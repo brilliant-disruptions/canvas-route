@@ -42,9 +42,8 @@ class MySalesScreen extends ConsumerWidget {
                       ]),
                       if (p.opensAt != null) Text('${DateFormat.yMMMEd().format(p.opensAt!)} · ${DateFormat.jm().format(p.opensAt!)}–${p.closesAt == null ? '' : DateFormat.jm().format(p.closesAt!)}', style: t.bodySmall?.copyWith(color: c.onSurfaceVariant)),
                       const SizedBox(height: Sp.s3),
-                      Row(children: [
+                      Wrap(spacing: Sp.s2, runSpacing: Sp.s2, children: [
                         OutlinedButton.icon(onPressed: () => showShareSaleSheet(context, p), icon: const Icon(Icons.qr_code_2), label: const Text('Sign QR')),
-                        const SizedBox(width: Sp.s2),
                         if (p.isLive)
                           TextButton(
                             onPressed: () async {

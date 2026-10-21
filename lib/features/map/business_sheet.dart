@@ -80,7 +80,7 @@ class BusinessSheet extends ConsumerWidget {
           Row(children: [
             Expanded(
               child: KnButton(
-                label: added ? 'Remove from route' : 'Add to route',
+                label: added ? 'Remove' : 'Add to route',
                 icon: added ? Icons.remove_circle_outline : Icons.add_location_alt_outlined,
                 onPressed: () {
                   ref.read(mapProvider.notifier).toggleDraft(business);

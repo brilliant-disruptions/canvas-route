@@ -82,28 +82,30 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
     if (results.isNotEmpty && _map != null) {
       final lats = results.map((b) => b.lat);
       final lngs = results.map((b) => b.lng);
-      await _map!.animateCamera(CameraUpdate.newLatLngBounds(
-        LatLngBounds(
-          southwest: LatLng(lats.reduce((a, b) => a < b ? a : b), lngs.reduce((a, b) => a < b ? a : b)),
-          northeast: LatLng(lats.reduce((a, b) => a > b ? a : b), lngs.reduce((a, b) => a > b ? a : b)),
+      await _map!.animateCamera(
+        CameraUpdate.newLatLngBounds(
+          LatLngBounds(
+            southwest: LatLng(lats.reduce((a, b) => a < b ? a : b), lngs.reduce((a, b) => a < b ? a : b)),
+            northeast: LatLng(lats.reduce((a, b) => a > b ? a : b), lngs.reduce((a, b) => a > b ? a : b)),
+          ),
+          64,
         ),
-        64,
-      ));
+      );
     }
   }
 
   Business _pinToBusiness(Pin p) => Business(
-        pinId: p.id,
-        placeId: p.placeId,
-        name: p.name,
-        address: p.address ?? '',
-        lat: p.lat,
-        lng: p.lng,
-        source: StopSource.community,
-        opensAt: p.opensAt,
-        closesAt: p.closesAt,
-        listingUrl: p.listingUrl,
-      );
+    pinId: p.id,
+    placeId: p.placeId,
+    name: p.name,
+    address: p.address ?? '',
+    lat: p.lat,
+    lng: p.lng,
+    source: StopSource.community,
+    opensAt: p.opensAt,
+    closesAt: p.closesAt,
+    listingUrl: p.listingUrl,
+  );
 
   Future<void> _onLongPress(LatLng at) async {
     final pack = ref.read(modePackProvider);
@@ -111,7 +113,9 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
     if (!mounted) return;
     final r = await showManualStopSheet(context, address: address, requiresWindow: pack.requiresTimeWindow);
     if (r == null) return;
-    ref.read(mapProvider.notifier).addManual(
+    ref
+        .read(mapProvider.notifier)
+        .addManual(
           name: r.name,
           lat: at.latitude,
           lng: at.longitude,
@@ -136,7 +140,9 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
       if (mounted) toast(context, 'Couldn\'t find that address');
       return;
     }
-    ref.read(mapProvider.notifier).addManual(
+    ref
+        .read(mapProvider.notifier)
+        .addManual(
           name: r.name,
           lat: geo.lat,
           lng: geo.lng,
@@ -186,24 +192,28 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
     final markers = <Marker>{};
     for (final b in map.results) {
       final added = map.isDraft(b);
-      markers.add(Marker(
-        markerId: MarkerId('r:${b.identity}'),
-        position: LatLng(b.lat, b.lng),
-        icon: BitmapDescriptor.defaultMarkerWithHue(added ? 270 : BitmapDescriptor.hueAzure),
-        infoWindow: InfoWindow(title: b.name),
-        onTap: () => showBusinessSheet(context, b),
-      ));
+      markers.add(
+        Marker(
+          markerId: MarkerId('r:${b.identity}'),
+          position: LatLng(b.lat, b.lng),
+          icon: BitmapDescriptor.defaultMarkerWithHue(added ? 270 : BitmapDescriptor.hueAzure),
+          infoWindow: InfoWindow(title: b.name),
+          onTap: () => showBusinessSheet(context, b),
+        ),
+      );
     }
     for (final d in map.draftStops) {
       if (map.results.any((r) => r.identity == d.business.identity)) continue;
       if (visiblePins.any((p) => p.id == d.business.pinId)) continue;
-      markers.add(Marker(
-        markerId: MarkerId('d:${d.id}'),
-        position: LatLng(d.business.lat, d.business.lng),
-        icon: BitmapDescriptor.defaultMarkerWithHue(d.business.source == StopSource.manual ? 90 : 270),
-        infoWindow: InfoWindow(title: d.business.name),
-        onTap: () => showBusinessSheet(context, d.business),
-      ));
+      markers.add(
+        Marker(
+          markerId: MarkerId('d:${d.id}'),
+          position: LatLng(d.business.lat, d.business.lng),
+          icon: BitmapDescriptor.defaultMarkerWithHue(d.business.source == StopSource.manual ? 90 : 270),
+          infoWindow: InfoWindow(title: d.business.name),
+          onTap: () => showBusinessSheet(context, d.business),
+        ),
+      );
     }
     for (final p in visiblePins) {
       double hue = BitmapDescriptor.hueOrange;
@@ -224,13 +234,15 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
         }
       }
       if (map.isDraft(_pinToBusiness(p))) hue = 270;
-      markers.add(Marker(
-        markerId: MarkerId('p:${p.id}'),
-        position: LatLng(p.lat, p.lng),
-        icon: BitmapDescriptor.defaultMarkerWithHue(hue),
-        infoWindow: InfoWindow(title: p.name),
-        onTap: () => showPinSheet(context, p),
-      ));
+      markers.add(
+        Marker(
+          markerId: MarkerId('p:${p.id}'),
+          position: LatLng(p.lat, p.lng),
+          icon: BitmapDescriptor.defaultMarkerWithHue(hue),
+          infoWindow: InfoWindow(title: p.name),
+          onTap: () => showPinSheet(context, p),
+        ),
+      );
     }
 
     return Stack(
@@ -271,7 +283,14 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
                           decoration: InputDecoration(
                             hintText: pack.searchHint,
                             prefixIcon: map.searching
-                                ? const Padding(padding: EdgeInsets.all(12), child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)))
+                                ? const Padding(
+                                    padding: EdgeInsets.all(12),
+                                    child: SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    ),
+                                  )
                                 : const Icon(Icons.search),
                             suffixIcon: map.query.isEmpty
                                 ? null
@@ -280,7 +299,8 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
                                     onPressed: () {
                                       _search.clear();
                                       ref.read(mapProvider.notifier).clearSearch();
-                                    }),
+                                    },
+                                  ),
                             filled: false,
                             border: InputBorder.none,
                             enabledBorder: InputBorder.none,
@@ -293,8 +313,9 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
                     _GlassBar(
                       child: IconButton(
                         icon: Icon(map.viewMode == MapViewMode.map ? Icons.view_list : Icons.map),
-                        onPressed: () => ref.read(mapProvider.notifier).setViewMode(
-                            map.viewMode == MapViewMode.map ? MapViewMode.list : MapViewMode.map),
+                        onPressed: () => ref
+                            .read(mapProvider.notifier)
+                            .setViewMode(map.viewMode == MapViewMode.map ? MapViewMode.list : MapViewMode.map),
                       ),
                     ),
                     const SizedBox(width: Sp.s2),
@@ -303,32 +324,57 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
                 ),
               ),
               const SizedBox(height: Sp.s2),
-              _ModeChips(pack: pack, map: map, onSuggestion: (s) {
-                _search.text = s;
-                _runSearch();
-              }),
+              _ModeChips(
+                pack: pack,
+                map: map,
+                onSuggestion: (s) {
+                  _search.text = s;
+                  _runSearch();
+                },
+              ),
               if (_clipboardUrl != null)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(Sp.s4, Sp.s2, Sp.s4, 0),
                   child: KnCard(
                     tier: 3,
                     padding: const EdgeInsets.symmetric(horizontal: Sp.s4, vertical: Sp.s2),
-                    child: Row(children: [
-                      Icon(Icons.link, color: c.tertiary),
-                      const SizedBox(width: Sp.s3),
-                      Expanded(child: Text('Add the ${ListingLink.sourceLabel(_clipboardUrl!) ?? 'listing'} sale from your clipboard?')),
-                      TextButton(onPressed: _addFromClipboard, child: const Text('Add')),
-                      IconButton(icon: const Icon(Icons.close), onPressed: () => setState(() => _clipboardUrl = null)),
-                    ]),
+                    child: Row(
+                      children: [
+                        Icon(Icons.link, color: c.tertiary),
+                        const SizedBox(width: Sp.s3),
+                        Expanded(
+                          child: Text(
+                            'Add the ${ListingLink.sourceLabel(_clipboardUrl!) ?? 'listing'} sale from your clipboard?',
+                          ),
+                        ),
+                        TextButton(onPressed: _addFromClipboard, child: const Text('Add')),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => setState(() => _clipboardUrl = null),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               if (map.error != null)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(Sp.s4, Sp.s2, Sp.s4, 0),
-                  child: KnBadge(map.error!, color: c.errorContainer, onColor: c.onErrorContainer, icon: Icons.error_outline),
+                  child: KnBadge(
+                    map.error!,
+                    color: c.errorContainer,
+                    onColor: c.onErrorContainer,
+                    icon: Icons.error_outline,
+                  ),
                 ),
               if (map.viewMode == MapViewMode.list)
-                Expanded(child: _ResultsList(results: map.results, pins: visiblePins, pinToBusiness: _pinToBusiness, center: _centerOrDefault)),
+                Expanded(
+                  child: _ResultsList(
+                    results: map.results,
+                    pins: visiblePins,
+                    pinToBusiness: _pinToBusiness,
+                    center: _centerOrDefault,
+                  ),
+                ),
             ],
           ),
         ),
@@ -357,7 +403,9 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
                 offset: const Offset(-4, 4),
                 child: FloatingActionButton.extended(
                   heroTag: 'draft',
-                  onPressed: () => map.draftStops.isEmpty ? toast(context, 'Tap a ${pack.stopNoun} to add it') : showDraftTray(context),
+                  onPressed: () => map.draftStops.isEmpty
+                      ? toast(context, 'Tap a ${pack.stopNoun} to add it')
+                      : showDraftTray(context),
                   icon: const Icon(Icons.playlist_add_check),
                   label: Text(map.editingRouteId != null ? 'Editing' : 'Draft'),
                 ),
@@ -375,15 +423,17 @@ class _GlassBar extends StatelessWidget {
   final Widget child;
   @override
   Widget build(BuildContext context) => Container(
-        height: 52,
-        decoration: BoxDecoration(
-          color: context.kn.glass,
-          borderRadius: BorderRadius.circular(Rad.xl),
-          border: Border.all(color: context.kn.ghostBorder),
-          boxShadow: [BoxShadow(color: context.kn.primaryDim.withValues(alpha: 0.08), blurRadius: 32, offset: const Offset(0, 8))],
-        ),
-        child: Center(child: child),
-      );
+    height: 52,
+    decoration: BoxDecoration(
+      color: context.kn.glass,
+      borderRadius: BorderRadius.circular(Rad.xl),
+      border: Border.all(color: context.kn.ghostBorder),
+      boxShadow: [
+        BoxShadow(color: context.kn.primaryDim.withValues(alpha: 0.08), blurRadius: 32, offset: const Offset(0, 8)),
+      ],
+    ),
+    child: Center(child: child),
+  );
 }
 
 /// Mode-specific chip row under the search bar: weekend selector (Yard Sales),
@@ -403,7 +453,12 @@ class _ModeChips extends ConsumerWidget {
       final sat = now.add(Duration(days: (DateTime.saturday - now.weekday) % 7));
       final sun = sat.add(const Duration(days: 1));
       final nextSat = sat.add(const Duration(days: 7));
-      final opts = [(null, 'Any day'), (sat, 'Sat ${DateFormat.Md().format(sat)}'), (sun, 'Sun ${DateFormat.Md().format(sun)}'), (nextSat, 'Next Sat')];
+      final opts = [
+        (null, 'Any day'),
+        (sat, 'Sat ${DateFormat.Md().format(sat)}'),
+        (sun, 'Sun ${DateFormat.Md().format(sun)}'),
+        (nextSat, 'Next Sat'),
+      ];
       chips = [
         for (final (d, label) in opts)
           ChoiceChip(
@@ -417,9 +472,19 @@ class _ModeChips extends ConsumerWidget {
       final products = ref.watch(productsProvider).value ?? const [];
       final sets = products.map((p) => p.setName).toSet().take(6).toList();
       chips = [
-        ChoiceChip(label: const Text('Any product'), selected: map.productFilter == null, showCheckmark: false, onSelected: (_) => n.setProductFilter(null)),
+        ChoiceChip(
+          label: const Text('Any product'),
+          selected: map.productFilter == null,
+          showCheckmark: false,
+          onSelected: (_) => n.setProductFilter(null),
+        ),
         for (final s in sets)
-          ChoiceChip(label: Text(s), selected: map.productFilter == s, showCheckmark: false, onSelected: (_) => n.setProductFilter(s)),
+          ChoiceChip(
+            label: Text(s),
+            selected: map.productFilter == s,
+            showCheckmark: false,
+            onSelected: (_) => n.setProductFilter(s),
+          ),
       ];
     } else {
       chips = [for (final s in pack.searchSuggestions) ActionChip(label: Text(s), onPressed: () => onSuggestion(s))];
@@ -450,33 +515,42 @@ class _ResultsList extends ConsumerWidget {
     final map = ref.watch(mapProvider);
     final items = [...results, ...pins.map(pinToBusiness)];
     if (items.isEmpty) {
-      return const EmptyState(icon: Icons.search, title: 'No results yet', body: 'Search above or long-press the map to drop a stop.');
+      return const EmptyState(
+        icon: Icons.search,
+        title: 'No results yet',
+        body: 'Search above or long-press the map to drop a stop.',
+      );
     }
-    return Container(
-      margin: const EdgeInsets.fromLTRB(Sp.s4, Sp.s2, Sp.s4, Sp.s4),
-      decoration: BoxDecoration(color: c.glass, borderRadius: BorderRadius.circular(Rad.xl), border: Border.all(color: c.ghostBorder)),
-      child: ListView.separated(
-        padding: const EdgeInsets.symmetric(vertical: Sp.s2),
-        itemCount: items.length,
-        separatorBuilder: (_, _) => const GhostDivider(),
-        itemBuilder: (_, i) {
-          final b = items[i];
-          final dist = haversineMeters(center.latitude, center.longitude, b.lat, b.lng);
-          return CheckboxListTile(
-            value: map.isDraft(b),
-            onChanged: (_) => ref.read(mapProvider.notifier).toggleDraft(b),
-            controlAffinity: ListTileControlAffinity.leading,
-            activeColor: c.primary,
-            title: Text(b.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-            subtitle: Text('${formatDistance(dist)} · ${b.address}', maxLines: 1, overflow: TextOverflow.ellipsis),
-            secondary: IconButton(
-              icon: const Icon(Icons.info_outline),
-              onPressed: () => b.pinId != null
-                  ? _openPin(context, ref, b.pinId!)
-                  : showBusinessSheet(context, b),
-            ),
-          );
-        },
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(Sp.s4, Sp.s2, Sp.s4, Sp.s4),
+      child: Material(
+        color: c.glass,
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Rad.xl),
+          side: BorderSide(color: c.ghostBorder),
+        ),
+        child: ListView.separated(
+          padding: const EdgeInsets.symmetric(vertical: Sp.s2),
+          itemCount: items.length,
+          separatorBuilder: (_, _) => const GhostDivider(),
+          itemBuilder: (_, i) {
+            final b = items[i];
+            final dist = haversineMeters(center.latitude, center.longitude, b.lat, b.lng);
+            return CheckboxListTile(
+              value: map.isDraft(b),
+              onChanged: (_) => ref.read(mapProvider.notifier).toggleDraft(b),
+              controlAffinity: ListTileControlAffinity.leading,
+              activeColor: c.primary,
+              title: Text(b.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+              subtitle: Text('${formatDistance(dist)} · ${b.address}', maxLines: 1, overflow: TextOverflow.ellipsis),
+              secondary: IconButton(
+                icon: const Icon(Icons.info_outline),
+                onPressed: () => b.pinId != null ? _openPin(context, ref, b.pinId!) : showBusinessSheet(context, b),
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -491,7 +565,7 @@ class _ResultsList extends ConsumerWidget {
 void goToBuilder(BuildContext context) => context.push('/route/builder');
 
 String modeLabel(AppMode m) => switch (m) {
-      AppMode.fieldSales => 'Field Sales',
-      AppMode.yardSales => 'Yard Sales',
-      AppMode.cardDrops => 'Card Drops',
-    };
+  AppMode.fieldSales => 'Field Sales',
+  AppMode.yardSales => 'Yard Sales',
+  AppMode.cardDrops => 'Card Drops',
+};

@@ -55,7 +55,12 @@ class KnButton extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           if (icon != null) ...[Icon(icon, color: fg, size: 20), const SizedBox(width: Sp.s2)],
-                          Text(label, style: Theme.of(context).textTheme.titleLarge?.copyWith(color: fg)),
+                          Flexible(
+                            child: Text(label,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.titleLarge?.copyWith(color: fg)),
+                          ),
                         ],
                       ),
               ),
@@ -96,20 +101,25 @@ class KnCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(Rad.xl),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (accent != null)
-              Container(
-                width: 4,
-                decoration: BoxDecoration(
-                  color: accent,
-                  borderRadius: const BorderRadius.horizontal(left: Radius.circular(Rad.xl)),
+        // The accent bar must match the content height. IntrinsicHeight gives the
+        // stretched Row a bounded height inside scrolling parents.
+        child: accent == null
+            ? Padding(padding: padding, child: child)
+            : IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Container(
+                      width: 4,
+                      decoration: BoxDecoration(
+                        color: accent,
+                        borderRadius: const BorderRadius.horizontal(left: Radius.circular(Rad.xl)),
+                      ),
+                    ),
+                    Expanded(child: Padding(padding: padding, child: child)),
+                  ],
                 ),
               ),
-            Expanded(child: Padding(padding: padding, child: child)),
-          ],
-        ),
       ),
     );
   }

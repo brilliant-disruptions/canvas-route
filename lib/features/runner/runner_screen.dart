@@ -132,8 +132,9 @@ class _RunnerScreenState extends ConsumerState<RunnerScreen> {
             initialChildSize: 0.34,
             minChildSize: 0.18,
             maxChildSize: 0.9,
-            builder: (_, scroll) => Container(
-              decoration: BoxDecoration(color: c.surfaceContainer, borderRadius: const BorderRadius.vertical(top: Radius.circular(Rad.xxl))),
+            builder: (_, scroll) => Material(
+              color: c.surfaceContainer,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(Rad.xxl)),
               child: ListView(
                 controller: scroll,
                 padding: const EdgeInsets.fromLTRB(Sp.s4, Sp.s2, Sp.s4, Sp.s6),

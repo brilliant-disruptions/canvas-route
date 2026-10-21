@@ -155,7 +155,7 @@ ThemeData knTheme(Brightness brightness) {
       style: FilledButton.styleFrom(
         backgroundColor: c.primary,
         foregroundColor: c.onPrimary,
-        minimumSize: const Size.fromHeight(52),
+        minimumSize: const Size(64, 52),
         textStyle: text.titleLarge,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Rad.lg)),
       ),
@@ -163,7 +163,7 @@ ThemeData knTheme(Brightness brightness) {
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: c.onSurface,
-        minimumSize: const Size.fromHeight(52),
+        minimumSize: const Size(64, 52),
         textStyle: text.titleLarge,
         side: BorderSide(color: c.outline),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Rad.lg)),
