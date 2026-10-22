@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -16,6 +14,7 @@ import '../../state/community_state.dart';
 import '../../state/profile_state.dart';
 import '../../state/providers.dart';
 import '../../ui/widgets/kn_widgets.dart';
+import '../../ui/widgets/xfile_image.dart';
 
 /// Post a sale → live pin + share link + QR for the sign (spec §4.3).
 class HostSaleScreen extends ConsumerStatefulWidget {
@@ -33,7 +32,7 @@ class _HostSaleScreenState extends ConsumerState<HostSaleScreen> {
   TimeOfDay _close = const TimeOfDay(hour: 13, minute: 0);
   final _cats = <String>{};
   String? _earlyBirds;
-  final _photos = <File>[];
+  final _photos = <XFile>[];
   bool _busy = false;
 
   @override
@@ -138,11 +137,11 @@ class _HostSaleScreenState extends ConsumerState<HostSaleScreen> {
           ),
           const SectionHeader('Photos'),
           Row(children: [
-            for (final f in _photos) Padding(padding: const EdgeInsets.only(right: Sp.s2), child: ClipRRect(borderRadius: BorderRadius.circular(Rad.lg), child: Image.file(f, width: 72, height: 72, fit: BoxFit.cover))),
+            for (final f in _photos) Padding(padding: const EdgeInsets.only(right: Sp.s2), child: ClipRRect(borderRadius: BorderRadius.circular(Rad.lg), child: XFileImage(f, width: 72, height: 72))),
             OutlinedButton.icon(
               onPressed: () async {
                 final x = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 80, maxWidth: 1600);
-                if (x != null) setState(() => _photos.add(File(x.path)));
+                if (x != null) setState(() => _photos.add(x));
               },
               icon: const Icon(Icons.add_photo_alternate_outlined),
               label: const Text('Add'),

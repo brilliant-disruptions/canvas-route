@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart';
 
 import '../models/alert_item.dart';
 import '../supabase_client.dart';
@@ -15,7 +15,7 @@ class AlertRepository {
   Future<void> registerPushToken(String userId, String token) => sb.from('push_tokens').upsert({
         'user_id': userId,
         'token': token,
-        'platform': Platform.isIOS ? 'ios' : 'android',
+        'platform': defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android',
         'updated_at': DateTime.now().toUtc().toIso8601String(),
       });
 

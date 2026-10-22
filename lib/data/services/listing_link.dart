@@ -29,8 +29,12 @@ class ListingLink {
   }
 
   static Future<String?> readClipboardUrl() async {
-    final data = await Clipboard.getData(Clipboard.kTextPlain);
-    final text = data?.text?.trim();
-    return looksLikeListing(text) ? text : null;
+    try {
+      final data = await Clipboard.getData(Clipboard.kTextPlain);
+      final text = data?.text?.trim();
+      return looksLikeListing(text) ? text : null;
+    } catch (_) {
+      return null;
+    }
   }
 }

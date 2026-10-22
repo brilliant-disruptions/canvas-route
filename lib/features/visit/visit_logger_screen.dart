@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -16,6 +14,7 @@ import '../../state/providers.dart';
 import '../../state/routes_state.dart';
 import '../../state/visits_state.dart';
 import '../../ui/widgets/kn_widgets.dart';
+import '../../ui/widgets/xfile_image.dart';
 import '../community/product_picker.dart';
 
 /// Renders the mode's visit fields dynamically; a re-log pre-fills and overwrites.
@@ -30,7 +29,7 @@ class VisitLoggerScreen extends ConsumerStatefulWidget {
 class _VisitLoggerScreenState extends ConsumerState<VisitLoggerScreen> {
   VisitDraft _draft = VisitDraft();
   final _controllers = <String, TextEditingController>{};
-  File? _photo;
+  XFile? _photo;
   bool _loaded = false;
   bool _saving = false;
 
@@ -180,7 +179,7 @@ class _VisitLoggerScreenState extends ConsumerState<VisitLoggerScreen> {
           const SizedBox(height: Sp.s2),
           Row(children: [
             if (_photo != null)
-              ClipRRect(borderRadius: BorderRadius.circular(Rad.lg), child: Image.file(_photo!, width: 96, height: 96, fit: BoxFit.cover))
+              ClipRRect(borderRadius: BorderRadius.circular(Rad.lg), child: XFileImage(_photo!, width: 96, height: 96))
             else if (existing != null)
               FutureBuilder(
                 future: ref.read(storageServiceProvider).signedUrl(StorageService.visitPhotos, existing),
@@ -207,6 +206,6 @@ class _VisitLoggerScreenState extends ConsumerState<VisitLoggerScreen> {
 
   Future<void> _pick(ImageSource src) async {
     final x = await ImagePicker().pickImage(source: src, imageQuality: 80, maxWidth: 1600);
-    if (x != null) setState(() => _photo = File(x.path));
+    if (x != null) setState(() => _photo = x);
   }
 }

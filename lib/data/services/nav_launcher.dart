@@ -1,12 +1,16 @@
-import 'dart:io';
-
+import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Hands a stop to the platform's maps app for turn-by-turn.
 class NavLauncher {
   Future<bool> navigateTo({required double lat, required double lng, String? label}) async {
     final name = Uri.encodeComponent(label ?? 'Stop');
-    final uri = Platform.isIOS
+    final ios = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+    final android = !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+    if (!ios && !android) {
+      return launchUrl(Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$lat,$lng'), mode: LaunchMode.externalApplication);
+    }
+    final uri = ios
         ? Uri.parse('maps://?daddr=$lat,$lng&q=$name')
         : Uri.parse('google.navigation:q=$lat,$lng');
     if (await canLaunchUrl(uri)) return launchUrl(uri, mode: LaunchMode.externalApplication);

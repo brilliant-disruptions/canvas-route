@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:cross_file/cross_file.dart';
 
 import '../models/app_mode.dart';
 import '../models/business.dart';
@@ -64,7 +64,7 @@ class PinRepository {
     required List<String> categories,
     String? notes,
     String? earlyBirds,
-    List<File> photos = const [],
+    List<XFile> photos = const [],
   }) async {
     final row = await sb
         .from('pins')
@@ -104,7 +104,7 @@ class PinRepository {
     DateTime? opensAt,
     DateTime? closesAt,
     String? listingUrl,
-    required File signPhoto,
+    required XFile signPhoto,
   }) async {
     final row = await sb
         .from('pins')
@@ -153,7 +153,7 @@ class PinRepository {
     return Pin.fromRow(row);
   }
 
-  Future<void> addPhoto(String pinId, String userId, File file) async {
+  Future<void> addPhoto(String pinId, String userId, XFile file) async {
     final path = await _storage.upload(StorageService.pinPhotos, file);
     await sb.from('pin_photos').insert({'pin_id': pinId, 'user_id': userId, 'storage_path': path});
   }

@@ -1,5 +1,4 @@
-import 'dart:io';
-
+import 'package:cross_file/cross_file.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/models/app_mode.dart';
@@ -33,7 +32,7 @@ class VisitLogger {
     required RouteModel route,
     required Stop stop,
     required VisitDraft draft,
-    File? photo,
+    XFile? photo,
   }) async {
     final uid = ref.read(currentUserIdProvider)!;
     String? photoPath;

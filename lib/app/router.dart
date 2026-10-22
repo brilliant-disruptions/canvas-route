@@ -25,12 +25,12 @@ import '../features/visit/visit_logger_screen.dart';
 import '../state/providers.dart';
 import 'shell.dart';
 
-final _rootKey = GlobalKey<NavigatorState>();
+final rootNavigatorKey = GlobalKey<NavigatorState>();
 
 final routerProvider = Provider<GoRouter>((ref) {
   final prefs = ref.watch(localPrefsProvider);
   return GoRouter(
-    navigatorKey: _rootKey,
+    navigatorKey: rootNavigatorKey,
     initialLocation: '/map',
     redirect: (context, state) {
       final loc = state.matchedLocation;

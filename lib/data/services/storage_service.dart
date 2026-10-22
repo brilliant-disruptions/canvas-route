@@ -1,5 +1,5 @@
-import 'dart:io';
-
+import 'package:cross_file/cross_file.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
 import '../supabase_client.dart';
@@ -11,11 +11,17 @@ class StorageService {
   static const pinPhotos = 'pin-photos';
   static const avatars = 'avatars';
 
-  Future<String> upload(String bucket, File file) async {
+  Future<String> upload(String bucket, XFile file) async {
     final uid = requireUserId();
-    final ext = file.path.split('.').last.toLowerCase();
-    final path = '$uid/${const Uuid().v4()}.${ext.isEmpty ? 'jpg' : ext}';
-    await sb.storage.from(bucket).upload(path, file);
+    final name = file.name.isNotEmpty ? file.name : file.path;
+    final dot = name.lastIndexOf('.');
+    final ext = dot == -1 ? 'jpg' : name.substring(dot + 1).toLowerCase();
+    final path = '$uid/${const Uuid().v4()}.$ext';
+    await sb.storage.from(bucket).uploadBinary(
+          path,
+          await file.readAsBytes(),
+          fileOptions: FileOptions(contentType: file.mimeType ?? 'image/$ext'),
+        );
     return path;
   }
 

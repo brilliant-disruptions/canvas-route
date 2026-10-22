@@ -1,15 +1,14 @@
-import 'dart:io';
+import 'dart:convert';
 
-import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 class ShareService {
   Future<void> shareCsv(String csv, String fileName, {String? subject}) async {
-    final dir = await getTemporaryDirectory();
-    final file = File('${dir.path}/$fileName');
-    await file.writeAsString(csv);
+    // In-memory file so this works on web as well as mobile.
+    final file = XFile.fromData(utf8.encode(csv), mimeType: 'text/csv', name: fileName);
     await SharePlus.instance.share(ShareParams(
-      files: [XFile(file.path, mimeType: 'text/csv')],
+      files: [file],
+      fileNameOverrides: [fileName],
       subject: subject,
     ));
   }

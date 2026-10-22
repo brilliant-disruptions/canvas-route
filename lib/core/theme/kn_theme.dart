@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import 'kn_colors.dart';
+
+/// Bundled in pubspec.yaml under assets/fonts.
+const kFontFamily = 'Manrope';
 
 /// Spacing scale, 4px base unit.
 abstract final class Sp {
@@ -31,11 +33,12 @@ abstract final class Rad {
 /// Builds Material ThemeData from Kinetic Noir tokens. Manrope throughout.
 ThemeData knTheme(Brightness brightness) {
   final c = brightness == Brightness.dark ? KnColors.dark : KnColors.light;
-  final base = ThemeData(brightness: brightness, useMaterial3: true);
-  final manrope = GoogleFonts.manropeTextTheme();
+  final base = ThemeData(brightness: brightness, useMaterial3: true, fontFamily: kFontFamily);
+  final manrope = base.textTheme;
 
   TextStyle s(TextStyle? t, double size, FontWeight w, double height, [double? ls]) =>
       (t ?? const TextStyle()).copyWith(
+        fontFamily: kFontFamily,
         fontSize: size,
         fontWeight: w,
         height: height / size,
