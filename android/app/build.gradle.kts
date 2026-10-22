@@ -1,3 +1,6 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
@@ -5,9 +8,12 @@ plugins {
 }
 
 // Secrets live in android/local.properties (gitignored), e.g. GOOGLE_MAPS_API_KEY=AIza...
-val localProps = java.util.Properties().apply {
-    val f = rootProject.file("local.properties")
-    if (f.exists()) f.inputStream().use { load(it) }
+// Plain statements on purpose: inside a Gradle script, `apply {}` and `java.` resolve to Gradle's
+// own Project.apply and `java` extension rather than Kotlin's scope function and package.
+val localProps = Properties()
+val localPropsFile = rootProject.file("local.properties")
+if (localPropsFile.exists()) {
+    FileInputStream(localPropsFile).use { stream -> localProps.load(stream) }
 }
 
 android {
