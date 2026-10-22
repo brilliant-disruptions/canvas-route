@@ -161,6 +161,14 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
     final map = ref.watch(mapProvider);
     final center = ref.watch(mapCenterProvider);
 
+    // A new mode starts with an empty search; its results were cleared with the map state.
+    ref.listen(activeModeProvider, (prev, next) {
+      if (prev == next) return;
+      _search.clear();
+      if (_clipboardUrl != null) setState(() => _clipboardUrl = null);
+      _checkClipboard();
+    });
+
     // Move the camera to the user once GPS resolves.
     ref.listen(currentLocationProvider, (_, next) {
       final loc = next.value;
