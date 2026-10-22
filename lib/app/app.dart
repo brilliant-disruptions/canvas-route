@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -18,6 +19,8 @@ class CanvasRouteApp extends ConsumerWidget {
       darkTheme: knTheme(Brightness.dark),
       themeMode: ref.watch(appearanceProvider),
       routerConfig: router,
+      // Let mouse and trackpad drags scroll lists and sheets too (web and desktop testing).
+      scrollBehavior: const MaterialScrollBehavior().copyWith(dragDevices: PointerDeviceKind.values.toSet()),
     );
   }
 }

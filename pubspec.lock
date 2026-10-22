@@ -382,7 +382,7 @@ packages:
     source: hosted
     version: "2.18.7"
   google_maps_flutter_platform_interface:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: google_maps_flutter_platform_interface
       sha256: "742e86787abac8b08352aaf31b2d1fffc77038ab2e9ebd8d4d7013eec9e97218"
@@ -393,10 +393,10 @@ packages:
     dependency: transitive
     description:
       name: google_maps_flutter_web
-      sha256: de408355e21b0da7da17962b86c338d320d9bc1c5eb94e72a2d021955bda5aaa
+      sha256: "65911541b63c3ac7ae46c62a0bddaf130bb9e85b478d4650b0e69468ab6af7d6"
       url: "https://pub.dev"
     source: hosted
-    version: "0.6.4+2"
+    version: "0.6.5"
   gotrue:
     dependency: transitive
     description:
@@ -857,10 +857,10 @@ packages:
     dependency: transitive
     description:
       name: shared_preferences_android
-      sha256: a67a1a6a62b241ad4ddd8a97f5a12bb547c445190930233b63cd28cc0a104a76
+      sha256: "593034a16e82953ca31145db6c85174286262715f9c5e6a9d8c65ffd9fcdce09"
       url: "https://pub.dev"
     source: hosted
-    version: "2.5.1"
+    version: "2.5.3"
   shared_preferences_foundation:
     dependency: transitive
     description:
