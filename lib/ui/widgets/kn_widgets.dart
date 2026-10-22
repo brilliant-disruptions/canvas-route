@@ -30,6 +30,17 @@ class KnButton extends StatelessWidget {
     final c = context.kn;
     final enabled = onPressed != null && !loading;
     final fg = lime ? c.onTertiary : c.onPrimary;
+    // InkWell alone does not mark this as a button for screen readers.
+    return MergeSemantics(
+      child: Semantics(
+        button: true,
+        enabled: enabled,
+        child: _body(context, c, enabled, fg),
+      ),
+    );
+  }
+
+  Widget _body(BuildContext context, KnColors c, bool enabled, Color fg) {
     return Opacity(
       opacity: enabled ? 1 : 0.5,
       child: DecoratedBox(
@@ -95,7 +106,7 @@ class KnCard extends StatelessWidget {
       2 => c.surfaceHigh,
       _ => c.surfaceHighest,
     };
-    return Material(
+    final card = Material(
       color: bg,
       borderRadius: BorderRadius.circular(Rad.xl),
       child: InkWell(
@@ -122,6 +133,7 @@ class KnCard extends StatelessWidget {
               ),
       ),
     );
+    return onTap == null ? card : MergeSemantics(child: Semantics(button: true, child: card));
   }
 }
 

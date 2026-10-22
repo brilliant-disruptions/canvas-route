@@ -295,6 +295,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
                             suffixIcon: map.query.isEmpty
                                 ? null
                                 : IconButton(
+                                    tooltip: 'Clear search',
                                     icon: const Icon(Icons.close),
                                     onPressed: () {
                                       _search.clear();
@@ -312,6 +313,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
                     const SizedBox(width: Sp.s2),
                     _GlassBar(
                       child: IconButton(
+                        tooltip: map.viewMode == MapViewMode.map ? 'Show list' : 'Show map',
                         icon: Icon(map.viewMode == MapViewMode.map ? Icons.view_list : Icons.map),
                         onPressed: () => ref
                             .read(mapProvider.notifier)
@@ -349,6 +351,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
                         ),
                         TextButton(onPressed: _addFromClipboard, child: const Text('Add')),
                         IconButton(
+                          tooltip: 'Dismiss',
                           icon: const Icon(Icons.close),
                           onPressed: () => setState(() => _clipboardUrl = null),
                         ),
@@ -385,6 +388,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
             mainAxisSize: MainAxisSize.min,
             children: [
               FloatingActionButton.small(
+                tooltip: 'My location',
                 heroTag: 'loc',
                 backgroundColor: c.surfaceHighest,
                 foregroundColor: c.onSurface,
@@ -545,6 +549,7 @@ class _ResultsList extends ConsumerWidget {
               title: Text(b.name, maxLines: 1, overflow: TextOverflow.ellipsis),
               subtitle: Text('${formatDistance(dist)} · ${b.address}', maxLines: 1, overflow: TextOverflow.ellipsis),
               secondary: IconButton(
+                tooltip: 'Details',
                 icon: const Icon(Icons.info_outline),
                 onPressed: () => b.pinId != null ? _openPin(context, ref, b.pinId!) : showBusinessSheet(context, b),
               ),

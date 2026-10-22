@@ -374,7 +374,7 @@ class _StopRow extends StatelessWidget {
       ]),
       onTap: onEdit,
       trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-        IconButton(icon: const Icon(Icons.close), onPressed: onRemove, visualDensity: VisualDensity.compact),
+        IconButton(tooltip: 'Remove stop', icon: const Icon(Icons.close), onPressed: onRemove, visualDensity: VisualDensity.compact),
         ReorderableDragStartListener(index: index, child: const Icon(Icons.drag_handle)),
       ]),
     );

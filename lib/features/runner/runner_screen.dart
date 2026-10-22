@@ -122,7 +122,7 @@ class _RunnerScreenState extends ConsumerState<RunnerScreen> {
             child: Padding(
               padding: const EdgeInsets.all(Sp.s4),
               child: Row(children: [
-                _Glass(child: IconButton(icon: const Icon(Icons.close), onPressed: () => context.pop())),
+                _Glass(child: IconButton(tooltip: 'Exit route', icon: const Icon(Icons.close), onPressed: () => context.pop())),
                 const Spacer(),
                 ProgressPill('${route.visitedCount} of ${route.stopCount} visited', icon: Icons.flag_outlined),
               ]),

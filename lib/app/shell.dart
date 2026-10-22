@@ -115,6 +115,7 @@ class ProfileButton extends StatelessWidget {
   const ProfileButton({super.key});
   @override
   Widget build(BuildContext context) => IconButton(
+        tooltip: 'Menu',
         icon: const Icon(Icons.menu),
         onPressed: () => Scaffold.of(context).openEndDrawer(),
       );

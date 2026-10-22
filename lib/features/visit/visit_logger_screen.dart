@@ -140,6 +140,7 @@ class _VisitLoggerScreenState extends ConsumerState<VisitLoggerScreen> {
             hintText: f.hint,
             suffixIcon: isPhone || isEmail
                 ? IconButton(
+                    tooltip: isPhone ? 'Call' : 'Email',
                     icon: Icon(isPhone ? Icons.call_outlined : Icons.mail_outline),
                     onPressed: () {
                       final v = _ctrl(f.key).text.trim();
@@ -164,7 +165,7 @@ class _VisitLoggerScreenState extends ConsumerState<VisitLoggerScreen> {
           leading: const Icon(Icons.event),
           title: Text(f.label),
           subtitle: Text(d == null ? 'Not set' : DateFormat.yMMMEd().format(d)),
-          trailing: d == null ? null : IconButton(icon: const Icon(Icons.clear), onPressed: () => setState(() => _draft.values[f.key] = null)),
+          trailing: d == null ? null : IconButton(tooltip: 'Clear date', icon: const Icon(Icons.clear), onPressed: () => setState(() => _draft.values[f.key] = null)),
           onTap: () async {
             final r = await showDatePicker(context: context, initialDate: d ?? DateTime.now(), firstDate: DateTime.now().subtract(const Duration(days: 365)), lastDate: DateTime.now().add(const Duration(days: 365 * 2)));
             if (r != null) setState(() => _draft.values[f.key] = r);

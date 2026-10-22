@@ -106,12 +106,12 @@ class _Pins extends ConsumerWidget {
               title: Text(p.name),
               subtitle: Text('${p.status.name} · ${p.origin.name} · ${p.address ?? ''}'),
               trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                IconButton(icon: Icon(Icons.check, color: c.statusDone), onPressed: () async {
+                IconButton(tooltip: 'Approve', icon: Icon(Icons.check, color: c.statusDone), onPressed: () async {
                   await ref.read(pinRepoProvider).setStatus(p.id, PinStatus.live);
                   ref.invalidate(myPinsProvider);
                   if (context.mounted) (context as Element).markNeedsBuild();
                 }),
-                IconButton(icon: Icon(Icons.delete_outline, color: c.error), onPressed: () async {
+                IconButton(tooltip: 'Remove', icon: Icon(Icons.delete_outline, color: c.error), onPressed: () async {
                   await ref.read(pinRepoProvider).setStatus(p.id, PinStatus.removed);
                   if (context.mounted) (context as Element).markNeedsBuild();
                 }),

@@ -40,6 +40,7 @@ class AdvancedScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(Sp.s4),
         children: [
           SectionHeader('Outcomes', subtitle: 'Shown as chips in the ${pack.visitVerb.toLowerCase()} form', trailing: IconButton(
+            tooltip: 'Add outcome',
             icon: const Icon(Icons.add),
             onPressed: () async {
               final v = await promptText(context, title: 'New outcome', confirmLabel: 'Add');
@@ -62,11 +63,12 @@ class AdvancedScreen extends ConsumerWidget {
                   contentPadding: EdgeInsets.zero,
                   title: Text(outcomes[i]),
                   leading: ReorderableDragStartListener(index: i, child: const Icon(Icons.drag_handle)),
-                  trailing: IconButton(icon: const Icon(Icons.close), onPressed: () => n.updateOverride(pack.id, (x) => x.copyWith(outcomes: outcomes.where((o) => o != outcomes[i]).toList()))),
+                  trailing: IconButton(tooltip: 'Remove outcome', icon: const Icon(Icons.close), onPressed: () => n.updateOverride(pack.id, (x) => x.copyWith(outcomes: outcomes.where((o) => o != outcomes[i]).toList()))),
                 ),
             ],
           ),
           SectionHeader('Visit fields', subtitle: 'Toggle, reorder, or add custom fields', trailing: IconButton(
+            tooltip: 'Add field',
             icon: const Icon(Icons.add),
             onPressed: () async {
               final r = await showKnSheet<VisitFieldDefinition>(context, builder: (_) => const _NewFieldSheet());

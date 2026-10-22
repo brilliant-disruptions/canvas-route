@@ -156,6 +156,7 @@ class RequestCard extends ConsumerWidget {
         ),
         Column(children: [
           IconButton(
+            tooltip: voted ? 'Remove upvote' : 'Upvote',
             icon: Icon(voted ? Icons.thumb_up : Icons.thumb_up_outlined, color: voted ? c.tertiary : null),
             onPressed: uid == null
                 ? null
