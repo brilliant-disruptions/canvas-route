@@ -1,3 +1,7 @@
+/// Zigzag-decodes a value. Arithmetic, not `~`: on the web `~` yields an
+/// unsigned 32-bit result, which turns every negative delta into garbage.
+int _unzigzag(int v) => (v & 1) != 0 ? -(v >> 1) - 1 : v >> 1;
+
 /// Decodes a Google encoded polyline (precision 5) into (lat, lng) pairs.
 List<({double lat, double lng})> decodePolyline(String encoded) {
   final points = <({double lat, double lng})>[];
@@ -11,7 +15,7 @@ List<({double lat, double lng})> decodePolyline(String encoded) {
       result |= (b & 0x1f) << shift;
       shift += 5;
     } while (b >= 0x20);
-    lat += (result & 1) != 0 ? ~(result >> 1) : (result >> 1);
+    lat += _unzigzag(result);
     shift = 0;
     result = 0;
     do {
@@ -19,7 +23,7 @@ List<({double lat, double lng})> decodePolyline(String encoded) {
       result |= (b & 0x1f) << shift;
       shift += 5;
     } while (b >= 0x20);
-    lng += (result & 1) != 0 ? ~(result >> 1) : (result >> 1);
+    lng += _unzigzag(result);
     points.add((lat: lat / 1e5, lng: lng / 1e5));
   }
   return points;

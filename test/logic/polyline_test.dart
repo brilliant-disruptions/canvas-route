@@ -14,6 +14,18 @@ void main() {
     expect(pts[2].lng, closeTo(-126.453, 1e-5));
   });
 
+  test('negative deltas decode correctly (regression: `~` is unsigned on web)', () {
+    // Dallas → one block west → one block south; both deltas negative.
+    final pts = decodePolyline(r'o~ggEnhwmQ?jHjH?');
+    expect(pts.length, 3);
+    expect(pts[1].lng, lessThan(pts[0].lng));
+    expect(pts[2].lat, lessThan(pts[1].lat));
+    for (final p in pts) {
+      expect(p.lat, inInclusiveRange(32, 34));
+      expect(p.lng, inInclusiveRange(-98, -96));
+    }
+  });
+
   test('empty string decodes to no points', () {
     expect(decodePolyline(''), isEmpty);
   });
