@@ -55,6 +55,20 @@ You do the Apple-side steps once. After that, every build is one click.
 4. Install **TestFlight** from the App Store on your iPhone, open the invite email, and tap
    Install. New builds show up there automatically.
 
+## Building with Xcode Cloud instead
+
+Xcode Cloud works too and needs no GitHub secrets, because App Store Connect signs for you.
+
+- `ios/ci_scripts/ci_post_clone.sh` runs automatically after each clone. It installs Flutter
+  3.47.7 and CocoaPods and generates the files Flutter normally creates on a Mac. Without it the
+  build stops at "FlutterGeneratedPluginSwiftPackage cannot be accessed".
+- Workflow settings: start condition **branch `main`**, action **Archive (iOS)** using
+  `ios/Runner.xcworkspace` and the `Runner` scheme, post-action **TestFlight (Internal Testing)**.
+- It builds the demo app. To build production later, add the environment variable
+  `CANVASROUTE_ENTRY=lib/main.dart` to the workflow.
+- The GitHub Actions compile check runs the same script, so a change that would break Xcode Cloud
+  shows up there first.
+
 ## Good to know
 
 - Build numbers come from the workflow run number, so every upload is unique.

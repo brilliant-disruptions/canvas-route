@@ -89,13 +89,18 @@ jobs:
 
       - run: flutter pub get
 
-      - name: Build unsigned (compile check)
+      - name: Build unsigned the way Xcode Cloud does (compile check)
         if: env.WANT_UPLOAD != 'true' || env.HAS_SIGNING != 'true'
+        env:
+          CANVASROUTE_ENTRY: ${{ steps.cfg.outputs.target }}
+          CI_BUILD_NUMBER: ${{ steps.cfg.outputs.build_number }}
         run: |
-          DEFINES=""
-          [ -f .env.json ] && DEFINES="--dart-define-from-file=.env.json"
-          flutter build ios --release --no-codesign -t ${{ steps.cfg.outputs.target }} $DEFINES \
-            --build-name ${{ steps.cfg.outputs.build_name }} --build-number ${{ steps.cfg.outputs.build_number }}
+          set -euo pipefail
+          # Same post-clone script and xcodebuild commands Xcode Cloud runs.
+          sh ios/ci_scripts/ci_post_clone.sh
+          xcodebuild -resolvePackageDependencies -workspace ios/Runner.xcworkspace -scheme Runner
+          xcodebuild build -quiet -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release \
+            -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO
           if [ "$WANT_UPLOAD" = "true" ]; then
             echo "::warning::Built unsigned because the App Store Connect secrets are not set. See docs/testflight.md."
           fi
