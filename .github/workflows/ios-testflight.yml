@@ -1,0 +1,175 @@
+name: iOS TestFlight
+
+# Manual run: builds the iOS app and, when the App Store Connect secrets are
+# set, signs it and uploads it to TestFlight. Pushes that touch the app only
+# compile it unsigned, so a broken iOS build shows up before you need it.
+#
+# Secrets (Settings → Secrets and variables → Actions), see docs/testflight.md:
+#   APPLE_TEAM_ID                 10-character Team ID
+#   ASC_KEY_ID                    App Store Connect API key ID
+#   ASC_ISSUER_ID                 App Store Connect issuer ID
+#   ASC_KEY_P8                    Contents of the AuthKey_XXXX.p8 file
+# Production entry point only:
+#   SUPABASE_URL, SUPABASE_ANON_KEY, GOOGLE_MAPS_API_KEY
+
+on:
+  workflow_dispatch:
+    inputs:
+      entry:
+        description: "Which app to build. demo = sample data, no backend needed."
+        type: choice
+        options: [demo, production]
+        default: demo
+      upload:
+        description: "Upload to TestFlight (needs the App Store Connect secrets)"
+        type: boolean
+        default: true
+  push:
+    branches: [spec-v3-modes-platform]
+    paths:
+      - "ios/**"
+      - "lib/**"
+      - "assets/**"
+      - "pubspec.yaml"
+      - "pubspec.lock"
+      - ".github/workflows/ios-testflight.yml"
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  ios:
+    runs-on: macos-26
+    timeout-minutes: 60
+    env:
+      FLUTTER_VERSION: "3.47.7"
+      ENTRY: ${{ inputs.entry || 'demo' }}
+      WANT_UPLOAD: ${{ github.event_name == 'workflow_dispatch' && inputs.upload }}
+      HAS_SIGNING: ${{ secrets.ASC_KEY_ID != '' && secrets.ASC_ISSUER_ID != '' && secrets.ASC_KEY_P8 != '' && secrets.APPLE_TEAM_ID != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select newest Xcode
+        run: |
+          XCODE=$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)
+          sudo xcode-select -s "$XCODE"
+          xcodebuild -version
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Resolve build settings
+        id: cfg
+        run: |
+          if [ "$ENTRY" = "production" ]; then
+            echo "target=lib/main.dart" >> "$GITHUB_OUTPUT"
+          else
+            echo "target=lib/main_demo.dart" >> "$GITHUB_OUTPUT"
+          fi
+          # TestFlight needs a new build number every upload.
+          echo "build_number=${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+          echo "build_name=$(grep '^version:' pubspec.yaml | sed 's/version: *//; s/+.*//')" >> "$GITHUB_OUTPUT"
+
+      - name: Write production config
+        if: env.ENTRY == 'production'
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "::error::The production app needs SUPABASE_URL and SUPABASE_ANON_KEY secrets. Run the demo entry instead, or add them."
+            exit 1
+          fi
+          python3 -c 'import json,os; json.dump({k: os.environ[k] for k in ("SUPABASE_URL","SUPABASE_ANON_KEY","GOOGLE_MAPS_API_KEY")}, open(".env.json","w"))'
+
+      - run: flutter pub get
+
+      - name: Build unsigned (compile check)
+        if: env.WANT_UPLOAD != 'true' || env.HAS_SIGNING != 'true'
+        run: |
+          DEFINES=""
+          [ -f .env.json ] && DEFINES="--dart-define-from-file=.env.json"
+          flutter build ios --release --no-codesign -t ${{ steps.cfg.outputs.target }} $DEFINES \
+            --build-name ${{ steps.cfg.outputs.build_name }} --build-number ${{ steps.cfg.outputs.build_number }}
+          if [ "$WANT_UPLOAD" = "true" ]; then
+            echo "::warning::Built unsigned because the App Store Connect secrets are not set. See docs/testflight.md."
+          fi
+
+      - name: Install App Store Connect API key
+        if: env.WANT_UPLOAD == 'true' && env.HAS_SIGNING == 'true'
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/asc"
+          printf '%s\n' "$ASC_KEY_P8" > "$RUNNER_TEMP/asc/AuthKey_${ASC_KEY_ID}.p8"
+          chmod 600 "$RUNNER_TEMP/asc/AuthKey_${ASC_KEY_ID}.p8"
+
+      - name: Archive, sign, and upload to TestFlight
+        if: env.WANT_UPLOAD == 'true' && env.HAS_SIGNING == 'true'
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+        run: |
+          set -euo pipefail
+          KEY="$RUNNER_TEMP/asc/AuthKey_${ASC_KEY_ID}.p8"
+          AUTH=(-allowProvisioningUpdates -authenticationKeyPath "$KEY" -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID")
+          DEFINES=""
+          [ -f .env.json ] && DEFINES="--dart-define-from-file=.env.json"
+
+          # Generate Flutter's Xcode settings (entry point, version, pods) without building.
+          flutter build ios --release --config-only -t ${{ steps.cfg.outputs.target }} $DEFINES \
+            --build-name ${{ steps.cfg.outputs.build_name }} --build-number ${{ steps.cfg.outputs.build_number }}
+
+          xcodebuild archive \
+            -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath build/ios/CanvasRoute.xcarchive \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CODE_SIGN_STYLE=Automatic \
+            GOOGLE_MAPS_API_KEY="${GOOGLE_MAPS_API_KEY:-}" \
+            "${AUTH[@]}"
+
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>${APPLE_TEAM_ID}</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>uploadSymbols</key><true/>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict></plist>
+          PLIST
+
+          # destination=upload sends the signed build straight to App Store Connect.
+          xcodebuild -exportArchive \
+            -archivePath build/ios/CanvasRoute.xcarchive \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath build/ios/export \
+            "${AUTH[@]}"
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### CanvasRoute iOS"
+            echo "- Entry: \`$ENTRY\` · version ${{ steps.cfg.outputs.build_name }} (${{ steps.cfg.outputs.build_number }})"
+            if [ "$WANT_UPLOAD" = "true" ] && [ "$HAS_SIGNING" = "true" ]; then
+              echo "- Uploaded to App Store Connect. It appears in TestFlight after Apple finishes processing, usually 5 to 15 minutes."
+            elif [ "$WANT_UPLOAD" = "true" ]; then
+              echo "- Built unsigned only: add the App Store Connect secrets to upload (docs/testflight.md)."
+            else
+              echo "- Compile check only (unsigned)."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove API key
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/asc"

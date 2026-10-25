@@ -74,6 +74,11 @@ Auth: anonymous session on first launch so Row Level Security works immediately;
 or Apple/Google identity keeps the same uid, so guest routes carry over. Community actions
 (reports, hosting, sharing) require a linked account.
 
+## TestFlight
+
+The demo build ships to TestFlight from GitHub Actions. One-time Apple setup and the per-build
+steps are in [`docs/testflight.md`](docs/testflight.md).
+
 ## Status
 
 Phases 0–3 of the spec are implemented in this codebase: Field Sales parity, Yard Sales mode,
