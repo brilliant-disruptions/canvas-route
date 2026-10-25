@@ -34,7 +34,7 @@ You do the Apple-side steps once. After that, every build is one click.
 5. **Find your Team ID.** developer.apple.com → Account → Membership details → Team ID
    (10 characters).
 
-6. **Add four repository secrets.** github.com/michaeljwilt/canvas-route → Settings →
+6. **Add four repository secrets.** github.com/brilliant-disruptions/canvas-route → Settings →
    Secrets and variables → Actions → **New repository secret**:
 
    | Name | Value |

@@ -30,8 +30,11 @@ DEFINES=""
 [ -f .env.json ] && DEFINES="--dart-define-from-file=.env.json"
 
 # Xcode Cloud numbers every build; TestFlight needs each upload to be unique.
+# --no-codesign: there are no signing certificates on the build machine at this
+# point (Xcode Cloud signs later, during the archive), and without the flag
+# Flutter stops with "No development certificates available".
 # shellcheck disable=SC2086
-flutter build ios --config-only --release -t "$ENTRY" $DEFINES --build-number "${CI_BUILD_NUMBER:-1}"
+flutter build ios --config-only --release --no-codesign -t "$ENTRY" $DEFINES --build-number "${CI_BUILD_NUMBER:-1}"
 
 # config-only normally runs pod install; make sure the Pods project exists either way.
 if [ ! -d ios/Pods ]; then
