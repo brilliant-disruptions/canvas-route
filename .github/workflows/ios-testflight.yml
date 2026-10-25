@@ -25,7 +25,7 @@ on:
         type: boolean
         default: true
   push:
-    branches: [spec-v3-modes-platform]
+    branches: [main, spec-v3-modes-platform]
     paths:
       - "ios/**"
       - "lib/**"
