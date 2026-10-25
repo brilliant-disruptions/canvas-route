@@ -71,6 +71,9 @@
 	<false/>
 	<key>GoogleMapsApiKey</key>
 	<string>$(GOOGLE_MAPS_API_KEY)</string>
+	<!-- Required because the location plugin links the "always" API (ITMS-90683); the app only ever asks for while-in-use. -->
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>CanvasRoute uses your location while the app is open to center the map and order your route. It never tracks you in the background.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>CanvasRoute centers the map on you and orders your route from where you are.</string>
 	<key>NSCameraUsageDescription</key>
