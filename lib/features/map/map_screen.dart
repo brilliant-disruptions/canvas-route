@@ -26,6 +26,7 @@ import '../../state/profile_state.dart';
 import '../../state/providers.dart';
 import '../../ui/widgets/kn_widgets.dart';
 import '../community/pin_sheet.dart';
+import '../tour/tour.dart';
 import 'business_sheet.dart';
 import 'draft_tray.dart';
 import 'manual_stop_sheet.dart';
@@ -284,6 +285,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
                   children: [
                     Expanded(
                       child: _GlassBar(
+                        key: TourKeys.search,
                         child: TextField(
                           controller: _search,
                           textInputAction: TextInputAction.search,
@@ -329,7 +331,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
                       ),
                     ),
                     const SizedBox(width: Sp.s2),
-                    const _GlassBar(child: ProfileButton()),
+                    _GlassBar(key: TourKeys.menu, child: const ProfileButton()),
                   ],
                 ),
               ),
@@ -408,6 +410,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
               ),
               const SizedBox(height: Sp.s3),
               Badge(
+                key: TourKeys.draft,
                 isLabelVisible: map.draftStops.isNotEmpty,
                 label: Text('${map.draftStops.length}'),
                 backgroundColor: c.primary,
@@ -431,7 +434,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
 }
 
 class _GlassBar extends StatelessWidget {
-  const _GlassBar({required this.child});
+  const _GlassBar({super.key, required this.child});
   final Widget child;
   @override
   Widget build(BuildContext context) => Container(
@@ -502,6 +505,7 @@ class _ModeChips extends ConsumerWidget {
       chips = [for (final s in pack.searchSuggestions) ActionChip(label: Text(s), onPressed: () => onSuggestion(s))];
     }
     return SizedBox(
+      key: TourKeys.filters,
       height: 40,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,

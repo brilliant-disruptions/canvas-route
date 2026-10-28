@@ -39,6 +39,11 @@ class LocalPrefs {
   bool get hasOnboarded => _bool('hasOnboarded') ?? false;
   Future<void> setHasOnboarded(bool v) => _put('hasOnboarded', v);
 
+  /// Seen the first-run spotlight tour (or skipped it). Per device: a new
+  /// phone gets shown round once.
+  bool get hasToured => _bool('hasToured') ?? false;
+  Future<void> setHasToured(bool v) => _put('hasToured', v);
+
   AppMode get cachedMode => AppMode.fromId(_str('activeMode'));
   Future<void> setCachedMode(AppMode m) => _put('activeMode', m.id);
 

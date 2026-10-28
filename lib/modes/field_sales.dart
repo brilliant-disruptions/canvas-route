@@ -59,6 +59,21 @@ const fieldSalesPack = ModePack(
       icon: Icons.fact_check_outlined,
     ),
   ],
+  tour: ModeTour(
+    search: TourCopy(
+      'Find businesses',
+      'Search any kind of business. Results land on the map around wherever you\'re looking.',
+    ),
+    filters: TourCopy('One-tap searches', 'Tap one to search the area on screen.'),
+    draft: TourCopy(
+      'Your draft route',
+      'Tap a pin to add it, or long-press the map to drop your own stop. Open Draft to put them in order and save.',
+    ),
+    routes: TourCopy(
+      'Saved routes',
+      'Start a route, pick up where you left off, or export what you logged.',
+    ),
+  ),
   emptyRoutesCopy: 'No routes yet — head to the map to start building.',
   visitVerb: 'Log Visit',
   stopNoun: 'stop',

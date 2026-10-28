@@ -49,4 +49,22 @@ void main() {
     expect(back.type, FieldType.number);
     expect(back.isCustom, isTrue);
   });
+
+  test('every pack words its own tour stops: short, sentence case, filled in', () {
+    for (final pack in modePacks.values) {
+      final t = pack.tour;
+      for (final c in [t.search, t.filters, t.draft, t.routes]) {
+        expect(c.title, isNotEmpty, reason: pack.label);
+        expect(c.title.length, lessThanOrEqualTo(28), reason: '${pack.label}: ${c.title}');
+        expect(c.title.endsWith('.'), isFalse, reason: '${pack.label}: ${c.title}');
+        expect(
+          c.title.split(' ').skip(1).any((w) => w.isNotEmpty && w[0] != w[0].toLowerCase() && w != 'Saturday'),
+          isFalse,
+          reason: '${pack.label}: "${c.title}" should be sentence case',
+        );
+        expect(c.body.length, lessThanOrEqualTo(130), reason: '${pack.label}: ${c.body}');
+      }
+    }
+    expect(packFor(AppMode.cardDrops).tour.filters.title, isNot(packFor(AppMode.yardSales).tour.filters.title));
+  });
 }

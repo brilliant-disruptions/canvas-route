@@ -73,6 +73,21 @@ const cardDropsPack = ModePack(
       icon: Icons.notifications_active_outlined,
     ),
   ],
+  tour: ModeTour(
+    search: TourCopy(
+      'Find stores',
+      'Search Target, Walmart or your local card shop. Stores the community reports on are already on the map.',
+    ),
+    filters: TourCopy('Filter by set', 'Pick a set to light up stores where someone just saw it on the shelf.'),
+    draft: TourCopy(
+      'Plan a card run',
+      'Tap a store to add it, or long-press the map to drop your own. Open Draft to order stops by restock window.',
+    ),
+    routes: TourCopy(
+      'Your card runs',
+      'Start a run and report the shelf at each store in two taps.',
+    ),
+  ),
   emptyRoutesCopy: 'No card runs yet — add your stores from the map.',
   visitVerb: 'Report Shelf',
   stopNoun: 'store',

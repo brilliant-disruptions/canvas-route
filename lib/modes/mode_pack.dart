@@ -26,6 +26,30 @@ class OnboardingPage {
   final IconData icon;
 }
 
+/// One caption on the first-run spotlight tour.
+class TourCopy {
+  const TourCopy(this.title, this.body);
+  final String title;
+  final String body;
+}
+
+/// The mode's own words for the map-screen tour stops that differ by mode.
+class ModeTour {
+  const ModeTour({required this.search, required this.filters, required this.draft, required this.routes});
+
+  /// The search bar.
+  final TourCopy search;
+
+  /// The chip row under the search bar (suggestions, days or product sets).
+  final TourCopy filters;
+
+  /// The Draft button.
+  final TourCopy draft;
+
+  /// The routes tab.
+  final TourCopy routes;
+}
+
 /// A vertical pack. Screens render from this; they never branch on [id].
 /// If a feature needs `if (mode == x)`, add a field here instead (spec §2.3).
 class ModePack {
@@ -50,6 +74,7 @@ class ModePack {
     required this.outcomeToReportStatus,
     required this.alerts,
     required this.onboarding,
+    required this.tour,
     required this.emptyRoutesCopy,
     required this.visitVerb,
     required this.stopNoun,
@@ -88,6 +113,9 @@ class ModePack {
   final Map<String, String> outcomeToReportStatus;
   final List<AlertKind> alerts;
   final List<OnboardingPage> onboarding;
+
+  /// Copy for the first-run spotlight tour.
+  final ModeTour tour;
   final String emptyRoutesCopy;
   final String visitVerb; // "Log Visit" / "Log Stop" / "Report Shelf"
   final String stopNoun; // "stop" / "sale" / "store"

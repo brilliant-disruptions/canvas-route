@@ -70,6 +70,12 @@ A **Mode** is a typed config object (`lib/modes/mode_pack.dart`). Screens render
 pack and never branch on mode id. Adding a vertical is a new pack file plus any new stop-source
 adapters it needs.
 
+First-run tour: after onboarding (and once for installs already past it) a five-stop spotlight tour
+lights up the search bar, the chip row, Draft, the routes tab and the menu, in the active mode's
+words (`ModePack.tour`). It's remembered per device in `LocalPrefs` (`hasToured`; Skip counts as
+seen) and replays from **Preferences → Show me around**. The overlay is
+`lib/ui/widgets/spotlight.dart`; the stops are in `lib/features/tour/tour.dart`.
+
 Auth: anonymous session on first launch so Row Level Security works immediately; linking an email
 or Apple/Google identity keeps the same uid, so guest routes carry over. Community actions
 (reports, hosting, sharing) require a linked account.

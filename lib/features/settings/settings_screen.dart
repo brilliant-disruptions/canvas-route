@@ -9,6 +9,7 @@ import '../../state/appearance_state.dart';
 import '../../state/auth_state.dart';
 import '../../state/profile_state.dart';
 import '../../state/providers.dart';
+import '../../state/tour_state.dart';
 import '../../ui/widgets/kn_widgets.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -31,6 +32,15 @@ class SettingsScreen extends ConsumerWidget {
           ListTile(leading: const Icon(Icons.person_outline), title: const Text('Profile'), trailing: const Icon(Icons.chevron_right), onTap: () => context.push('/settings/profile')),
           ListTile(leading: const Icon(Icons.credit_card), title: const Text('Account & plan'), trailing: const Icon(Icons.chevron_right), onTap: () => context.push('/settings/account')),
           ListTile(leading: const Icon(Icons.tune), title: Text('Outcomes, fields & export · ${pack.label}'), trailing: const Icon(Icons.chevron_right), onTap: () => context.push('/settings/advanced')),
+          ListTile(
+            leading: const Icon(Icons.tips_and_updates_outlined),
+            title: const Text('Show me around'),
+            subtitle: const Text('A quick tour of the map'),
+            onTap: () {
+              ref.read(tourRequestProvider.notifier).request();
+              context.go('/map');
+            },
+          ),
           const SectionHeader('Appearance'),
           SegmentedButton<ThemeMode>(
             segments: const [

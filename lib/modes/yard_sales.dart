@@ -65,6 +65,21 @@ const yardSalesPack = ModePack(
       icon: Icons.shopping_bag_outlined,
     ),
   ],
+  tour: ModeTour(
+    search: TourCopy(
+      'Find sales',
+      'Search estate sales and thrift stores. Sales posted by hosts and spotted by other hunters are already on the map.',
+    ),
+    filters: TourCopy('Pick the day', 'Show only the sales open Saturday, Sunday or next weekend.'),
+    draft: TourCopy(
+      'Plan Saturday morning',
+      'Tap a sale to add it, or long-press the map to drop one you spotted. Open Draft to put them in order by closing time.',
+    ),
+    routes: TourCopy(
+      'Saved routes',
+      'Run a route on the day and log the haul at each stop.',
+    ),
+  ),
   emptyRoutesCopy: 'No routes yet — pick this weekend\'s sales on the map.',
   visitVerb: 'Log Stop',
   stopNoun: 'sale',

@@ -4,29 +4,64 @@ import 'package:go_router/go_router.dart';
 
 import '../core/theme/kn_colors.dart';
 import '../core/theme/kn_theme.dart';
+import '../features/tour/tour.dart';
 import '../modes/mode_pack.dart';
 import '../state/auth_state.dart';
 import '../state/profile_state.dart';
+import '../state/providers.dart';
+import '../state/tour_state.dart';
 
-/// Bottom tabs + the profile drawer reachable from every tab.
-class AppShell extends ConsumerWidget {
+/// Bottom tabs + the profile drawer reachable from every tab. Also where the
+/// first-run tour starts, and where Preferences asks to replay it.
+class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key, required this.child});
   final Widget child;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends ConsumerState<AppShell> {
+  bool _touring = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final firstTime = ref.read(localPrefsProvider).hasOnboarded && !ref.read(touredProvider);
+      if (firstTime || ref.read(tourRequestProvider)) _tour();
+    });
+  }
+
+  Future<void> _tour() async {
+    if (_touring) return;
+    _touring = true;
+    try {
+      await startTour(context, ref);
+    } finally {
+      _touring = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.listen(tourRequestProvider, (_, asked) {
+      if (asked) _tour();
+    });
     final loc = GoRouterState.of(context).matchedLocation;
     final index = loc.startsWith('/routes') ? 1 : 0;
     final pack = ref.watch(modePackProvider);
     return Scaffold(
       endDrawer: const ProfileDrawer(),
-      body: child,
+      body: widget.child,
       bottomNavigationBar: NavigationBar(
         selectedIndex: index,
         onDestinationSelected: (i) => context.go(i == 0 ? '/map' : '/routes'),
         destinations: [
           const NavigationDestination(icon: Icon(Icons.map_outlined), selectedIcon: Icon(Icons.map), label: 'Map'),
           NavigationDestination(
+            key: TourKeys.routesTab,
             icon: const Icon(Icons.alt_route_outlined),
             selectedIcon: const Icon(Icons.alt_route),
             label: pack.id.name == 'cardDrops' ? 'Runs' : 'Routes',
