@@ -25,6 +25,7 @@ import '../../data/services/listing_link.dart';
 import '../../modes/mode_pack.dart';
 import '../../state/auth_state.dart';
 import '../../state/community_state.dart';
+import '../../state/demand_state.dart';
 import '../../state/follow_ups_state.dart';
 import '../../state/location_state.dart';
 import '../../state/map_state.dart';
@@ -34,6 +35,7 @@ import '../../ui/map/pin_icons.dart';
 import '../../ui/widgets/kn_widgets.dart';
 import '../community/pin_sheet.dart';
 import 'business_sheet.dart';
+import 'cold_start_card.dart';
 import 'draft_tray.dart';
 import 'manual_stop_sheet.dart';
 import 'spotlight_deck.dart';
@@ -390,7 +392,8 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
       lng: double.parse((_center?.longitude ?? center.lng).toStringAsFixed(2)),
       radiusMi: 20.0,
     );
-    final pins = pack.communityPins ? (ref.watch(nearbyPinsProvider(key)).value ?? const <Pin>[]) : const <Pin>[];
+    final nearby = pack.communityPins ? ref.watch(nearbyPinsProvider(key)) : null;
+    final pins = nearby?.value ?? const <Pin>[];
     final visiblePins = pins.where((p) {
       if (!matchesHunt(p.categories, map.huntFilter, wildcard: pack.pinCategoryWildcard)) return false;
       if (map.selectedDay == null || p.opensAt == null) return true;
@@ -414,7 +417,17 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
     final spots = _spotEntries(pack: pack, map: map, pins: visiblePins, latest: latest, summaries: summaries);
     final listView = map.viewMode == MapViewMode.list;
     final showDeck = spots.isNotEmpty;
+    // Nothing listed anywhere near: say so, count the user in, and offer the ways
+    // to change it, instead of an empty map.
+    final coldStart =
+        pack.waitlistLabel != null &&
+        (nearby?.hasValue ?? false) &&
+        pins.isEmpty &&
+        map.viewMode == MapViewMode.map &&
+        map.query.isEmpty &&
+        map.draftStops.isEmpty;
     final showQuickStart =
+        !coldStart &&
         map.viewMode == MapViewMode.map &&
         spots.isEmpty &&
         map.query.isEmpty &&
@@ -536,7 +549,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
             if (mounted) setState(() => _center = mid);
           },
           onLongPress: pack.hasSource(StopSourceId.manual) ? _onLongPress : null,
-          padding: EdgeInsets.only(top: 140, bottom: (showDeck || showQuickStart) && !listView ? 200 : 24),
+          padding: EdgeInsets.only(top: 140, bottom: coldStart ? 300 : (showDeck || showQuickStart) && !listView ? 200 : 24),
         ),
         // List view sits on the page, not over the map's pins.
         if (listView) Positioned.fill(child: ColoredBox(color: c.surface)),
@@ -691,7 +704,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              if (!listView && pack.spotLabel != null) ...[
+              if (!listView && !coldStart && pack.spotLabel != null) ...[
                 Padding(
                   padding: const EdgeInsets.only(right: Sp.s4),
                   child: FloatingActionButton.extended(
@@ -735,6 +748,13 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
                   showTip: !listView && !ref.read(localPrefsProvider).hasSeenPlanTip,
                   onDismissTip: _dismissPlanTip,
                   showCards: !listView,
+                )
+              else if (coldStart)
+                ColdStartCard(
+                  pack: pack,
+                  area: demandKey(pack.id, key.lat, key.lng),
+                  onSpot: _spotHere,
+                  onBrowse: (lat, lng) => _map?.animateCamera(CameraUpdate.newLatLngZoom(LatLng(lat, lng), 12)),
                 )
               else if (showQuickStart)
                 QuickStartDeck(

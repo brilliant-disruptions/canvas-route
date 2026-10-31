@@ -18,7 +18,7 @@ import 'state/providers.dart';
 ///   flutter build web -t lib/main_demo.dart --no-web-resources-cdn
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  GoogleMapsFlutterPlatform.instance = DemoMapsPlatform(myLocation: LatLng(DemoDb.home.lat, DemoDb.home.lng));
+  GoogleMapsFlutterPlatform.instance = DemoMapsPlatform(myLocation: LatLng(DemoDb.user.lat, DemoDb.user.lng));
   final prefs = LocalPrefs.memory(); // fresh onboarding on every load
   final db = DemoDb.seeded();
   final storage = DemoStorageService();
@@ -42,6 +42,7 @@ Future<void> main() async {
       shareRepoProvider.overrideWithValue(DemoShareRepository(db)),
       tripRepoProvider.overrideWithValue(DemoTripRepository(db)),
       teamRepoProvider.overrideWithValue(DemoTeamRepository(db)),
+      demandRepoProvider.overrideWithValue(DemoDemandRepository(db)),
       placesServiceProvider.overrideWithValue(DemoPlacesService()),
       directionsServiceProvider.overrideWithValue(DemoDirectionsService()),
       locationServiceProvider.overrideWithValue(DemoLocationService()),

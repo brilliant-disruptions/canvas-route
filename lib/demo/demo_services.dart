@@ -135,7 +135,7 @@ class DemoLocationService implements LocationService {
   @override
   Future<bool> ensurePermission() async => true;
   @override
-  Future<Waypoint?> current() async => DemoDb.home;
+  Future<Waypoint?> current() async => DemoDb.user;
 }
 
 /// Photos stay in the browser for the session; the picked file's blob URL is the path.

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/repositories/alert_repository.dart';
 import '../data/repositories/auth_repository.dart';
+import '../data/repositories/demand_repository.dart';
 import '../data/repositories/feature_request_repository.dart';
 import '../data/repositories/pin_repository.dart';
 import '../data/repositories/product_repository.dart';
@@ -49,3 +50,4 @@ final alertRepoProvider = Provider((_) => AlertRepository());
 final shareRepoProvider = Provider((_) => ShareRepository());
 final tripRepoProvider = Provider((_) => TripRepository());
 final teamRepoProvider = Provider((_) => TeamRepository());
+final demandRepoProvider = Provider((_) => DemandRepository());

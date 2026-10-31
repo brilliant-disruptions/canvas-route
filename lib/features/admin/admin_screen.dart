@@ -8,6 +8,7 @@ import '../../core/theme/kn_theme.dart';
 import '../../data/models/feature_request.dart';
 import '../../data/models/pin.dart';
 import '../../state/community_state.dart';
+import '../../state/demand_state.dart';
 import '../../state/feature_requests_state.dart';
 import '../../state/profile_state.dart';
 import '../../state/providers.dart';
@@ -24,7 +25,7 @@ class AdminScreen extends ConsumerWidget {
       return const Scaffold(body: EmptyState(icon: Icons.lock_outline, title: 'Admins only'));
     }
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Scaffold(
         appBar: AppBar(
           title: Row(
@@ -39,10 +40,11 @@ class AdminScreen extends ConsumerWidget {
               Tab(text: 'Requests'),
               Tab(text: 'Pins'),
               Tab(text: 'Products'),
+              Tab(text: 'Demand'),
             ],
           ),
         ),
-        body: const TabBarView(children: [_Requests(), _Pins(), _Products()]),
+        body: const TabBarView(children: [_Requests(), _Pins(), _Products(), _Demand()]),
       ),
     );
   }
@@ -235,6 +237,49 @@ class _Products extends ConsumerWidget {
           },
         );
       },
+    );
+  }
+}
+
+/// Where people are waiting for listings: the busiest areas first, with how much
+/// is live there. Many waiting and nothing live is where to recruit hosts next.
+class _Demand extends ConsumerWidget {
+  const _Demand();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.kn;
+    final t = Theme.of(context).textTheme;
+    final pack = ref.watch(modePackProvider);
+    final cells = ref.watch(demandCellsProvider(pack.id));
+    return AsyncView(
+      value: cells,
+      onRetry: () => ref.invalidate(demandCellsProvider(pack.id)),
+      data: (list) => list.isEmpty
+          ? EmptyState(icon: Icons.front_hand_outlined, title: 'No one waiting yet', body: 'People who tap "${pack.waitlistLabel ?? 'I\'m hunting here'}" in an empty area show up here.')
+          : ListView.separated(
+              padding: const EdgeInsets.all(Sp.s4),
+              itemCount: list.length,
+              separatorBuilder: (_, _) => const GhostDivider(),
+              itemBuilder: (_, i) {
+                final d = list[i];
+                final launch = d.liveSales == 0 && d.hunters >= 10;
+                return ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: CircleAvatar(
+                    backgroundColor: launch ? c.tertiary : c.surfaceHighest,
+                    child: Text('${d.hunters}', style: t.labelLarge?.copyWith(color: launch ? c.onTertiary : c.onSurface)),
+                  ),
+                  title: Text('${d.lat.toStringAsFixed(1)}, ${d.lng.toStringAsFixed(1)}'),
+                  subtitle: Text([
+                    '${d.hunters} ${pack.communityNoun} waiting',
+                    '${d.liveSales} live',
+                    if (d.newest != null) 'latest ${DateFormat.MMMd().format(d.newest!)}',
+                  ].join(' · ')),
+                  trailing: launch ? KnBadge('RECRUIT HOSTS', color: c.tertiary, onColor: c.onTertiary) : null,
+                );
+              },
+            ),
     );
   }
 }

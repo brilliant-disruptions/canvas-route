@@ -79,6 +79,7 @@ class ModePack {
     this.webBilling = false,
     this.crmExport = false,
     this.teamPlan = false,
+    this.waitlistLabel,
     this.proLabel = 'Pro',
     this.proPrice = '',
     this.proPitch = '',
@@ -185,6 +186,11 @@ class ModePack {
   /// Teams: a manager's activity view, a join code for reps, and teammates'
   /// recent outcomes on business sheets. Creating a team needs the Team plan.
   final bool teamPlan;
+
+  /// When set, an area with no listings shows a "not here yet" card whose main
+  /// button (this label, e.g. "I'm hunting here") counts the user as waiting, and
+  /// hosts see how many are waiting near them.
+  final String? waitlistLabel;
 
   /// Store product for the Team plan, billed per seat on the web.
   static const teamProductId = 'canvasroute_team_monthly';

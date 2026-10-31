@@ -1,6 +1,7 @@
 import 'package:cross_file/cross_file.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show AuthState, OAuthProvider, User;
 
+import '../core/logic/geo.dart';
 import '../core/logic/restock.dart';
 import '../data/models/alert_item.dart';
 import '../data/models/app_mode.dart';
@@ -21,6 +22,7 @@ import '../data/models/store_summary.dart';
 import '../data/models/visit.dart';
 import '../data/repositories/alert_repository.dart';
 import '../data/repositories/auth_repository.dart';
+import '../data/repositories/demand_repository.dart';
 import '../data/repositories/feature_request_repository.dart';
 import '../data/repositories/pin_repository.dart';
 import '../data/repositories/product_repository.dart';
@@ -302,6 +304,8 @@ class DemoPinRepository implements PinRepository {
     final rows = db.pins.values.where((p) => p['mode'] == mode.id && p['status'] == 'live').toList();
     final now = DateTime.now();
     rows.removeWhere((p) => p['closes_at'] != null && DateTime.parse(p['closes_at'] as String).isBefore(now));
+    // Same radius filter as the nearby_pins RPC.
+    rows.removeWhere((p) => haversineMeters(lat, lng, (p['lat'] as num).toDouble(), (p['lng'] as num).toDouble()) > radiusMi * 1609.344);
     return rows.map(_pin).toList();
   });
 
@@ -836,4 +840,44 @@ class DemoTeamRepository implements TeamRepository {
 
   @override
   Future<void> remove(String userId) => _later(() {});
+}
+
+/// Demand in the demo: a few dozen hunters already waiting, and the demo's own
+/// sales as the nearest live area (so "away" builds can browse back to Dallas).
+class DemoDemandRepository implements DemandRepository {
+  DemoDemandRepository(this.db);
+  final DemoDb db;
+  final _mine = <String>{};
+  static String _cell(AppMode m, double lat, double lng) => '${m.id}:${lat.toStringAsFixed(1)},${lng.toStringAsFixed(1)}';
+
+  @override
+  Future<int> register(AppMode mode, double lat, double lng) => _later(() {
+    _mine.add(_cell(mode, lat, lng));
+    return 37 + _mine.length;
+  });
+
+  @override
+  Future<int> waiting(AppMode mode, double lat, double lng) => _later(() => 37 + _mine.length);
+
+  @override
+  Future<bool> mine(AppMode mode, double lat, double lng) => _later(() => _mine.contains(_cell(mode, lat, lng)));
+
+  @override
+  Future<NearestLive?> nearestLive(AppMode mode, double lat, double lng) => _later(() {
+    NearestLive? best;
+    for (final p in db.pins.values.where((p) => p['mode'] == mode.id && p['status'] == 'live')) {
+      final pl = (p['lat'] as num).toDouble(), pg = (p['lng'] as num).toDouble();
+      final miles = haversineMeters(lat, lng, pl, pg) / 1609.344;
+      if (best == null || miles < best.miles) best = NearestLive(lat: pl, lng: pg, miles: miles, address: p['address'] as String?);
+    }
+    return best;
+  });
+
+  @override
+  Future<List<DemandCell>> cells(AppMode mode) => _later(() => [
+        DemandCell(lat: 36.2, lng: -96.0, hunters: 41, liveSales: 0, newest: DateTime.now().subtract(const Duration(hours: 2))),
+        DemandCell(lat: 30.3, lng: -97.7, hunters: 26, liveSales: 1, newest: DateTime.now().subtract(const Duration(hours: 9))),
+        DemandCell(lat: 32.8, lng: -96.8, hunters: 19, liveSales: 11, newest: DateTime.now().subtract(const Duration(days: 1))),
+        DemandCell(lat: 35.5, lng: -97.5, hunters: 12, liveSales: 0, newest: DateTime.now().subtract(const Duration(days: 3))),
+      ]);
 }

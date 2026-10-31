@@ -11,9 +11,12 @@ import '../../core/env.dart';
 import '../../core/theme/kn_colors.dart';
 import '../../core/theme/kn_theme.dart';
 import '../../data/models/pin.dart';
+import '../../modes/mode_pack.dart';
 import '../../data/services/storage_service.dart';
 import '../../state/auth_state.dart';
 import '../../state/community_state.dart';
+import '../../state/demand_state.dart';
+import '../../state/location_state.dart';
 import '../../state/profile_state.dart';
 import '../../state/providers.dart';
 import '../../ui/widgets/kn_widgets.dart';
@@ -104,6 +107,8 @@ class _HostSaleScreenState extends ConsumerState<HostSaleScreen> {
       body: ListView(
         padding: const EdgeInsets.all(Sp.s4),
         children: [
+          // Supply meets demand: hosts see that people near them are looking.
+          if (pack.waitlistLabel != null) _WaitingBanner(pack: pack),
           TextField(
             controller: _name,
             decoration: const InputDecoration(labelText: 'Sale name', hintText: 'Multi-family yard sale'),
@@ -275,4 +280,44 @@ Future<void> showShareSaleSheet(BuildContext context, Pin pin) {
       );
     },
   );
+}
+
+/// "38 hunters near you are waiting for sales." Only shown once there's a crowd.
+class _WaitingBanner extends ConsumerWidget {
+  const _WaitingBanner({required this.pack});
+  final ModePack pack;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.kn;
+    final t = Theme.of(context).textTheme;
+    final at = ref.watch(mapCenterProvider); // GPS, else home, else office
+    final n = ref.watch(huntersWaitingProvider(demandKey(pack.id, at.lat, at.lng))).value ?? 0;
+    if (n < 3) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: Sp.s4),
+      child: KnCard(
+        tier: 3,
+        accent: c.tertiary,
+        child: Row(
+          children: [
+            Icon(Icons.groups_2_outlined, color: c.tertiary, size: 32),
+            const SizedBox(width: Sp.s3),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('$n ${pack.communityNoun} near you are waiting', style: t.titleMedium),
+                  Text(
+                    'Your ${pack.stopNoun} lands on their map the moment you publish. Free, always.',
+                    style: t.bodySmall?.copyWith(color: c.onSurfaceVariant),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

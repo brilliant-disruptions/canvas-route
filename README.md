@@ -159,6 +159,14 @@ scoped to the caller's team:
 
 Members of a team whose owner holds the Team plan get Pro. Seat counts aren't enforced yet.
 
+Migration `020` adds the demand loop:
+- In an area with no listings, the map shows a "not here yet" card. "I'm hunting here" counts the
+  user as waiting, stored only as a ~7-mile grid cell.
+- Hosts see "N hunters near you are waiting".
+- Admin → **Demand** ranks areas by hunters waiting against live sales, to show where to recruit
+  hosts next.
+- Build the demo with `--dart-define=DEMO_AWAY=true` to see the empty-area state from Tulsa.
+
 Follow-up reminders are local notifications (`flutter_local_notifications`). Android enables
 core library desugaring plus the plugin's scheduling receivers; iOS asks for permission the first
 time a reminder is scheduled. **Check both on a device**: this repo's CI has no Android or iOS

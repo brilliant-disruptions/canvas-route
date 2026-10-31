@@ -212,4 +212,32 @@ do $$ begin
 end $$;
 reset role;
 
+-- ── demand: coarse cells, aggregate counts, admin-only map ──
+select pg_temp.act('00000000-0000-0000-0000-00000000000a');
+set role authenticated;
+do $$ begin
+  if register_hunt_interest('yard_sales', 36.1539, -95.9928) <> 1 then raise exception 'FAIL: first hunter not counted'; end if;
+  if register_hunt_interest('yard_sales', 36.1540, -95.9930) <> 1 then raise exception 'FAIL: same hunter counted twice'; end if;
+  if not my_hunt_interest('yard_sales', 36.15, -95.99) then raise exception 'FAIL: own interest not found'; end if;
+  if exists (select 1 from demand_by_cell('yard_sales')) then raise exception 'FAIL: non-admin read the demand map'; end if;
+  if exists (select 1 from hunt_interest) then raise exception 'FAIL: raw interest rows readable'; end if;
+end $$;
+reset role;
+select pg_temp.act('00000000-0000-0000-0000-00000000000b');
+set role authenticated;
+do $$ begin
+  -- A neighbouring cell (about 7 miles away) still counts toward the same area.
+  if register_hunt_interest('yard_sales', 36.24, -95.99) <> 2 then raise exception 'FAIL: neighbour cell not aggregated'; end if;
+  if hunters_waiting('yard_sales', 37.5, -95.99) <> 0 then raise exception 'FAIL: far-away area counted'; end if;
+end $$;
+reset role;
+do $$ begin
+  if exists (select 1 from hunt_interest where cell_lat <> round(cell_lat, 1)) then raise exception 'FAIL: precise location stored'; end if;
+end $$;
+set role anon;
+do $$ begin
+  if not pg_temp.fails('select hunters_waiting(''yard_sales'', 36.15, -95.99)') then raise exception 'FAIL: anon read demand'; end if;
+end $$;
+reset role;
+
 \echo 'security tests passed'

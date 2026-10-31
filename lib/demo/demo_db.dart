@@ -12,6 +12,11 @@ class DemoDb {
   static const userId = 'demo-user';
   static const home = Waypoint(32.8140, -96.7900); // Dallas, between Uptown and Lakewood
 
+  /// `--dart-define=DEMO_AWAY=true` puts the demo user in Tulsa, outside the
+  /// seeded area, to show what a city with no listings yet looks like.
+  static const away = bool.fromEnvironment('DEMO_AWAY');
+  static const user = away ? Waypoint(36.1540, -95.9928) : home;
+
   final profiles = <String, Map<String, dynamic>>{};
   final settings = <String, Map<String, dynamic>>{};
   final routes = <String, Map<String, dynamic>>{};
