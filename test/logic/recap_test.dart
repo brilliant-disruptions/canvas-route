@@ -29,6 +29,12 @@ void main() {
     expect(r.wins, 1);
   });
 
+  test('countLines counts non-blank lines', () {
+    expect(countLines('Lounge chair\nCast iron skillet\n\n  '), 2);
+    expect(countLines(null), 0);
+    expect(countLines(3), 0);
+  });
+
   test('countNoun pluralizes', () {
     expect(countNoun(1, 'find'), '1 find');
     expect(countNoun(0, 'lead'), '0 leads');

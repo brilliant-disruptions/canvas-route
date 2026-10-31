@@ -108,7 +108,7 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
     if (route == null) return const Scaffold(body: LoadingView());
 
     return KnScaffold(
-      title: route.allVisited ? 'Run complete' : 'Summary',
+      title: route.allVisited ? '${pack.routesTab.substring(0, pack.routesTab.length - 1)} complete' : 'Summary',
       body: AsyncView(
         value: visits,
         data: (list) {
@@ -130,6 +130,10 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
                 list.fold<double>(0, (s, v) => s + ((v.customFields[key] as num?)?.toDouble() ?? 0)),
               ),
           };
+          final counted = pack.summaryCountField;
+          final itemCount = counted == null
+              ? 0
+              : list.fold<int>(0, (s, v) => s + countLines(v.customFields[counted.key]));
 
           // Celebrate a run finished just now, not every reopen of an old summary.
           final lastVisit = list
@@ -158,7 +162,13 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
                       child: FittedBox(
                         child: RepaintBoundary(
                           key: _cardKey,
-                          child: RecapCard(pack: pack, routeName: route.name, recap: recap, totals: totals),
+                          child: RecapCard(
+                            pack: pack,
+                            routeName: route.name,
+                            recap: recap,
+                            totals: totals,
+                            extra: itemCount == 0 ? null : countNoun(itemCount, counted!.noun),
+                          ),
                         ),
                       ),
                     ),

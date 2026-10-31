@@ -67,3 +67,6 @@ List<({double x, double y})> fitPoints(List<({double lat, double lng})> pts, dou
   final ox = pad + (iw - spanLng * scale) / 2, oy = pad + (ih - spanLat * scale) / 2;
   return [for (final p in pts) (x: ox + (p.lng - minLng) * scale, y: oy + (maxLat - p.lat) * scale)];
 }
+
+/// Items in a one-per-line field ("Items bought"), ignoring blank lines.
+int countLines(Object? text) => text is String ? text.split('\n').where((l) => l.trim().isNotEmpty).length : 0;

@@ -100,6 +100,7 @@ const yardSalesPack = ModePack(
     ProPerk(Icons.group_outlined, 'Share routes with your crew'),
   ],
   summaryTotals: ['spent'],
+  summaryCountField: (key: 'items', noun: 'item'),
   supportsHosting: true,
   hostSignHeadline: 'YARD SALE',
   spotLabel: 'Share it with nearby hunters',

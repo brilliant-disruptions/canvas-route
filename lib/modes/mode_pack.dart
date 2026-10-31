@@ -85,6 +85,7 @@ class ModePack {
     this.saveVisitLabel = 'Save visit',
     this.spotLabel,
     this.pinCategoryWildcard,
+    this.summaryCountField,
     this.photoHint,
     this.productCatalog = false,
   });
@@ -189,6 +190,9 @@ class ModePack {
 
   /// The category that matches any hunt filter, e.g. "Everything".
   final String? pinCategoryWildcard;
+
+  /// A one-per-line visit field whose lines the recap counts, e.g. items bought.
+  final ({String key, String noun})? summaryCountField;
 
   /// Shown under the visit photo picker when photos are shared with the community.
   final String? photoHint;
