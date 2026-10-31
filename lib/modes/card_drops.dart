@@ -94,5 +94,12 @@ const cardDropsPack = ModePack(
   freeRouteLimit: 1,
   proProductId: 'canvasroute_drop_alerts_pro',
   proLabel: 'Drop Alerts Pro',
+  proPrice: '\$4.99 / mo',
+  proPitch: 'Never miss a restock',
+  proPerks: [
+    ProPerk(Icons.all_inclusive, 'Unlimited card runs'),
+    ProPerk(Icons.notifications_active_outlined, 'Alerts for unlimited products, up to 50 mi'),
+    ProPerk(Icons.calendar_month_outlined, 'Restock calendar for your stores'),
+  ],
   productCatalog: true,
 );

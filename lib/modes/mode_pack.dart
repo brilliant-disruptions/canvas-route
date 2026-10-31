@@ -19,6 +19,12 @@ class ReportStatusOption {
   final bool positive;
 }
 
+class ProPerk {
+  const ProPerk(this.icon, this.label);
+  final IconData icon;
+  final String label;
+}
+
 class OnboardingPage {
   const OnboardingPage({required this.headline, required this.subtext, required this.icon});
   final String headline;
@@ -67,6 +73,9 @@ class ModePack {
     this.freeRouteLimit,
     this.proProductId,
     this.proLabel = 'Pro',
+    this.proPrice = '',
+    this.proPitch = '',
+    this.proPerks = const [],
     this.summaryTotals = const [],
     this.supportsHosting = false,
     this.productCatalog = false,
@@ -135,6 +144,16 @@ class ModePack {
   final int? freeRouteLimit;
   final String? proProductId;
   final String proLabel;
+
+  /// Display price, e.g. "\$4.99 / mo".
+  final String proPrice;
+
+  /// Paywall headline, e.g. "Never miss a restock".
+  final String proPitch;
+  final List<ProPerk> proPerks;
+
+  /// Saving one more route would pass the free limit.
+  bool atRouteLimit(int saved, {required bool paying}) => !paying && freeRouteLimit != null && saved >= freeRouteLimit!;
 
   /// Custom-field keys summed on the Route Summary (e.g. "spent").
   final List<String> summaryTotals;

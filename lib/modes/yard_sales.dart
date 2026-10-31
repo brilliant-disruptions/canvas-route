@@ -86,6 +86,13 @@ const yardSalesPack = ModePack(
   freeRouteLimit: 1,
   proProductId: 'canvasroute_season_pass',
   proLabel: 'Season Pass',
+  proPrice: '\$9.99 / yr',
+  proPitch: 'Every Saturday, planned',
+  proPerks: [
+    ProPerk(Icons.all_inclusive, 'Unlimited saved routes'),
+    ProPerk(Icons.receipt_long_outlined, 'Haul export for taxes'),
+    ProPerk(Icons.group_outlined, 'Share routes with your crew'),
+  ],
   summaryTotals: ['spent'],
   supportsHosting: true,
 );

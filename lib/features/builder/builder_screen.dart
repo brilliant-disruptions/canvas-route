@@ -22,6 +22,7 @@ import '../../state/routes_state.dart';
 import '../../ui/map/pin_icons.dart';
 import '../../ui/widgets/kn_widgets.dart';
 import '../map/manual_stop_sheet.dart';
+import '../settings/paywall_sheet.dart';
 
 enum _Order { preserve, optimize }
 
@@ -168,6 +169,14 @@ class _BuilderScreenState extends ConsumerState<BuilderScreen> with PinIconsMixi
   Future<void> _save() async {
     final map = ref.read(mapProvider);
     if (map.draftStops.isEmpty) return;
+    // Gate at the moment of value: the run is built and its ETAs are on screen.
+    final pack = ref.read(modePackProvider);
+    final saved = (await ref.read(routesProvider.future)).length; // may not be loaded yet
+    if (!mounted) return;
+    if (map.editingRouteId == null && pack.atRouteLimit(saved, paying: ref.read(isPayingProvider))) {
+      await showPaywall(context, pack, reason: freeLimitReason(pack));
+      return;
+    }
     final name = _name.text.trim().isEmpty ? _autoName() : _name.text.trim();
     setState(() => _busy = true);
     try {

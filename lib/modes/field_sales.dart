@@ -78,4 +78,11 @@ const fieldSalesPack = ModePack(
   routesTitle: 'Saved routes',
   proProductId: 'canvasroute_pro_monthly',
   proLabel: 'Pro',
+  proPrice: '\$19 / rep / mo',
+  proPitch: 'Route your whole territory',
+  proPerks: [
+    ProPerk(Icons.all_inclusive, 'Unlimited routes'),
+    ProPerk(Icons.tune, 'Custom fields and exports'),
+    ProPerk(Icons.lightbulb_outline, 'Feature request submissions'),
+  ],
 );

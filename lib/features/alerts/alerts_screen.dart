@@ -52,7 +52,7 @@ class AlertsScreen extends ConsumerWidget {
                 label: const Text('Follow a product'),
                 onPressed: () async {
                   if (!paying && follows.isNotEmpty) {
-                    await showPaywall(context, pack);
+                    await showPaywall(context, pack, reason: 'Free follows 1 product. Follow every set you collect.');
                     return;
                   }
                   final id = await showKnSheet<String>(

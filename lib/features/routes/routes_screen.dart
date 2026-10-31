@@ -27,8 +27,8 @@ class RoutesScreen extends ConsumerWidget {
 
     Future<void> newRoute() async {
       final count = routes.value?.length ?? 0;
-      if (pack.freeRouteLimit != null && !paying && count >= pack.freeRouteLimit!) {
-        await showPaywall(context, pack);
+      if (pack.atRouteLimit(count, paying: paying)) {
+        await showPaywall(context, pack, reason: freeLimitReason(pack));
         return;
       }
       ref.read(mapProvider.notifier).clearEditing();
