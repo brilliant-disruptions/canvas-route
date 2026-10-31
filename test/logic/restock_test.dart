@@ -32,4 +32,24 @@ void main() {
     expect(relativeAge(now.subtract(const Duration(hours: 3)), now: now), '3h ago');
     expect(relativeAge(now.subtract(const Duration(days: 2)), now: now), '2d ago');
   });
+
+  group('nextLikelyWindow', () {
+    final sat9 = DateTime(2026, 10, 31, 9); // Saturday
+    test('picks the soonest window, including one in progress', () {
+      final w = nextLikelyWindow([(dow: 2, hour: 8, hits: 9), (dow: 6, hour: 8, hits: 3)], sat9);
+      expect(w!.start, DateTime(2026, 10, 31, 8)); // Sat 8–10am is still open at 9
+      expect(untilLabel(w.start, sat9), 'now');
+    });
+    test('rolls to next week once today\'s window has passed', () {
+      final w = nextLikelyWindow([(dow: 6, hour: 6, hits: 3)], sat9);
+      expect(w!.start, DateTime(2026, 11, 7, 6));
+      expect(untilLabel(w.start, sat9), 'in 7 days');
+    });
+    test('labels', () {
+      expect(untilLabel(sat9.add(const Duration(minutes: 45)), sat9), 'in 45 min');
+      expect(untilLabel(sat9.add(const Duration(hours: 5)), sat9), 'in 5h');
+      expect(untilLabel(DateTime(2026, 11, 1, 8), sat9), 'tomorrow');
+      expect(nextLikelyWindow(const [], sat9), isNull);
+    });
+  });
 }

@@ -18,6 +18,7 @@ import '../../state/profile_state.dart';
 import '../../state/providers.dart';
 import '../../ui/widgets/kn_widgets.dart';
 import 'report_sheet.dart';
+import 'restock_rhythm.dart';
 
 Future<void> showPinSheet(BuildContext context, Pin pin) => showKnSheet(context, builder: (_) => PinSheet(pin: pin));
 
@@ -74,7 +75,10 @@ class PinSheet extends ConsumerWidget {
             for (final cat in pin.categories) KnBadge(cat, color: c.surfaceHighest, onColor: c.onSurface),
             if (summary != null) _TierBadge(summary.tier),
           ]),
-          if (summary != null && summary.bestWindowLabel != null) ...[
+          if (summary != null && summary.dayHits.any((h) => h > 0)) ...[
+            const SizedBox(height: Sp.s3),
+            RestockRhythm(summary: summary),
+          ] else if (summary != null && summary.bestWindowLabel != null) ...[
             const SizedBox(height: Sp.s3),
             KnCard(
               tier: 3,

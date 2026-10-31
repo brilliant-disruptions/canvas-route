@@ -9,6 +9,7 @@ class StoreSummary {
     required this.bestWindows,
     required this.recent,
     this.lastSeen,
+    this.dayHits = const [],
   });
 
   final int totalHits;
@@ -17,6 +18,9 @@ class StoreSummary {
   final RestockTier tier;
   final List<({int dow, int hour, int hits})> bestWindows;
   final List<Map<String, dynamic>> recent;
+
+  /// Positive reports per weekday, Sun = 0. Empty from servers before migration 010.
+  final List<int> dayHits;
 
   static const empty = StoreSummary(totalHits: 0, totalReports: 0, tier: RestockTier.unknown, bestWindows: [], recent: []);
 
@@ -34,6 +38,7 @@ class StoreSummary {
       bestWindows: ((j['best_windows'] as List?) ?? const [])
           .map((w) => (dow: (w['dow'] as num).toInt(), hour: (w['hour'] as num).toInt(), hits: (w['hits'] as num).toInt()))
           .toList(),
+      dayHits: ((j['day_hits'] as List?) ?? const []).map((e) => (e as num).toInt()).toList(),
       recent: ((j['recent'] as List?) ?? const []).map((e) => Map<String, dynamic>.from(e as Map)).toList(),
     );
   }

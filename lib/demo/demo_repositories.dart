@@ -414,6 +414,7 @@ class DemoReportRepository implements ReportRepository {
     final rows = _forPin(pinId).where((r) =>
         DateTime.parse(r['created_at'] as String).isAfter(cutoff) && (r['trust_at_filing'] as int? ?? 50) >= 30);
     final buckets = <(int, int), int>{};
+    final days = List.filled(7, 0);
     var hits = 0;
     DateTime? lastSeen;
     for (final r in rows) {
@@ -423,6 +424,7 @@ class DemoReportRepository implements ReportRepository {
       hits++;
       final k = (t.weekday % 7, t.hour);
       buckets[k] = (buckets[k] ?? 0) + 1;
+      days[t.weekday % 7]++;
     }
     final best = buckets.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
     return StoreSummary(
@@ -431,6 +433,7 @@ class DemoReportRepository implements ReportRepository {
       lastSeen: lastSeen,
       tier: tierForHits(hits),
       bestWindows: [for (final e in best.take(3)) (dow: e.key.$1, hour: e.key.$2, hits: e.value)],
+      dayHits: days,
       recent: const [],
     );
   }
