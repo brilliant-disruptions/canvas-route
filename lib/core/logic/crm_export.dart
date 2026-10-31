@@ -87,8 +87,10 @@ String buildCrmCsv(CrmFormat f, List<CrmLead> leads) {
     ].join(' · ');
     rows.add(CsvRow({
       'company': l.company,
-      'first': n.first,
-      'last': f == CrmFormat.salesforce && n.last.isEmpty && n.first.isEmpty ? l.company : n.last,
+      // Salesforce requires Last Name: a one-word contact goes there, and no contact
+      // falls back to the company.
+      'first': f == CrmFormat.salesforce && n.last.isEmpty ? '' : n.first,
+      'last': f == CrmFormat.salesforce && n.last.isEmpty ? (n.first.isNotEmpty ? n.first : l.company) : n.last,
       'email': l.email ?? '',
       'phone': l.phone ?? '',
       'street': a.street,

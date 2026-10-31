@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/logic/dates.dart';
 import '../../core/logic/errors.dart';
 import '../../core/logic/geo.dart';
 import '../../core/logic/polyline.dart';
@@ -77,7 +78,7 @@ class _BuilderScreenState extends ConsumerState<BuilderScreen> with PinIconsMixi
     final ids = drafts.map((d) => d.business.pinId).whereType<String>().toList();
     if (ids.isEmpty) return {};
     final summaries = await ref.read(storeSummariesProvider(ids.join(',')).future);
-    final day = DateTime.now().hour >= 20 ? DateTime.now().add(const Duration(days: 1)) : DateTime.now();
+    final day = DateTime.now().hour >= 20 ? dayPlus(DateTime.now(), 1) : DateTime.now();
     final out = <String, StoreWindow>{};
     for (final e in summaries.entries) {
       final w = windowOnDay(e.value.bestWindows, day);

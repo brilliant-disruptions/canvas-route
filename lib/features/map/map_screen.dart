@@ -8,6 +8,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 
 import '../../app/shell.dart';
+import '../../core/logic/dates.dart';
 import '../../core/logic/errors.dart';
 import '../../core/logic/pin_labels.dart';
 import '../../core/logic/restock.dart';
@@ -874,9 +875,9 @@ class _ModeChips extends ConsumerWidget {
     final now = DateTime.now();
     List<Widget> chips;
     if (pack.requiresTimeWindow) {
-      final sat = now.add(Duration(days: (DateTime.saturday - now.weekday) % 7));
-      final sun = sat.add(const Duration(days: 1));
-      final nextSat = sat.add(const Duration(days: 7));
+      final sat = dayPlus(now, (DateTime.saturday - now.weekday) % 7);
+      final sun = dayPlus(sat, 1);
+      final nextSat = dayPlus(sat, 7);
       final opts = [
         (null, 'Any day'),
         (sat, 'Sat ${DateFormat.Md().format(sat)}'),

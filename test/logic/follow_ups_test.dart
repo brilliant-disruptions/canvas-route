@@ -22,7 +22,17 @@ void main() {
     expect(followUpDueLabel(DateTime(2026, 11, 14), now), 'Due Nov 14');
   });
 
-  test('snooze lands a week out at midnight, across DST', () {
-    expect(snoozeWeek(now), DateTime(2026, 11, 7));
+  test('snooze moves a week later, never earlier', () {
+    expect(snoozeWeek(now, DateTime(2026, 10, 30)), DateTime(2026, 11, 7), reason: 'overdue: a week from today');
+    expect(snoozeWeek(now, DateTime(2026, 10, 31)), DateTime(2026, 11, 7), reason: 'due today: a week from today');
+    expect(snoozeWeek(now, DateTime(2026, 11, 20)), DateTime(2026, 11, 27), reason: 'future: a week after it was due');
+  });
+
+  test('day counts survive DST changes', () {
+    // US spring-forward 2027-03-14 and fall-back 2026-11-01 are 23- and 25-hour days.
+    expect(calendarDaysBetween(DateTime(2027, 3, 14), DateTime(2027, 3, 15)), 1);
+    expect(calendarDaysBetween(DateTime(2027, 3, 15), DateTime(2027, 3, 13)), -2);
+    expect(calendarDaysBetween(DateTime(2026, 11, 1), DateTime(2026, 11, 2)), 1);
+    expect(followUpDueLabel(DateTime(2027, 3, 15), DateTime(2027, 3, 14, 9)), 'Due tomorrow');
   });
 }

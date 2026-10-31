@@ -69,6 +69,7 @@ cp .env.json.example .env.json   # fill in values; never commit it
 flutter pub get
 flutter run --dart-define-from-file=.env.json
 flutter analyze && flutter test
+TZ=America/Chicago flutter test   # date logic must also pass across US DST changes
 ```
 
 ### 5. Billing (Field Sales, Stripe on the web)

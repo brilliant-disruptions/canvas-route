@@ -1,4 +1,5 @@
 // Short labels that fit on a map pin.
+import 'dates.dart';
 
 /// "7a", "12:30p".
 String compactTime(DateTime t) {
@@ -59,11 +60,7 @@ String saleStatus(DateTime opens, DateTime? closes, DateTime now) {
   final until = closes == null ? '' : ' · until ${compactTime(closes)}';
   switch (salePhase(opens, closes, now)) {
     case SalePhase.upcoming:
-      final days = DateTime(
-        opens.year,
-        opens.month,
-        opens.day,
-      ).difference(DateTime(now.year, now.month, now.day)).inDays;
+      final days = calendarDaysBetween(now, opens);
       final day = switch (days) {
         0 => 'today',
         1 => 'tomorrow',
@@ -85,9 +82,8 @@ String saleStatus(DateTime opens, DateTime? closes, DateTime now) {
 /// The Saturday a new sale defaults to: this one, unless its usual window
 /// (closing at [closesHour]) is already over, then next week's.
 DateTime nextSaleDay(DateTime now, {int closesHour = 13}) {
-  final today = DateTime(now.year, now.month, now.day);
-  final add = (DateTime.saturday - today.weekday) % 7;
-  return today.add(Duration(days: add == 0 && now.hour >= closesHour ? 7 : add));
+  final add = (DateTime.saturday - now.weekday) % 7;
+  return dayPlus(now, add == 0 && now.hour >= closesHour ? 7 : add);
 }
 
 /// Why a sale window can't be posted, or null if it can.

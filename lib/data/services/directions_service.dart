@@ -21,6 +21,9 @@ class DirectionsException implements Exception {
 /// Essentials; more stops or `optimize` bills as Pro. Yard-sale days are ordered by
 /// closing time on the device, so they never ask Google to optimize.
 class DirectionsService {
+  /// Weak signal shouldn't hang the screen; routing falls back to an estimate.
+  static const _timeout = Duration(seconds: 10);
+
   DirectionsService({http.Client? client, String? apiKey})
       : _client = client ?? http.Client(),
         _apiKey = apiKey ?? Env.googleMapsApiKey;
@@ -68,7 +71,7 @@ class DirectionsService {
       Uri.parse(_url),
       headers: {'Content-Type': 'application/json', 'X-Goog-Api-Key': _apiKey, 'X-Goog-FieldMask': _fields},
       body: jsonEncode(body),
-    );
+    ).timeout(_timeout);
     if (res.statusCode != 200) throw DirectionsException('Routes API error ${res.statusCode}');
     final data = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
     final routes = data['routes'] as List? ?? const [];

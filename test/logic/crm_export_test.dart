@@ -49,4 +49,11 @@ void main() {
     expect(csv, contains('IN_PROGRESS'));
     expect(csv, contains('"Outcome: Interested · Follow up 2026-11-03 · Wants pricing, ""soon"""'));
   });
+
+  test('Salesforce puts a one-word contact in Last Name, which it requires', () {
+    final csv = buildCrmCsv(CrmFormat.salesforce, const [
+      CrmLead(company: 'Taco y Vino', address: '213 N Bishop Ave, Dallas, TX 75208', contactName: 'Marco (owner)'),
+    ]);
+    expect(csv.split('\n')[1], startsWith('Taco y Vino,,Marco,'));
+  });
 }

@@ -18,6 +18,9 @@ class PlacesException implements Exception {
 /// Field masks set the bill: search asks only for Pro fields (no rating or hours),
 /// and the Enterprise hours field is fetched once, when a business sheet opens.
 class PlacesService {
+  /// Weak signal shouldn't hang the screen; routing falls back to an estimate.
+  static const _timeout = Duration(seconds: 10);
+
   PlacesService({http.Client? client, String? apiKey})
       : _client = client ?? http.Client(),
         _apiKey = apiKey ?? Env.googleMapsApiKey;
@@ -51,7 +54,7 @@ class PlacesService {
           },
         },
       }),
-    );
+    ).timeout(_timeout);
     if (res.statusCode != 200) throw PlacesException('Places API error ${res.statusCode}');
     final data = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
     final results = (data['places'] as List? ?? const []).cast<Map<String, dynamic>>();
@@ -73,7 +76,7 @@ class PlacesService {
     final res = await _client.get(
       Uri.parse('$_places/places/${Uri.encodeComponent(placeId)}'),
       headers: _headers('nationalPhoneNumber,websiteUri,regularOpeningHours.weekdayDescriptions'),
-    );
+    ).timeout(_timeout);
     if (res.statusCode != 200) throw PlacesException('Place Details error ${res.statusCode}');
     final r = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
     return (
@@ -87,7 +90,7 @@ class PlacesService {
 
   Future<String?> reverseGeocode(double lat, double lng) async {
     final uri = Uri.parse('$_base/geocode/json').replace(queryParameters: {'latlng': '$lat,$lng', 'key': _key()});
-    final res = await _client.get(uri);
+    final res = await _client.get(uri).timeout(_timeout, onTimeout: () => http.Response('', 408));
     if (res.statusCode != 200) return null;
     final data = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
     final results = data['results'] as List? ?? const [];
@@ -97,7 +100,7 @@ class PlacesService {
 
   Future<({double lat, double lng, String formatted})?> geocode(String address) async {
     final uri = Uri.parse('$_base/geocode/json').replace(queryParameters: {'address': address, 'key': _key()});
-    final res = await _client.get(uri);
+    final res = await _client.get(uri).timeout(_timeout, onTimeout: () => http.Response('', 408));
     if (res.statusCode != 200) return null;
     final data = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
     final results = data['results'] as List? ?? const [];

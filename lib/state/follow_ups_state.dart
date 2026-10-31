@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/logic/follow_ups.dart';
 import '../core/logic/reminders.dart';
 import '../core/logic/visit_history.dart';
 import '../data/models/route_model.dart';
@@ -38,8 +39,7 @@ final followUpsProvider = FutureProvider<List<FollowUp>>((ref) async {
 /// Overdue plus today, for badges.
 final followUpsDueProvider = Provider<int>((ref) {
   final now = DateTime.now();
-  final today = DateTime(now.year, now.month, now.day).add(const Duration(days: 1));
-  return ref.watch(followUpsProvider).value?.where((f) => f.due.isBefore(today)).length ?? 0;
+  return ref.watch(followUpsProvider).value?.where((f) => followUpBucket(f.due, now).index <= FollowUpBucket.today.index).length ?? 0;
 });
 
 class FollowUpActions {

@@ -225,7 +225,7 @@ class _TeamViewState extends ConsumerState<_TeamView> {
           for (final m in roster)
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: CircleAvatar(child: Text(m.name.characters.first.toUpperCase())),
+              leading: CircleAvatar(child: Text(m.name.isEmpty ? '?' : m.name.characters.first.toUpperCase())),
               title: Text(m.userId == me ? '${m.name} (you)' : m.name),
               subtitle: Text(m.isManager ? 'Manager' : 'Rep'),
               trailing: manager && !m.isManager
@@ -234,7 +234,11 @@ class _TeamViewState extends ConsumerState<_TeamView> {
                       icon: Icon(Icons.person_remove_outlined, color: c.error),
                       onPressed: () async {
                         if (!await confirm(context, title: 'Remove ${m.name}?', body: 'They keep their own routes and visits; they just leave the team.', confirmLabel: 'Remove', destructive: true)) return;
-                        await ref.read(teamRepoProvider).remove(m.userId);
+                        try {
+                          await ref.read(teamRepoProvider).remove(m.userId);
+                        } catch (e) {
+                          if (context.mounted) toast(context, friendlyError(e));
+                        }
                         ref.invalidate(teamRosterProvider);
                         ref.invalidate(teamActivityProvider(_days));
                       },
@@ -254,7 +258,12 @@ class _TeamViewState extends ConsumerState<_TeamView> {
               )) {
                 return;
               }
-              await ref.read(teamRepoProvider).leave();
+              try {
+                await ref.read(teamRepoProvider).leave();
+              } catch (e) {
+                if (context.mounted) toast(context, friendlyError(e));
+                return;
+              }
               ref.invalidate(myTeamProvider);
             },
             child: Text(widget.team.ownerId == me ? 'Delete team' : 'Leave team', style: TextStyle(color: c.error)),

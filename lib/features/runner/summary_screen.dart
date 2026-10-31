@@ -68,7 +68,8 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
   Future<void> _export(RouteModel route, List<Visit> list) async {
     final pack = ref.read(modePackProvider);
     if (!pack.crmExport) return _exportCsv(route, list);
-    final choice = await showKnSheet<CrmFormat?>(
+    // A record so "CSV" and "dismissed" (null) are different answers.
+    final choice = await showKnSheet<({CrmFormat? crm})>(
       context,
       builder: (ctx) => Column(
         mainAxisSize: MainAxisSize.min,
@@ -77,7 +78,7 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
             leading: const Icon(Icons.table_view_outlined),
             title: const Text('Spreadsheet (CSV)'),
             subtitle: const Text('Your export columns'),
-            onTap: () => Navigator.pop(ctx),
+            onTap: () => Navigator.pop(ctx, (crm: null)),
           ),
           for (final (f, name) in const [(CrmFormat.hubspot, 'HubSpot'), (CrmFormat.salesforce, 'Salesforce')])
             ListTile(
@@ -85,17 +86,18 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
               title: Text('$name import file'),
               subtitle: Text(f == CrmFormat.hubspot ? 'Contacts + companies, lead status, notes' : 'Leads, lead status, description'),
               trailing: ref.read(isPayingProvider) ? null : KnBadge(pack.proLabel.toUpperCase()),
-              onTap: () => Navigator.pop(ctx, f),
+              onTap: () => Navigator.pop(ctx, (crm: f)),
             ),
           const SizedBox(height: Sp.s4),
         ],
       ),
     );
-    if (!mounted) return;
-    if (choice == null) return _exportCsv(route, list);
+    if (!mounted || choice == null) return;
+    final format = choice.crm;
+    if (format == null) return _exportCsv(route, list);
     if (!await requirePro(context, ref, 'CRM import files are part of ${pack.proLabel}.')) return;
     final byStop = {for (final v in list) v.stopId: v};
-    final csv = buildCrmCsv(choice, [
+    final csv = buildCrmCsv(format, [
       for (final s in route.stops)
         if (byStop[s.id] case final v?)
           CrmLead(
@@ -110,7 +112,7 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
             visitedAt: v.createdAt,
           ),
     ]);
-    await ref.read(shareServiceProvider).shareCsv(csv, csvFileName(route.name, choice.name), subject: 'Leads: ${route.name}');
+    await ref.read(shareServiceProvider).shareCsv(csv, csvFileName(route.name, format.name), subject: 'Leads: ${route.name}');
   }
 
   Future<void> _exportCsv(RouteModel route, List<Visit> list) async {

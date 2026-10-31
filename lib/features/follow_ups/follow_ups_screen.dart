@@ -169,7 +169,7 @@ class _FollowUpCard extends ConsumerWidget {
                 label: const Text('Add stop'),
               ),
               TextButton.icon(
-                onPressed: () => move(snoozeWeek(now), 'Moved to next week'),
+                onPressed: () => move(snoozeWeek(now, f.due), 'Moved a week later'),
                 icon: const Icon(Icons.snooze, size: 18),
                 label: const Text('Next week'),
               ),

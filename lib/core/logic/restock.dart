@@ -1,4 +1,5 @@
 // Restock pattern helpers for Card Drops (spec §3.4).
+import 'dates.dart';
 
 enum RestockTier { unknown, emerging, established }
 
@@ -64,9 +65,8 @@ String relativeAge(DateTime t, {DateTime? now}) {
   final top = best.map((w) => w.hits).reduce((a, b) => a > b ? a : b);
   ({DateTime start, DateTime end})? soonest;
   for (final w in best.where((w) => w.hits >= 2 && w.hits * 3 >= top)) {
-    final today = DateTime(now.year, now.month, now.day);
     for (var d = 0; d <= 7; d++) {
-      final day = today.add(Duration(days: d));
+      final day = dayPlus(now, d);
       if (day.weekday % 7 != w.dow) continue;
       final start = DateTime(day.year, day.month, day.day, w.hour);
       final end = start.add(const Duration(hours: 2));
@@ -83,7 +83,7 @@ String untilLabel(DateTime start, DateTime now) {
   if (!start.isAfter(now)) return 'now';
   final d = start.difference(now);
   if (d.inMinutes < 60) return 'in ${d.inMinutes} min';
-  final days = DateTime(start.year, start.month, start.day).difference(DateTime(now.year, now.month, now.day)).inDays;
+  final days = calendarDaysBetween(now, start);
   if (days == 0) return 'in ${d.inHours}h';
   if (days == 1) return 'tomorrow';
   return 'in $days days';

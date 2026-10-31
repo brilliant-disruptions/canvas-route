@@ -1,4 +1,5 @@
 // What happened the last times you visited a place. Pure; no Flutter.
+import 'dates.dart';
 
 class VisitMark {
   const VisitMark({required this.key, required this.at, this.outcome, this.notes});
@@ -40,9 +41,7 @@ Map<String, VisitHistory> buildVisitHistory(Iterable<VisitMark> marks) {
 
 /// "Visited today", "Visited yesterday", "Visited 3× · last 12 days ago".
 String visitHistoryLine(VisitHistory h, DateTime now) {
-  final days = DateTime(now.year, now.month, now.day)
-      .difference(DateTime(h.lastAt.year, h.lastAt.month, h.lastAt.day))
-      .inDays;
+  final days = calendarDaysBetween(h.lastAt, now);
   final when = switch (days) {
     <= 0 => 'today',
     1 => 'yesterday',

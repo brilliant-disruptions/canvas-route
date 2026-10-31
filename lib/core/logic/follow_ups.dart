@@ -1,12 +1,14 @@
 // When a follow-up is due, relative to today. Pure; no Flutter.
 
-enum FollowUpBucket { overdue, today, thisWeek, later }
+import 'dates.dart';
 
-DateTime _day(DateTime d) => DateTime(d.year, d.month, d.day);
+export 'dates.dart' show calendarDaysBetween;
+
+enum FollowUpBucket { overdue, today, thisWeek, later }
 
 /// Overdue before today, today, within the next 6 days, or later.
 FollowUpBucket followUpBucket(DateTime due, DateTime now) {
-  final days = _day(due).difference(_day(now)).inDays;
+  final days = calendarDaysBetween(now, due);
   if (days < 0) return FollowUpBucket.overdue;
   if (days == 0) return FollowUpBucket.today;
   if (days < 7) return FollowUpBucket.thisWeek;
@@ -22,7 +24,7 @@ String followUpBucketTitle(FollowUpBucket b) => switch (b) {
 
 /// "Due today", "Due tomorrow", "1 day overdue", "Due Thu", "Due Nov 14".
 String followUpDueLabel(DateTime due, DateTime now) {
-  final days = _day(due).difference(_day(now)).inDays;
+  final days = calendarDaysBetween(now, due);
   if (days < 0) return '${-days} day${days == -1 ? '' : 's'} overdue';
   if (days == 0) return 'Due today';
   if (days == 1) return 'Due tomorrow';
@@ -31,5 +33,9 @@ String followUpDueLabel(DateTime due, DateTime now) {
   return days < 7 ? 'Due ${wd[due.weekday - 1]}' : 'Due ${mo[due.month - 1]} ${due.day}';
 }
 
-/// A week from today, for "not yet, ask me next week".
-DateTime snoozeWeek(DateTime now) => _day(now).add(const Duration(days: 7));
+/// A week later, for "not yet, ask me next week": a week after the due date, or a
+/// week from today if it's already due. Never earlier than it was.
+DateTime snoozeWeek(DateTime now, DateTime due) {
+  final base = calendarDaysBetween(now, due) > 0 ? due : now;
+  return dayPlus(base, 7);
+}
