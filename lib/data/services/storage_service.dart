@@ -1,7 +1,9 @@
 import 'package:cross_file/cross_file.dart';
+import 'package:flutter/foundation.dart' show compute;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../core/logic/photo_scrub.dart';
 import '../supabase_client.dart';
 
 /// Supabase Storage uploads. Paths are `<uid>/<uuid>.<ext>` so bucket RLS can
@@ -18,16 +20,17 @@ class StorageService {
 
   Future<String> upload(String bucket, XFile file) async {
     final uid = requireUserId();
-    final name = file.name.isNotEmpty ? file.name : file.path;
-    final dot = name.lastIndexOf('.');
-    final ext = dot == -1 ? 'jpg' : name.substring(dot + 1).toLowerCase();
-    final path = '$uid/${const Uuid().v4()}.$ext';
+    // Strip EXIF (GPS, device, time) off the UI thread; the picker keeps it when resizing.
+    final raw = await file.readAsBytes();
+    final clean = await compute(scrubPhoto, raw);
+    if (clean == null) throw StateError('That file isn\'t a photo we can read');
+    final path = '$uid/${const Uuid().v4()}.jpg';
     await sb.storage.from(bucket).uploadBinary(
           path,
-          await file.readAsBytes(),
+          clean,
           // Names are unique and never rewritten, so the CDN may keep them for a year;
           // cached bandwidth bills at a third of the uncached rate.
-          fileOptions: FileOptions(contentType: file.mimeType ?? 'image/$ext', cacheControl: '31536000'),
+          fileOptions: const FileOptions(contentType: 'image/jpeg', cacheControl: '31536000'),
         );
     return path;
   }
