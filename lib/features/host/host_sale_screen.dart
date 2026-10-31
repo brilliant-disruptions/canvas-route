@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -6,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../core/logic/pin_labels.dart';
+import '../../core/logic/sale_text.dart';
 import '../../core/logic/errors.dart';
 import '../../core/env.dart';
 import '../../core/theme/kn_colors.dart';
@@ -45,6 +47,47 @@ class _HostSaleScreenState extends ConsumerState<HostSaleScreen> {
   void initState() {
     super.initState();
     _day = nextSaleDay(DateTime.now(), closesHour: _close.hour);
+  }
+
+  /// Paste a post → filled form. Only what's found changes; the host reviews it all.
+  Future<void> _pastePost() async {
+    // Pre-fill from the clipboard when allowed; the box is editable either way.
+    var clip = '';
+    try {
+      clip = (await Clipboard.getData(Clipboard.kTextPlain))?.text?.trim() ?? '';
+    } catch (_) {}
+    if (!mounted) return;
+    final text = await promptText(
+      context,
+      title: 'Paste your post',
+      initial: clip,
+      confirmLabel: 'Fill the form',
+      multiline: true,
+    );
+    if (text == null || text.trim().isEmpty || !mounted) return;
+    final pack = ref.read(modePackProvider);
+    final d = parseSaleText(text, DateTime.now(), categoryKeywords: pack.categoryKeywords);
+    if (d.filled == 0) {
+      toast(context, 'Couldn\'t find sale details in that. Fill the form below instead.');
+      return;
+    }
+    setState(() {
+      if (d.name != null) _name.text = d.name!;
+      if (d.address != null) _address.text = d.address!;
+      if (d.day != null) _day = d.day!;
+      if (d.opens case (final h, final m)) _open = TimeOfDay(hour: h, minute: m);
+      if (d.closes case (final h, final m)) _close = TimeOfDay(hour: h, minute: m);
+      _cats.addAll(d.categories.where(pack.pinCategories.contains));
+      if (d.earlyBirds != null) _earlyBirds = d.earlyBirds;
+      if (_notes.text.trim().isEmpty) _notes.text = text.trim().length > 500 ? '${text.trim().substring(0, 500)}…' : text.trim();
+    });
+    HapticFeedback.mediumImpact();
+    final missing = [if (d.address == null) 'address', if (d.day == null) 'day', if (d.opens == null) 'hours'];
+    toast(
+      context,
+      missing.isEmpty ? 'Filled ${d.filled} fields. Check them, then publish.' : 'Filled ${d.filled} fields. Add the ${missing.join(' and ')}.',
+      icon: Icons.auto_fix_high,
+    );
   }
 
   Future<void> _publish() async {
@@ -109,6 +152,33 @@ class _HostSaleScreenState extends ConsumerState<HostSaleScreen> {
         children: [
           // Supply meets demand: hosts see that people near them are looking.
           if (pack.waitlistLabel != null) _WaitingBanner(pack: pack),
+          // The fastest way in: most hosts already wrote this post somewhere.
+          if (pack.categoryKeywords.isNotEmpty) ...[
+            KnCard(
+              tier: 2,
+              onTap: _pastePost,
+              child: Row(
+                children: [
+                  Icon(Icons.auto_fix_high, color: c.tertiary),
+                  const SizedBox(width: Sp.s3),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Already posted it somewhere?', style: t.titleSmall),
+                        Text(
+                          'Paste your Facebook, Nextdoor or Craigslist post and we\'ll fill this in.',
+                          style: t.bodySmall?.copyWith(color: c.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.content_paste_go, color: c.tertiary),
+                ],
+              ),
+            ),
+            const SizedBox(height: Sp.s4),
+          ],
           TextField(
             controller: _name,
             decoration: const InputDecoration(labelText: 'Sale name', hintText: 'Multi-family yard sale'),

@@ -374,13 +374,28 @@ Future<bool> confirm(BuildContext context, {required String title, String? body,
   return r ?? false;
 }
 
-Future<String?> promptText(BuildContext context, {required String title, String? hint, String? initial, String confirmLabel = 'Save'}) {
+Future<String?> promptText(
+  BuildContext context, {
+  required String title,
+  String? hint,
+  String? initial,
+  String confirmLabel = 'Save',
+  bool multiline = false,
+}) {
   final ctrl = TextEditingController(text: initial);
   return showDialog<String>(
     context: context,
     builder: (ctx) => AlertDialog(
       title: Text(title),
-      content: TextField(controller: ctrl, autofocus: true, decoration: InputDecoration(hintText: hint), textCapitalization: TextCapitalization.sentences),
+      content: TextField(
+        controller: ctrl,
+        autofocus: true,
+        decoration: InputDecoration(hintText: hint),
+        textCapitalization: TextCapitalization.sentences,
+        minLines: multiline ? 5 : 1,
+        maxLines: multiline ? 10 : 1,
+        keyboardType: multiline ? TextInputType.multiline : TextInputType.text,
+      ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
         TextButton(onPressed: () => Navigator.pop(ctx, ctrl.text.trim()), child: Text(confirmLabel)),

@@ -80,6 +80,7 @@ class ModePack {
     this.crmExport = false,
     this.teamPlan = false,
     this.waitlistLabel,
+    this.categoryKeywords = const {},
     this.proLabel = 'Pro',
     this.proPrice = '',
     this.proPitch = '',
@@ -191,6 +192,10 @@ class ModePack {
   /// button (this label, e.g. "I'm hunting here") counts the user as waiting, and
   /// hosts see how many are waiting near them.
   final String? waitlistLabel;
+
+  /// Words that put a pasted post in a category (prefix match), e.g.
+  /// Kids: ['kid', 'baby', 'toy']. Empty disables category detection.
+  final Map<String, List<String>> categoryKeywords;
 
   /// Store product for the Team plan, billed per seat on the web.
   static const teamProductId = 'canvasroute_team_monthly';
