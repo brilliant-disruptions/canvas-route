@@ -513,6 +513,10 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
                             .setViewMode(map.viewMode == MapViewMode.map ? MapViewMode.list : MapViewMode.map),
                       ),
                     ),
+                    if (pack.alerts.isNotEmpty && pack.hasCommunity) ...[
+                      const SizedBox(width: Sp.s2),
+                      _GlassBar(child: _AlertsButton(watchlist: pack.productCatalog)),
+                    ],
                     const SizedBox(width: Sp.s2),
                     const _GlassBar(child: ProfileButton()),
                   ],
@@ -664,6 +668,28 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Opens the watchlist; the badge counts alerts not yet opened.
+class _AlertsButton extends ConsumerWidget {
+  const _AlertsButton({required this.watchlist});
+  final bool watchlist;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final unread = ref.watch(alertsProvider).value?.where((a) => a.openedAt == null).length ?? 0;
+    return IconButton(
+      tooltip: watchlist ? 'Watchlist' : 'Alerts',
+      onPressed: () => context.push('/alerts'),
+      icon: Badge(
+        isLabelVisible: unread > 0,
+        label: Text('$unread'),
+        backgroundColor: context.kn.tertiary,
+        textColor: context.kn.onTertiary,
+        child: const Icon(Icons.notifications_outlined),
+      ),
     );
   }
 }
