@@ -40,6 +40,7 @@ Future<void> main() async {
       featureRequestRepoProvider.overrideWithValue(DemoFeatureRequestRepository(db)),
       alertRepoProvider.overrideWithValue(DemoAlertRepository(db)),
       shareRepoProvider.overrideWithValue(DemoShareRepository(db)),
+      tripRepoProvider.overrideWithValue(DemoTripRepository(db)),
       placesServiceProvider.overrideWithValue(DemoPlacesService()),
       directionsServiceProvider.overrideWithValue(DemoDirectionsService()),
       locationServiceProvider.overrideWithValue(DemoLocationService()),

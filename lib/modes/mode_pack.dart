@@ -75,6 +75,7 @@ class ModePack {
     this.includedInPlan = false,
     this.customFieldsPro = false,
     this.visitHistoryPro = false,
+    this.mileageLog = false,
     this.proLabel = 'Pro',
     this.proPrice = '',
     this.proPitch = '',
@@ -167,6 +168,9 @@ class ModePack {
   /// The last outcome and notes at a place you've visited need the paid tier;
   /// "Visited 3×" itself is always shown.
   final bool visitHistoryPro;
+
+  /// Log each run's miles for expense reports, with the IRS rate applied.
+  final bool mileageLog;
   final String proLabel;
 
   /// Display price, e.g. "\$4.99 / mo".

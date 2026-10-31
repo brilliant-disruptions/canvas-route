@@ -180,6 +180,8 @@ class ProfileDrawer extends ConsumerWidget {
                     : KnBadge('$dueFollowUps due', color: c.tertiary, onColor: c.onTertiary),
                 onTap: () => go('/follow-ups'),
               ),
+            if (pack.mileageLog)
+              ListTile(leading: const Icon(Icons.speed), title: const Text('Mileage'), onTap: () => go('/mileage')),
             if (pack.alerts.isNotEmpty && pack.hasCommunity)
               ListTile(
                 leading: const Icon(Icons.notifications_outlined),

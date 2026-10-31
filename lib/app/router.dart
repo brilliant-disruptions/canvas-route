@@ -12,6 +12,7 @@ import '../features/host/my_sales_screen.dart';
 import '../features/host/sale_sign_screen.dart';
 import '../features/map/map_screen.dart';
 import '../features/follow_ups/follow_ups_screen.dart';
+import '../features/mileage/mileage_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
 import '../features/routes/routes_screen.dart';
 import '../features/runner/runner_screen.dart';
@@ -75,6 +76,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/admin', builder: (_, _) => const AdminScreen()),
       GoRoute(path: '/alerts', builder: (_, _) => const AlertsScreen()),
       GoRoute(path: '/follow-ups', builder: (_, _) => const FollowUpsScreen()),
+      GoRoute(path: '/mileage', builder: (_, _) => const MileageScreen()),
       GoRoute(path: '/host', builder: (_, _) => const MySalesScreen(), routes: [
         GoRoute(path: 'new', builder: (_, _) => const HostSaleScreen()),
         GoRoute(path: 'sign/:pinId', builder: (_, s) => SaleSignScreen(pinId: s.pathParameters['pinId']!)),

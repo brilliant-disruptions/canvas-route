@@ -17,6 +17,7 @@ class DemoDb {
   final routes = <String, Map<String, dynamic>>{};
   final stops = <String, Map<String, dynamic>>{};
   final visits = <String, Map<String, dynamic>>{};
+  final trips = <String, Map<String, dynamic>>{};
   final pins = <String, Map<String, dynamic>>{};
   final pinPhotos = <Map<String, dynamic>>[];
   final products = <String, Map<String, dynamic>>{};
@@ -173,6 +174,21 @@ void _seed(DemoDb db) {
         },
       },
   ]);
+
+  // Mileage from earlier runs this month and last.
+  for (final (daysAgo, name, miles, stops) in [
+    (6, 'Deep Ellum restaurants', 9.4, 7),
+    (13, 'Preston Center offices', 22.8, 9),
+    (20, 'Lakewood dentists (week 1)', 14.1, 6),
+    (34, 'Richardson auto shops', 31.5, 10),
+  ]) {
+    final id = DemoDb.newId();
+    db.trips[id] = {
+      'id': id, 'route_id': null, 'mode': 'field_sales', 'user_id': uid, 'route_name': name,
+      'day': _date(now.subtract(Duration(days: daysAgo))), 'distance_m': (miles * 1609.344).round(),
+      'stops_visited': stops, 'estimated': false,
+    };
+  }
 
   // ---- Yard sale pins (this Saturday, plus one next week) ----
   String pin(Map<String, dynamic> row) {

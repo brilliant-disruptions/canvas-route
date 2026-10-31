@@ -88,6 +88,7 @@ const fieldSalesPack = ModePack(
   includedInPlan: true,
   customFieldsPro: true,
   visitHistoryPro: true,
+  mileageLog: true,
   freeRouteLimit: 3,
   proLabel: 'Pro',
   profileAsksCompany: true,

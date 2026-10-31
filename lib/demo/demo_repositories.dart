@@ -15,6 +15,7 @@ import '../data/models/report.dart';
 import '../data/models/route_model.dart';
 import '../data/models/settings.dart';
 import '../data/models/stop.dart';
+import '../data/models/trip.dart';
 import '../data/models/store_summary.dart';
 import '../data/models/visit.dart';
 import '../data/repositories/alert_repository.dart';
@@ -27,6 +28,7 @@ import '../data/repositories/report_repository.dart';
 import '../data/repositories/route_repository.dart';
 import '../data/repositories/settings_repository.dart';
 import '../data/repositories/share_repository.dart';
+import '../data/repositories/trip_repository.dart';
 import '../data/repositories/visit_repository.dart';
 import '../data/services/storage_service.dart';
 import 'demo_db.dart';
@@ -742,5 +744,25 @@ class DemoShareRepository implements ShareRepository {
       canFork: true,
       ownerHandle: db.profiles[r['user_id']]?['handle'] as String?,
     );
+  });
+}
+
+class DemoTripRepository implements TripRepository {
+  DemoTripRepository(this.db);
+  final DemoDb db;
+
+  @override
+  Future<List<Trip>> forUser(String userId, String mode) => _later(() {
+    final rows = db.trips.values.where((t) => t['user_id'] == userId && t['mode'] == mode).map(Trip.fromRow).toList();
+    return rows..sort((a, b) => b.day.compareTo(a.day));
+  });
+
+  @override
+  Future<Trip> upsert(Map<String, dynamic> insert) => _later(() {
+    final existing = db.trips.values.where((t) => t['route_id'] == insert['route_id']).firstOrNull;
+    final row = existing ?? {'id': DemoDb.newId()};
+    row.addAll(insert);
+    db.trips[row['id'] as String] = row;
+    return Trip.fromRow(row);
   });
 }

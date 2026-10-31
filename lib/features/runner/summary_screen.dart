@@ -18,6 +18,7 @@ import '../../state/profile_state.dart';
 import '../../state/providers.dart';
 import '../../state/routes_state.dart';
 import '../../state/visits_state.dart';
+import '../../state/trips_state.dart';
 import '../../ui/widgets/celebration.dart';
 import '../../ui/widgets/kn_widgets.dart';
 import 'recap_card.dart';
@@ -34,6 +35,7 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
   final _cardKey = GlobalKey();
   bool _sharing = false;
   bool _buzzed = false;
+  bool _tripLogged = false;
 
   Future<void> _shareRecap(RouteModel route, RunRecap recap) async {
     final pack = ref.read(modePackProvider);
@@ -112,6 +114,11 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
       body: AsyncView(
         value: visits,
         data: (list) {
+          if (!_tripLogged) {
+            _tripLogged = true;
+            // Mileage is bookkeeping: never block or fail the summary over it.
+            Future.microtask(() => ref.read(tripLoggerProvider).logRun(route, list)).catchError((_) {});
+          }
           final byStop = {for (final v in list) v.stopId: v};
           final recap = buildRecap([
             for (final s in route.stops)
