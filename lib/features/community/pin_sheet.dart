@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/logic/errors.dart';
 import '../../core/env.dart';
+import '../../core/logic/pin_labels.dart';
 import '../../core/logic/restock.dart';
 import '../../core/theme/kn_colors.dart';
 import '../../core/theme/kn_theme.dart';
@@ -53,6 +54,18 @@ class PinSheet extends ConsumerWidget {
     final business = businessFromPin(pin);
     final added = map.isDraft(business);
     final recent = ref.watch(recentReportsProvider(pin.id));
+    // Time-boxed sales get a live status, and take reports only while they're on.
+    final now = DateTime.now();
+    final phase = pin.kind == PinKind.yardSale && pin.opensAt != null
+        ? salePhase(pin.opensAt!, pin.closesAt, now)
+        : null;
+    final takesReports = phase == null || salePhaseTakesReports(phase);
+    final phaseColor = switch (phase) {
+      SalePhase.open => c.tertiary,
+      SalePhase.closingSoon => c.warning,
+      SalePhase.ended => c.error,
+      _ => c.primary,
+    };
     final summary = pin.kind == PinKind.store ? ref.watch(storeSummaryProvider(pin.id)).value : null;
 
     return DraggableScrollableSheet(
@@ -63,6 +76,23 @@ class PinSheet extends ConsumerWidget {
         controller: scroll,
         padding: const EdgeInsets.fromLTRB(Sp.s5, 0, Sp.s5, Sp.s6),
         children: [
+          if (phase != null) ...[
+            Row(
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(color: phaseColor, shape: BoxShape.circle),
+                ),
+                const SizedBox(width: Sp.s2),
+                Text(
+                  saleStatus(pin.opensAt!, pin.closesAt, now).toUpperCase(),
+                  style: t.labelMedium?.copyWith(color: phaseColor, fontWeight: FontWeight.w800, letterSpacing: 0.8),
+                ),
+              ],
+            ),
+            const SizedBox(height: Sp.s1),
+          ],
           Text(pin.name, style: t.headlineSmall),
           if (pin.address != null) Text(pin.address!, style: t.bodyMedium?.copyWith(color: c.onSurfaceVariant)),
           const SizedBox(height: Sp.s3),
@@ -194,8 +224,8 @@ class PinSheet extends ConsumerWidget {
           ),
           if (pack.communityReports) ...[
             SectionHeader(
-              pin.kind == PinKind.store ? 'What\'s on the shelf?' : 'Still going?',
-              trailing: anon
+              pin.kind == PinKind.store ? 'What\'s on the shelf?' : (takesReports ? 'Still going?' : 'Live reports'),
+              trailing: anon && takesReports
                   ? TextButton(
                       onPressed: () => context.push('/signin?reason=report'),
                       child: const Text('Sign in to report'),
@@ -208,6 +238,13 @@ class PinSheet extends ConsumerWidget {
                 icon: Icons.campaign_outlined,
                 lime: true,
                 onPressed: anon ? null : () => showReportSheet(context, pin),
+              )
+            else if (!takesReports)
+              Text(
+                phase == SalePhase.ended
+                    ? 'This sale has ended.'
+                    : 'Reports open when the sale starts, so they reflect what\'s really there.',
+                style: t.bodySmall?.copyWith(color: c.onSurfaceVariant),
               )
             else
               Wrap(
@@ -229,10 +266,22 @@ class PinSheet extends ConsumerWidget {
                                     );
                                 ref.invalidate(recentReportsProvider(pin.id));
                                 if (context.mounted) {
-                                  toast(context, 'Thanks — shared with nearby ${pack.communityNoun}', icon: Icons.check);
+                                  toast(
+                                    context,
+                                    'Thanks — shared with nearby ${pack.communityNoun}',
+                                    icon: Icons.check,
+                                  );
                                 }
                               } catch (e) {
-                                if (context.mounted) toast(context, friendlyError(e, denied: 'You can report a store 3 times an hour. Try again a bit later.'));
+                                if (context.mounted) {
+                                  toast(
+                                    context,
+                                    friendlyError(
+                                      e,
+                                      denied: 'You can report a place 3 times an hour. Try again a bit later.',
+                                    ),
+                                  );
+                                }
                               }
                             },
                     ),
@@ -243,7 +292,7 @@ class PinSheet extends ConsumerWidget {
               loading: () => const [LinearProgressIndicator()],
               error: (e, _) => [Text(friendlyError(e), style: t.bodySmall)],
               data: (list) => list.isEmpty
-                  ? [Text('No reports yet.', style: t.bodySmall?.copyWith(color: c.onSurfaceVariant))]
+                  ? [if (takesReports) Text('No reports yet.', style: t.bodySmall?.copyWith(color: c.onSurfaceVariant))]
                   : [
                       for (final r in list.take(5))
                         _ReportRow(

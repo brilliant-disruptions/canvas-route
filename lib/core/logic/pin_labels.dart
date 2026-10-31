@@ -36,3 +36,48 @@ String huntLabel(Set<String> wanted) => wanted.isEmpty
     : wanted.length == 1
     ? wanted.first
     : '${wanted.first} +${wanted.length - 1}';
+
+/// Where a time-boxed sale is relative to now.
+enum SalePhase { upcoming, startingSoon, open, closingSoon, ended }
+
+SalePhase salePhase(DateTime opens, DateTime? closes, DateTime now) {
+  if (closes != null && !now.isBefore(closes)) return SalePhase.ended;
+  if (now.isBefore(opens)) {
+    return opens.difference(now) <= const Duration(hours: 2) ? SalePhase.startingSoon : SalePhase.upcoming;
+  }
+  if (closes != null && closes.difference(now) <= const Duration(hours: 1)) return SalePhase.closingSoon;
+  return SalePhase.open;
+}
+
+/// "Still going?" reports only mean something while the sale is on.
+bool salePhaseTakesReports(SalePhase p) => p == SalePhase.open || p == SalePhase.closingSoon;
+
+const _weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+/// "Opens Sat 7a · in 6 days", "Opens in 45 min", "Open now · until 11a", "Ended".
+String saleStatus(DateTime opens, DateTime? closes, DateTime now) {
+  final until = closes == null ? '' : ' · until ${compactTime(closes)}';
+  switch (salePhase(opens, closes, now)) {
+    case SalePhase.upcoming:
+      final days = DateTime(
+        opens.year,
+        opens.month,
+        opens.day,
+      ).difference(DateTime(now.year, now.month, now.day)).inDays;
+      final day = switch (days) {
+        0 => 'today',
+        1 => 'tomorrow',
+        _ => _weekdays[opens.weekday - 1],
+      };
+      return 'Opens $day ${compactTime(opens)}${days > 1 ? ' · in $days days' : ''}';
+    case SalePhase.startingSoon:
+      final m = opens.difference(now).inMinutes;
+      return 'Opens in ${m < 60 ? '$m min' : '${(m / 60).round()}h'}';
+    case SalePhase.open:
+      return 'Open now$until';
+    case SalePhase.closingSoon:
+      return 'Closing soon$until';
+    case SalePhase.ended:
+      return 'Ended';
+  }
+}

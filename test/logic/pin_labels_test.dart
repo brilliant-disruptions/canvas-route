@@ -37,4 +37,26 @@ void main() {
     expect(huntLabel({'Tools'}), 'Tools');
     expect(huntLabel({'Tools', 'Kids', 'Books'}), 'Tools +2');
   });
+
+  group('sale status', () {
+    final opens = DateTime(2026, 11, 7, 7);
+    final closes = DateTime(2026, 11, 7, 11);
+    String at(DateTime now) => saleStatus(opens, closes, now);
+
+    test('a week out, the day before, and the last two hours', () {
+      expect(at(DateTime(2026, 10, 31, 15)), 'Opens Sat 7a · in 7 days');
+      expect(at(DateTime(2026, 11, 6, 20)), 'Opens tomorrow 7a');
+      expect(at(DateTime(2026, 11, 7, 6, 15)), 'Opens in 45 min');
+      expect(salePhase(opens, closes, DateTime(2026, 11, 7, 6, 15)), SalePhase.startingSoon);
+    });
+
+    test('open, closing soon, ended; reports only while it is on', () {
+      expect(at(DateTime(2026, 11, 7, 8)), 'Open now · until 11a');
+      expect(at(DateTime(2026, 11, 7, 10, 30)), 'Closing soon · until 11a');
+      expect(at(DateTime(2026, 11, 7, 11)), 'Ended');
+      expect(salePhaseTakesReports(salePhase(opens, closes, DateTime(2026, 11, 7, 8))), isTrue);
+      expect(salePhaseTakesReports(salePhase(opens, closes, DateTime(2026, 10, 31))), isFalse);
+      expect(salePhaseTakesReports(SalePhase.ended), isFalse);
+    });
+  });
 }
