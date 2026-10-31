@@ -87,5 +87,15 @@ with restock patterns. **Not yet wired:** push delivery for alerts (the `alerts`
 Realtime stream exist; an Edge Function + Expo/FCM sender is Phase 4), store billing (RevenueCat,
 Phase 4; the paywall sheet explains the tier), and public web pages for shared links (Phase 5).
 
+Share links are generated as `<webOrigin>/r/<token>` (routes) and `/s/<token>` (a host's sign QR).
+Both are routed in the app, but phones only open them in the app once Android App Links and iOS
+Associated Domains are configured and the matching verification files are hosted on that domain.
+Migration `010` adds per-weekday sighting counts to `store_summary` for the store sheet's restock
+chart; without it the sheet falls back to the text card.
+
+The demo build seeds two share tokens (`/#/r/demo-run`, `/#/s/demo-sale`) and simulates one
+community sighting about 20 seconds after launch, so the invite, sign and live-drop flows can be
+shown without a backend.
+
 This build has been validated with `flutter analyze` and `flutter test`. It has not yet been run
 on a device from this environment, which has no Android SDK or Xcode.

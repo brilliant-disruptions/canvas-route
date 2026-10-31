@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/logic/errors.dart';
 import '../../core/theme/kn_colors.dart';
 import '../../core/theme/kn_theme.dart';
 import '../../data/models/feature_request.dart';
@@ -9,6 +10,7 @@ import '../../state/feature_requests_state.dart';
 import '../../state/profile_state.dart';
 import '../../state/providers.dart';
 import '../../ui/widgets/kn_widgets.dart';
+import '../settings/paywall_sheet.dart';
 
 class FeatureRequestsScreen extends ConsumerStatefulWidget {
   const FeatureRequestsScreen({super.key});
@@ -30,13 +32,17 @@ class _State extends ConsumerState<FeatureRequestsScreen> {
           title: const Text('Feature requests'),
           bottom: const TabBar(tabs: [Tab(text: 'All requests'), Tab(text: 'My requests')]),
           actions: [
-            Tooltip(
-              message: paying ? 'New request' : 'Upgrade to submit requests',
-              child: TextButton.icon(
-                onPressed: paying ? () => showKnSheet(context, builder: (_) => const _NewRequestSheet()) : null,
-                icon: const Icon(Icons.add),
-                label: const Text('New'),
-              ),
+            // Free users get the reason and the upgrade, not a silently disabled button.
+            TextButton.icon(
+              onPressed: () => paying
+                  ? showKnSheet(context, builder: (_) => const _NewRequestSheet())
+                  : showPaywall(
+                      context,
+                      ref.read(modePackProvider),
+                      reason: 'Suggesting features is part of ${ref.read(modePackProvider).proLabel}. Anyone can upvote.',
+                    ),
+              icon: const Icon(Icons.add),
+              label: const Text('New'),
             ),
           ],
         ),
@@ -57,7 +63,9 @@ class _State extends ConsumerState<FeatureRequestsScreen> {
                     ]),
                   ),
                 ),
+                const SizedBox(width: Sp.s1),
                 PopupMenuButton<String>(
+                  tooltip: 'Sort',
                   icon: const Icon(Icons.sort),
                   onSelected: (v) => setState(() => _sort = v),
                   itemBuilder: (_) => const [
@@ -154,21 +162,47 @@ class RequestCard extends ConsumerWidget {
             if (request.summary != null) ...[const SizedBox(height: Sp.s2), Text(request.summary!, style: t.bodySmall?.copyWith(color: c.onSurfaceVariant))],
           ]),
         ),
+        // A pill you can see you've pressed: lime with the count when voted.
         Column(children: [
-          IconButton(
-            tooltip: voted ? 'Remove upvote' : 'Upvote',
-            icon: Icon(voted ? Icons.thumb_up : Icons.thumb_up_outlined, color: voted ? c.tertiary : null),
-            onPressed: uid == null
-                ? null
-                : () async {
-                    final repo = ref.read(featureRequestRepoProvider);
-                    voted ? await repo.unvote(uid, request.id) : await repo.upvote(uid, request.id);
-                    ref.invalidate(myUpvotesProvider);
-                    onChanged();
-                  },
+          Semantics(
+            button: true,
+            selected: voted,
+            label: voted ? 'Remove upvote, ${request.upvoteCount} votes' : 'Upvote, ${request.upvoteCount} votes',
+            child: Material(
+              color: voted ? c.tertiary : c.surfaceHigh,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(Rad.lg),
+                side: BorderSide(color: voted ? c.tertiary : c.ghostBorder),
+              ),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(Rad.lg),
+                onTap: uid == null
+                    ? null
+                    : () async {
+                        final repo = ref.read(featureRequestRepoProvider);
+                        voted ? await repo.unvote(uid, request.id) : await repo.upvote(uid, request.id);
+                        ref.invalidate(myUpvotesProvider);
+                        onChanged();
+                      },
+                child: SizedBox(
+                  width: 56,
+                  height: 60,
+                  child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Icon(Icons.arrow_upward_rounded, size: 20, color: voted ? c.onTertiary : c.onSurface),
+                    Text(
+                      '${request.upvoteCount}',
+                      style: t.titleMedium?.copyWith(color: voted ? c.onTertiary : c.onSurface),
+                    ),
+                  ]),
+                ),
+              ),
+            ),
           ),
-          Text('+${request.upvoteCount} users', style: t.labelSmall),
-          Text('+${request.orgCount} orgs', style: t.labelSmall?.copyWith(color: c.onSurfaceVariant)),
+          const SizedBox(height: Sp.s1),
+          Text(
+            '${request.orgCount} org${request.orgCount == 1 ? '' : 's'}',
+            style: t.labelSmall?.copyWith(color: c.onSurfaceVariant),
+          ),
         ]),
       ]),
     );
@@ -255,7 +289,7 @@ class _NewRequestSheetState extends ConsumerState<_NewRequestSheet> {
               } catch (e) {
                 if (context.mounted) {
                   setState(() => _busy = false);
-                  toast(context, 'Couldn\'t submit: $e');
+                  toast(context, 'Couldn\'t submit. ${friendlyError(e)}');
                 }
               }
             },

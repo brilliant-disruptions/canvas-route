@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/logic/errors.dart';
 import '../../core/theme/kn_colors.dart';
 import '../../core/theme/kn_theme.dart';
 
@@ -174,22 +175,20 @@ class ChipRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.kn;
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          for (final o in options) ...[
-            ChoiceChip(
-              label: Text(o),
-              selected: selected == o,
-              onSelected: (v) => onSelected(v ? o : (allowNone ? null : o)),
-              labelStyle: TextStyle(color: selected == o ? c.onPrimaryContainer : c.onSurface),
-              showCheckmark: false,
-            ),
-            const SizedBox(width: Sp.s2),
-          ],
-        ],
-      ),
+    // Wraps rather than scrolls: a clipped option is an option nobody picks.
+    return Wrap(
+      spacing: Sp.s2,
+      runSpacing: Sp.s2,
+      children: [
+        for (final o in options)
+          ChoiceChip(
+            label: Text(o),
+            selected: selected == o,
+            onSelected: (v) => onSelected(v ? o : (allowNone ? null : o)),
+            labelStyle: TextStyle(color: selected == o ? c.onPrimaryContainer : c.onSurface),
+            showCheckmark: false,
+          ),
+      ],
     );
   }
 }
@@ -274,8 +273,8 @@ class ErrorView extends StatelessWidget {
   @override
   Widget build(BuildContext context) => EmptyState(
         icon: Icons.error_outline,
-        title: 'Something went wrong',
-        body: error.toString(),
+        title: 'Couldn\'t load this',
+        body: friendlyError(error),
         action: onRetry == null ? null : OutlinedButton(onPressed: onRetry, child: const Text('Retry')),
       );
 }

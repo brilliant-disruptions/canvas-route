@@ -9,10 +9,9 @@ import '../features/builder/builder_screen.dart';
 import '../features/feature_requests/feature_requests_screen.dart';
 import '../features/host/host_sale_screen.dart';
 import '../features/host/my_sales_screen.dart';
+import '../features/host/sale_sign_screen.dart';
 import '../features/map/map_screen.dart';
-import '../features/onboarding/mode_picker_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
-import '../features/onboarding/profile_capture_screen.dart';
 import '../features/routes/routes_screen.dart';
 import '../features/runner/runner_screen.dart';
 import '../features/runner/summary_screen.dart';
@@ -20,6 +19,7 @@ import '../features/settings/account_screen.dart';
 import '../features/settings/advanced_screen.dart';
 import '../features/settings/profile_screen.dart';
 import '../features/settings/settings_screen.dart';
+import '../features/shared/sale_landing_screen.dart';
 import '../features/shared/shared_route_screen.dart';
 import '../features/visit/visit_logger_screen.dart';
 import '../state/providers.dart';
@@ -34,16 +34,14 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/map',
     redirect: (context, state) {
       final loc = state.matchedLocation;
-      if (!prefs.hasOnboarded && !loc.startsWith('/onboarding') && !loc.startsWith('/shared')) {
+      final shared = loc.startsWith('/shared') || loc.startsWith('/r/') || loc.startsWith('/s/');
+      if (!prefs.hasOnboarded && !loc.startsWith('/onboarding') && !shared) {
         return '/onboarding';
       }
       return null;
     },
     routes: [
-      GoRoute(path: '/onboarding', builder: (_, _) => const OnboardingScreen(), routes: [
-        GoRoute(path: 'profile', builder: (_, _) => const ProfileCaptureScreen()),
-      ]),
-      GoRoute(path: '/mode', builder: (_, _) => const ModePickerScreen()),
+      GoRoute(path: '/onboarding', builder: (_, _) => const OnboardingScreen()),
       GoRoute(path: '/signin', builder: (_, s) => SignInScreen(reason: s.uri.queryParameters['reason'])),
       ShellRoute(
         builder: (_, _, child) => AppShell(child: child),
@@ -52,7 +50,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/routes', builder: (_, _) => const RoutesScreen()),
         ],
       ),
-      GoRoute(path: '/route/builder', builder: (_, _) => const BuilderScreen()),
+      GoRoute(path: '/route/builder', builder: (_, s) => BuilderScreen(autoPlan: s.uri.queryParameters['plan'] == '1')),
       GoRoute(
         path: '/route/:id',
         pageBuilder: (_, s) => MaterialPage(fullscreenDialog: true, child: RunnerScreen(routeId: s.pathParameters['id']!)),
@@ -77,8 +75,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/alerts', builder: (_, _) => const AlertsScreen()),
       GoRoute(path: '/host', builder: (_, _) => const MySalesScreen(), routes: [
         GoRoute(path: 'new', builder: (_, _) => const HostSaleScreen()),
+        GoRoute(path: 'sign/:pinId', builder: (_, s) => SaleSignScreen(pinId: s.pathParameters['pinId']!)),
       ]),
       GoRoute(path: '/shared/:token', builder: (_, s) => SharedRouteScreen(token: s.pathParameters['token']!)),
+      // Share links are generated as <webOrigin>/r/<token>.
+      GoRoute(path: '/r/:token', builder: (_, s) => SharedRouteScreen(token: s.pathParameters['token']!)),
+      // Host sign QRs encode <webOrigin>/s/<token>.
+      GoRoute(path: '/s/:token', builder: (_, s) => SaleLandingScreen(token: s.pathParameters['token']!)),
     ],
   );
 });

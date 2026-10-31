@@ -39,6 +39,10 @@ class LocalPrefs {
   bool get hasOnboarded => _bool('hasOnboarded') ?? false;
   Future<void> setHasOnboarded(bool v) => _put('hasOnboarded', v);
 
+  /// The map's first-run hint pointing at the one-tap planner.
+  bool get hasSeenPlanTip => _bool('hasSeenPlanTip') ?? false;
+  Future<void> setHasSeenPlanTip(bool v) => _put('hasSeenPlanTip', v);
+
   AppMode get cachedMode => AppMode.fromId(_str('activeMode'));
   Future<void> setCachedMode(AppMode m) => _put('activeMode', m.id);
 

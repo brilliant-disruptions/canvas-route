@@ -19,6 +19,12 @@ class ReportStatusOption {
   final bool positive;
 }
 
+class ProPerk {
+  const ProPerk(this.icon, this.label);
+  final IconData icon;
+  final String label;
+}
+
 class OnboardingPage {
   const OnboardingPage({required this.headline, required this.subtext, required this.icon});
   final String headline;
@@ -53,13 +59,31 @@ class ModePack {
     required this.emptyRoutesCopy,
     required this.visitVerb,
     required this.stopNoun,
+    required this.spotlightTitle,
+    required this.planLabel,
+    required this.planMaxStops,
+    required this.outcomeIcons,
+    required this.communityNoun,
+    required this.winOutcomes,
+    required this.winNoun,
+    required this.routeNoun,
+    required this.routesTitle,
     this.placesQueryPreset,
     this.pinCategories = const [],
     this.freeRouteLimit,
     this.proProductId,
     this.proLabel = 'Pro',
+    this.proPrice = '',
+    this.proPitch = '',
+    this.proPerks = const [],
+    this.suggestionIcons = const {},
     this.summaryTotals = const [],
     this.supportsHosting = false,
+    this.hostSignHeadline = 'SALE',
+    this.profileAsksCompany = false,
+    this.pinsPlacesStops = false,
+    this.saveVisitLabel = 'Save visit',
+    this.photoHint,
     this.productCatalog = false,
   });
 
@@ -91,14 +115,74 @@ class ModePack {
   final String emptyRoutesCopy;
   final String visitVerb; // "Log Visit" / "Log Stop" / "Report Shelf"
   final String stopNoun; // "stop" / "sale" / "store"
+
+  /// Map deck header after the count, e.g. "4 stores worth a stop today".
+  final String spotlightTitle;
+
+  /// One-tap planner button on the map deck, e.g. "Plan my run".
+  final String planLabel;
+
+  /// How many top-ranked stops the one-tap planner takes.
+  final int planMaxStops;
+
+  /// Icons for the runner's one-tap outcome tiles; custom outcomes fall back to a check.
+  final Map<String, IconData> outcomeIcons;
+
+  /// Who sees shared reports: "Shared with nearby collectors".
+  final String communityNoun;
+
+  /// Outcomes the run recap counts as a win, e.g. "In stock".
+  final List<String> winOutcomes;
+
+  /// Singular noun for a win on the recap: "3 finds", "2 leads".
+  final String winNoun;
+
+  /// "route" / "run": the routes tab is its plural.
+  final String routeNoun;
+
+  /// Routes screen title, e.g. "Card runs".
+  final String routesTitle;
+
+  String get routesTab => '${routeNoun[0].toUpperCase()}${routeNoun.substring(1)}s';
+
+  IconData outcomeIcon(String outcome) => outcomeIcons[outcome] ?? Icons.check_circle_outline;
   final List<String> pinCategories;
   final int? freeRouteLimit;
   final String? proProductId;
   final String proLabel;
 
+  /// Display price, e.g. "\$4.99 / mo".
+  final String proPrice;
+
+  /// Paywall headline, e.g. "Never miss a restock".
+  final String proPitch;
+  final List<ProPerk> proPerks;
+
+  /// Icons for the map's quick-start category cards.
+  final Map<String, IconData> suggestionIcons;
+  IconData suggestionIcon(String s) => suggestionIcons[s] ?? Icons.search;
+
+  /// Saving one more route would pass the free limit.
+  bool atRouteLimit(int saved, {required bool paying}) => !paying && freeRouteLimit != null && saved >= freeRouteLimit!;
+
   /// Custom-field keys summed on the Route Summary (e.g. "spent").
   final List<String> summaryTotals;
   final bool supportsHosting;
+
+  /// The big word on a host's printable sign.
+  final String hostSignHeadline;
+
+  /// Profile asks for company and title (they head CSV exports).
+  final bool profileAsksCompany;
+
+  /// A logged Places stop gets a community store pin so its report has a home.
+  final bool pinsPlacesStops;
+
+  /// The visit form's save button, e.g. "Save report".
+  final String saveVisitLabel;
+
+  /// Shown under the visit photo picker when photos are shared with the community.
+  final String? photoHint;
   final bool productCatalog;
 
   bool get usesTimeWindows => optimizer != OptimizerKind.distance;

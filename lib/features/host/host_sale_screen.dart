@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
+import '../../core/logic/errors.dart';
 import '../../core/env.dart';
 import '../../core/theme/kn_colors.dart';
 import '../../core/theme/kn_theme.dart';
@@ -56,7 +57,7 @@ class _HostSaleScreenState extends ConsumerState<HostSaleScreen> {
     setState(() => _busy = true);
     try {
       final geo = await ref.read(placesServiceProvider).geocode(addr);
-      if (geo == null) throw Exception('Couldn\'t find that address');
+      if (geo == null) throw StateError('Couldn\'t find that address. Check it and try again.');
       final pin = await ref.read(pinRepoProvider).createHosted(
             ownerId: ref.read(currentUserIdProvider)!,
             name: name,
@@ -78,7 +79,7 @@ class _HostSaleScreenState extends ConsumerState<HostSaleScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _busy = false);
-        toast(context, '$e');
+        toast(context, friendlyError(e));
       }
     }
   }
@@ -128,11 +129,12 @@ class _HostSaleScreenState extends ConsumerState<HostSaleScreen> {
           const SectionHeader('Early birds'),
           SegmentedButton<String?>(
             segments: const [
-              ButtonSegment(value: null, label: Text('No preference')),
+              ButtonSegment(value: null, label: Text('Either')),
               ButtonSegment(value: 'welcome', label: Text('Welcome')),
               ButtonSegment(value: 'not_welcome', label: Text('Please don\'t')),
             ],
             selected: {_earlyBirds},
+            showSelectedIcon: false, // the check squeezed "No preference" onto three lines
             onSelectionChanged: (s) => setState(() => _earlyBirds = s.first),
           ),
           const SectionHeader('Photos'),
@@ -155,8 +157,11 @@ class _HostSaleScreenState extends ConsumerState<HostSaleScreen> {
   }
 }
 
+/// Public link for a hosted sale; the sign's QR encodes it.
+String saleLink(Pin pin) => '${Env.webOrigin}/s/${pin.shareToken}';
+
 Future<void> showShareSaleSheet(BuildContext context, Pin pin) {
-  final link = '${Env.webOrigin}/s/${pin.shareToken}';
+  final link = saleLink(pin);
   return showKnSheet(
     context,
     builder: (ctx) {
@@ -177,7 +182,17 @@ Future<void> showShareSaleSheet(BuildContext context, Pin pin) {
           const SizedBox(height: Sp.s3),
           SelectableText(link, style: t.labelMedium, textAlign: TextAlign.center),
           const SizedBox(height: Sp.s4),
-          Consumer(builder: (_, ref, _) => KnButton(label: 'Share link', icon: Icons.ios_share, onPressed: () => ref.read(shareServiceProvider).shareText('${pin.name} — $link', subject: pin.name))),
+          KnButton(
+            label: 'Make a printable sign',
+            icon: Icons.print_outlined,
+            lime: true,
+            onPressed: () {
+              Navigator.pop(ctx);
+              context.push('/host/sign/${pin.id}');
+            },
+          ),
+          const SizedBox(height: Sp.s2),
+          Consumer(builder: (_, ref, _) => OutlinedButton.icon(onPressed: () => ref.read(shareServiceProvider).shareText('${pin.name} — $link', subject: pin.name), icon: const Icon(Icons.ios_share), label: const Text('Share link'))),
         ]),
       );
     },

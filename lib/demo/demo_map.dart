@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart' show PlatformViewCreatedCallback;
@@ -134,14 +135,44 @@ class _DemoMapState extends State<_DemoMap> {
 
   GoogleMap? get _host => context.findAncestorWidgetOfExactType<GoogleMap>();
 
-  List<Marker> get _sortedMarkers =>
-      widget.objects.markers.toList()..sort((a, b) => b.position.latitude.compareTo(a.position.latitude));
+  List<Marker> get _sortedMarkers => widget.objects.markers.where((m) => m.visible).toList()
+    ..sort((a, b) {
+      final z = a.zIndexInt.compareTo(b.zIndexInt);
+      return z != 0 ? z : b.position.latitude.compareTo(a.position.latitude);
+    });
+
+  /// Decoded bitmap marker icons, keyed by their byte buffer.
+  static final _images = Expando<ui.Image>();
+  static final _decoding = Expando<bool>();
+
+  ui.Image? _imageFor(Marker m) {
+    final icon = m.icon;
+    if (icon is! BytesMapBitmap) return null;
+    final hit = _images[icon.byteData];
+    if (hit != null || _decoding[icon.byteData] == true) return hit;
+    _decoding[icon.byteData] = true;
+    ui.instantiateImageCodec(icon.byteData).then((c) => c.getNextFrame()).then((f) {
+      _images[icon.byteData] = f.image;
+      if (mounted) setState(() {});
+    });
+    return null;
+  }
+
+  /// Screen rect a marker occupies: the bitmap at its anchor, or the default pin.
+  Rect _markerRect(_Projection p, Marker m) {
+    final o = p.toScreen(m.position);
+    final icon = m.icon;
+    final img = icon is BytesMapBitmap ? _images[icon.byteData] : null;
+    if (img == null) return Rect.fromLTRB(o.dx - 18, o.dy - 44, o.dx + 18, o.dy + 6);
+    final ratio = (icon as BytesMapBitmap).imagePixelRatio;
+    final size = Size(img.width / ratio, img.height / ratio);
+    return (o - Offset(size.width * m.anchor.dx, size.height * m.anchor.dy)) & size;
+  }
 
   Marker? _hit(Offset pos) {
     final p = _proj(_size);
     for (final m in _sortedMarkers.reversed) {
-      final o = p.toScreen(m.position);
-      if (Rect.fromLTRB(o.dx - 18, o.dy - 44, o.dx + 18, o.dy + 6).contains(pos)) return m;
+      if (_markerRect(p, m).inflate(4).contains(pos)) return m;
     }
     return null;
   }
@@ -165,8 +196,11 @@ class _DemoMapState extends State<_DemoMap> {
         _fit(size);
         _needsFit = false;
       }
-      final painter = _MapPainter(_proj(size), _sortedMarkers, widget.objects.polylines,
-          (widget.config.myLocationEnabled ?? false) ? widget.myLocation : null);
+      final markers = _sortedMarkers;
+      final proj = _proj(size);
+      final painter = _MapPainter(proj, markers, widget.objects.polylines,
+          (widget.config.myLocationEnabled ?? false) ? widget.myLocation : null,
+          {for (final m in markers) if (_imageFor(m) case final img?) m.markerId: (img, _markerRect(proj, m))});
       final map = CustomPaint(painter: painter, size: size);
       return Listener(
         onPointerSignal: (e) {
@@ -209,11 +243,12 @@ class _DemoMapState extends State<_DemoMap> {
 }
 
 class _MapPainter extends CustomPainter {
-  _MapPainter(this.p, this.markers, this.polylines, this.me);
+  _MapPainter(this.p, this.markers, this.polylines, this.me, this.bitmaps);
   final _Projection p;
   final List<Marker> markers;
   final Set<Polyline> polylines;
   final LatLng? me;
+  final Map<MarkerId, (ui.Image, Rect)> bitmaps;
 
   static const _bg = Color(0xFFEDEAE3);
   static const _park = Color(0xFFCFE6C3);
@@ -320,6 +355,14 @@ class _MapPainter extends CustomPainter {
     }
 
     for (final m in markers) {
+      final bmp = bitmaps[m.markerId];
+      if (bmp != null) {
+        final (img, rect) = bmp;
+        canvas.drawImageRect(img, Offset.zero & Size(img.width.toDouble(), img.height.toDouble()), rect,
+            Paint()..color = Colors.black.withValues(alpha: m.alpha)..filterQuality = FilterQuality.medium);
+        continue;
+      }
+      if (m.icon is BytesMapBitmap) continue; // still decoding
       final json = m.icon.toJson() as List;
       final hue = json.length > 1 ? (json[1] as num).toDouble() : 0.0;
       final color = HSVColor.fromAHSV(1, hue, 0.78, hue == 0 ? 0.92 : 0.86).toColor().withValues(alpha: m.alpha);

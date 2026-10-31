@@ -39,7 +39,7 @@ class AccountScreen extends ConsumerWidget {
           ),
           const SectionHeader('Plans'),
           _PlanRow(name: 'Free', price: '\$0', perks: 'Map, routes${pack.freeRouteLimit != null ? ' (${pack.freeRouteLimit} saved)' : ''}, visit logging, reporting'),
-          _PlanRow(name: pack.proLabel, price: switch (pack.id.name) { 'yardSales' => '\$9.99 / yr', 'cardDrops' => '\$4.99 / mo', _ => '\$19 / rep / mo' }, perks: 'Everything in Free plus unlimited routes, alerts, exports, and feature requests', highlight: true),
+          _PlanRow(name: pack.proLabel, price: pack.proPrice, perks: ['Everything in Free', ...pack.proPerks.map((p) => p.label)].join(' · '), highlight: true),
           const SizedBox(height: Sp.s4),
           KnButton(label: 'Upgrade to ${pack.proLabel}', lime: true, onPressed: () => toast(context, 'Store billing arrives in the next release. Email us for early access.')),
           if (anon) ...[

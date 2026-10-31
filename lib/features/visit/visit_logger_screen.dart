@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/logic/errors.dart';
 import '../../core/theme/kn_colors.dart';
 import '../../core/theme/kn_theme.dart';
 import '../../data/models/visit.dart';
@@ -34,9 +35,9 @@ class _VisitLoggerScreenState extends ConsumerState<VisitLoggerScreen> {
   bool _saving = false;
 
   TextEditingController _ctrl(String key) => _controllers.putIfAbsent(key, () {
-        final v = _draft.values[key];
-        return TextEditingController(text: v == null ? '' : v.toString());
-      });
+    final v = _draft.values[key];
+    return TextEditingController(text: v == null ? '' : v.toString());
+  });
 
   @override
   void dispose() {
@@ -64,11 +65,13 @@ class _VisitLoggerScreenState extends ConsumerState<VisitLoggerScreen> {
       final r = await ref.read(visitLoggerProvider).log(route: route, stop: stop, draft: _draft, photo: _photo);
       if (!mounted) return;
       context.pop();
-      if (r.shared) toast(context, 'Shared with nearby ${route.mode.name == 'cardDrops' ? 'collectors' : 'hunters'}', icon: Icons.campaign_outlined);
+      if (r.shared) {
+        toast(context, 'Shared with nearby ${ref.read(modePackProvider).communityNoun}', icon: Icons.campaign_outlined);
+      }
     } catch (e) {
       if (mounted) {
         setState(() => _saving = false);
-        toast(context, 'Couldn\'t save: $e');
+        toast(context, 'Couldn\'t save. ${friendlyError(e)}');
       }
     }
   }
@@ -94,28 +97,66 @@ class _VisitLoggerScreenState extends ConsumerState<VisitLoggerScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(stop.name, style: t.headlineSmall, maxLines: 1, overflow: TextOverflow.ellipsis),
-          Text(stop.address, style: t.bodySmall?.copyWith(color: c.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis),
-        ]),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(stop.name, style: t.headlineSmall, maxLines: 1, overflow: TextOverflow.ellipsis),
+            Text(
+              stop.address,
+              style: t.bodySmall?.copyWith(color: c.onSurfaceVariant),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.all(Sp.s4),
         children: [
-          for (final f in fields) ...[
-            _field(f, outcomes, nav, pack.productCatalog),
+          // Short numeric fields share a row so the form isn't a column of full-width boxes.
+          for (final group in _groupShort(fields)) ...[
+            group.length == 1
+                ? _field(group.single, outcomes, nav, pack.productCatalog)
+                : Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (var i = 0; i < group.length; i++) ...[
+                        if (i > 0) const SizedBox(width: Sp.s2),
+                        Expanded(child: _field(group[i], outcomes, nav, pack.productCatalog)),
+                      ],
+                    ],
+                  ),
             const SizedBox(height: Sp.s4),
           ],
-          if (fields.isEmpty) const EmptyState(icon: Icons.tune, title: 'No visit fields enabled', body: 'Turn some on in Preferences → Advanced.'),
+          if (fields.isEmpty)
+            const EmptyState(
+              icon: Icons.tune,
+              title: 'No visit fields enabled',
+              body: 'Turn some on in Preferences → Advanced.',
+            ),
         ],
       ),
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(Sp.s4, Sp.s2, Sp.s4, Sp.s4),
-          child: KnButton(label: 'Save ${pack.visitVerb.split(' ').last.toLowerCase() == 'shelf' ? 'report' : 'visit'}', lime: true, loading: _saving, onPressed: _save),
+          child: KnButton(label: pack.saveVisitLabel, lime: true, loading: _saving, onPressed: _save),
         ),
       ),
     );
+  }
+
+  /// Runs of number and currency fields, up to three per row; everything else alone.
+  static List<List<VisitFieldDefinition>> _groupShort(List<VisitFieldDefinition> fields) {
+    bool short(VisitFieldDefinition f) => f.type == FieldType.number || f.type == FieldType.currency;
+    final out = <List<VisitFieldDefinition>>[];
+    for (final f in fields) {
+      if (short(f) && out.isNotEmpty && short(out.last.first) && out.last.length < 3) {
+        out.last.add(f);
+      } else {
+        out.add([f]);
+      }
+    }
+    return out;
   }
 
   Widget _field(VisitFieldDefinition f, List<String> outcomes, dynamic nav, bool catalog) {
@@ -123,11 +164,18 @@ class _VisitLoggerScreenState extends ConsumerState<VisitLoggerScreen> {
     final c = context.kn;
     switch (f.type) {
       case FieldType.selector:
-        return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(f.label, style: t.titleMedium),
-          const SizedBox(height: Sp.s2),
-          ChipRow(options: f.options.isNotEmpty ? f.options : outcomes, selected: _draft.values[f.key] as String?, onSelected: (v) => setState(() => _draft.values[f.key] = v)),
-        ]);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(f.label, style: t.titleMedium),
+            const SizedBox(height: Sp.s2),
+            ChipRow(
+              options: f.options.isNotEmpty ? f.options : outcomes,
+              selected: _draft.values[f.key] as String?,
+              onSelected: (v) => setState(() => _draft.values[f.key] = v),
+            ),
+          ],
+        );
       case FieldType.text:
         final isPhone = f.key == 'phone';
         final isEmail = f.key == 'email';
@@ -152,11 +200,25 @@ class _VisitLoggerScreenState extends ConsumerState<VisitLoggerScreen> {
           ),
         );
       case FieldType.multiline:
-        return TextField(controller: _ctrl(f.key), maxLines: 4, minLines: 2, textCapitalization: TextCapitalization.sentences, decoration: InputDecoration(labelText: f.label, hintText: f.hint, alignLabelWithHint: true));
+        return TextField(
+          controller: _ctrl(f.key),
+          maxLines: 4,
+          minLines: 2,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: InputDecoration(labelText: f.label, hintText: f.hint, alignLabelWithHint: true),
+        );
       case FieldType.number:
-        return TextField(controller: _ctrl(f.key), keyboardType: TextInputType.number, decoration: InputDecoration(labelText: f.label, hintText: f.hint));
+        return TextField(
+          controller: _ctrl(f.key),
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(labelText: f.label, hintText: f.hint),
+        );
       case FieldType.currency:
-        return TextField(controller: _ctrl(f.key), keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: InputDecoration(labelText: f.label, prefixText: '\$ ', hintText: f.hint));
+        return TextField(
+          controller: _ctrl(f.key),
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: InputDecoration(labelText: f.label, prefixText: '\$ ', hintText: f.hint),
+        );
       case FieldType.date:
         final v = _draft.values[f.key];
         final d = v is DateTime ? v : (v is String ? DateTime.tryParse(v) : null);
@@ -165,43 +227,91 @@ class _VisitLoggerScreenState extends ConsumerState<VisitLoggerScreen> {
           leading: const Icon(Icons.event),
           title: Text(f.label),
           subtitle: Text(d == null ? 'Not set' : DateFormat.yMMMEd().format(d)),
-          trailing: d == null ? null : IconButton(tooltip: 'Clear date', icon: const Icon(Icons.clear), onPressed: () => setState(() => _draft.values[f.key] = null)),
+          trailing: d == null
+              ? null
+              : IconButton(
+                  tooltip: 'Clear date',
+                  icon: const Icon(Icons.clear),
+                  onPressed: () => setState(() => _draft.values[f.key] = null),
+                ),
           onTap: () async {
-            final r = await showDatePicker(context: context, initialDate: d ?? DateTime.now(), firstDate: DateTime.now().subtract(const Duration(days: 365)), lastDate: DateTime.now().add(const Duration(days: 365 * 2)));
+            final r = await showDatePicker(
+              context: context,
+              initialDate: d ?? DateTime.now(),
+              firstDate: DateTime.now().subtract(const Duration(days: 365)),
+              lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
+            );
             if (r != null) setState(() => _draft.values[f.key] = r);
           },
         );
       case FieldType.toggle:
-        return SwitchListTile(contentPadding: EdgeInsets.zero, title: Text(f.label), value: _draft.values[f.key] == true, onChanged: (v) => setState(() => _draft.values[f.key] = v));
+        return SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text(f.label),
+          value: _draft.values[f.key] == true,
+          onChanged: (v) => setState(() => _draft.values[f.key] = v),
+        );
       case FieldType.photo:
         final existing = _draft.values['photo'] as String?;
-        return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(f.label, style: t.titleMedium),
-          const SizedBox(height: Sp.s2),
-          Row(children: [
-            if (_photo != null)
-              ClipRRect(borderRadius: BorderRadius.circular(Rad.lg), child: XFileImage(_photo!, width: 96, height: 96))
-            else if (existing != null)
-              FutureBuilder(
-                future: ref.read(storageServiceProvider).signedUrl(StorageService.visitPhotos, existing),
-                builder: (_, s) => s.data == null
-                    ? Container(width: 96, height: 96, decoration: BoxDecoration(color: c.surfaceHigh, borderRadius: BorderRadius.circular(Rad.lg)))
-                    : ClipRRect(borderRadius: BorderRadius.circular(Rad.lg), child: Image.network(s.data!, width: 96, height: 96, fit: BoxFit.cover)),
-              ),
-            if (_photo != null || existing != null) const SizedBox(width: Sp.s3),
-            OutlinedButton.icon(onPressed: () => _pick(ImageSource.camera), icon: const Icon(Icons.photo_camera_outlined), label: const Text('Camera')),
-            const SizedBox(width: Sp.s2),
-            OutlinedButton.icon(onPressed: () => _pick(ImageSource.gallery), icon: const Icon(Icons.photo_library_outlined), label: const Text('Library')),
-          ]),
-          Text('No employee names or back-room photos.', style: t.labelSmall?.copyWith(color: c.onSurfaceDisabled)),
-        ]);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(f.label, style: t.titleMedium),
+            const SizedBox(height: Sp.s2),
+            Row(
+              children: [
+                if (_photo != null)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(Rad.lg),
+                    child: XFileImage(_photo!, width: 96, height: 96),
+                  )
+                else if (existing != null)
+                  FutureBuilder(
+                    future: ref.read(storageServiceProvider).signedUrl(StorageService.visitPhotos, existing),
+                    builder: (_, s) => s.data == null
+                        ? Container(
+                            width: 96,
+                            height: 96,
+                            decoration: BoxDecoration(
+                              color: c.surfaceHigh,
+                              borderRadius: BorderRadius.circular(Rad.lg),
+                            ),
+                          )
+                        : ClipRRect(
+                            borderRadius: BorderRadius.circular(Rad.lg),
+                            child: Image.network(s.data!, width: 96, height: 96, fit: BoxFit.cover),
+                          ),
+                  ),
+                if (_photo != null || existing != null) const SizedBox(width: Sp.s3),
+                OutlinedButton.icon(
+                  onPressed: () => _pick(ImageSource.camera),
+                  icon: const Icon(Icons.photo_camera_outlined),
+                  label: const Text('Camera'),
+                ),
+                const SizedBox(width: Sp.s2),
+                OutlinedButton.icon(
+                  onPressed: () => _pick(ImageSource.gallery),
+                  icon: const Icon(Icons.photo_library_outlined),
+                  label: const Text('Library'),
+                ),
+              ],
+            ),
+            if (ref.read(modePackProvider).photoHint case final hint?)
+              Text(hint, style: t.labelSmall?.copyWith(color: c.onSurfaceDisabled)),
+          ],
+        );
       case FieldType.productMulti:
-        final v = (_draft.values[f.key] as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? const <Map<String, dynamic>>[];
-        return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(f.label, style: t.titleMedium),
-          const SizedBox(height: Sp.s2),
-          ProductMultiField(value: v, onChanged: (list) => setState(() => _draft.values[f.key] = list)),
-        ]);
+        final v =
+            (_draft.values[f.key] as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ??
+            const <Map<String, dynamic>>[];
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(f.label, style: t.titleMedium),
+            const SizedBox(height: Sp.s2),
+            ProductMultiField(value: v, onChanged: (list) => setState(() => _draft.values[f.key] = list)),
+          ],
+        );
     }
   }
 

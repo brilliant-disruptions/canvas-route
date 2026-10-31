@@ -55,3 +55,36 @@ String relativeAge(DateTime t, {DateTime? now}) {
   if (d.inDays < 7) return '${d.inDays}d ago';
   return '${(d.inDays / 7).floor()}w ago';
 }
+
+/// The soonest upcoming (or current) occurrence of a best window, looking a
+/// week ahead. Windows are two hours from their start hour. One-off sightings
+/// don't count: a window needs 2+ hits and a third of the strongest window's.
+({DateTime start, DateTime end})? nextLikelyWindow(List<({int dow, int hour, int hits})> best, DateTime now) {
+  if (best.isEmpty) return null;
+  final top = best.map((w) => w.hits).reduce((a, b) => a > b ? a : b);
+  ({DateTime start, DateTime end})? soonest;
+  for (final w in best.where((w) => w.hits >= 2 && w.hits * 3 >= top)) {
+    final today = DateTime(now.year, now.month, now.day);
+    for (var d = 0; d <= 7; d++) {
+      final day = today.add(Duration(days: d));
+      if (day.weekday % 7 != w.dow) continue;
+      final start = DateTime(day.year, day.month, day.day, w.hour);
+      final end = start.add(const Duration(hours: 2));
+      if (!end.isAfter(now)) continue;
+      if (soonest == null || start.isBefore(soonest.start)) soonest = (start: start, end: end);
+      break;
+    }
+  }
+  return soonest;
+}
+
+/// "now", "in 45 min", "in 5h", "tomorrow", "in 3 days".
+String untilLabel(DateTime start, DateTime now) {
+  if (!start.isAfter(now)) return 'now';
+  final d = start.difference(now);
+  if (d.inMinutes < 60) return 'in ${d.inMinutes} min';
+  final days = DateTime(start.year, start.month, start.day).difference(DateTime(now.year, now.month, now.day)).inDays;
+  if (days == 0) return 'in ${d.inHours}h';
+  if (days == 1) return 'tomorrow';
+  return 'in $days days';
+}

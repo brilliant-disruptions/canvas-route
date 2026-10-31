@@ -221,6 +221,28 @@ class DemoShareService implements ShareService {
       _show(title: 'Export · $fileName', body: csv, monospace: true, note: 'On a phone this opens the share sheet with the CSV attached.');
 
   @override
+  Future<void> shareImage(Uint8List png, String fileName, {String? text, String? subject}) async {
+    final ctx = rootNavigatorKey.currentContext;
+    if (ctx == null) return;
+    await showDialog<void>(
+      context: ctx,
+      builder: (c) => AlertDialog(
+        title: Text(subject ?? 'Share'),
+        content: SizedBox(
+          width: 340,
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('On a phone this opens the share sheet with this image attached.',
+                style: Theme.of(c).textTheme.bodySmall?.copyWith(color: c.kn.onSurfaceVariant)),
+            const SizedBox(height: Sp.s3),
+            ClipRRect(borderRadius: BorderRadius.circular(Rad.md), child: Image.memory(png)),
+          ]),
+        ),
+        actions: [TextButton(onPressed: () => Navigator.pop(c), child: const Text('Done'))],
+      ),
+    );
+  }
+
+  @override
   Future<void> shareText(String text, {String? subject}) =>
       _show(title: subject ?? 'Share', body: text, note: 'On a phone this opens the share sheet. Links point at the future web app.');
 

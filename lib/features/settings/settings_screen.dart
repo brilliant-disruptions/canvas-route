@@ -90,20 +90,15 @@ class SettingsScreen extends ConsumerWidget {
               value: profile.autoShareReports,
               onChanged: (v) => ref.read(profileProvider.notifier).patch({'auto_share_reports': v}),
             ),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Alert radius'),
-              subtitle: Slider(
-                value: profile.alertRadiusMi.toDouble(),
-                min: 1,
-                max: 50,
-                divisions: 49,
-                label: '${profile.alertRadiusMi} mi',
-                onChangeEnd: (v) => ref.read(profileProvider.notifier).patch({'alert_radius_mi': v.round()}),
-                onChanged: (_) {},
+            // The radius lives on the alerts screen, which applies the free plan's cap.
+            if (pack.alerts.isNotEmpty)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Alert radius'),
+                subtitle: Text('${profile.alertRadiusMi} mi · quiet hours and products in ${pack.productCatalog ? 'Watchlist' : 'Alerts'}'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/alerts'),
               ),
-              trailing: Text('${profile.alertRadiusMi} mi'),
-            ),
           ],
           const SizedBox(height: Sp.s8),
           if (!anon)

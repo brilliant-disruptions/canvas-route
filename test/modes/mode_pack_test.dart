@@ -42,6 +42,40 @@ void main() {
     expect(packFor(AppMode.fieldSales).usesTimeWindows, isFalse);
   });
 
+  test('every default outcome has a quick-log icon', () {
+    for (final pack in modePacks.values) {
+      expect(pack.outcomeIcons.keys.toSet(), pack.defaultOutcomes.toSet(), reason: pack.label);
+    }
+  });
+
+  test('recap wins are default outcomes', () {
+    for (final pack in modePacks.values) {
+      expect(pack.defaultOutcomes, containsAll(pack.winOutcomes), reason: pack.label);
+    }
+  });
+
+  test('paid packs price and pitch their plan', () {
+    for (final pack in modePacks.values.where((p) => p.proProductId != null)) {
+      expect(pack.proPrice, isNotEmpty, reason: pack.label);
+      expect(pack.proPitch, isNotEmpty, reason: pack.label);
+      expect(pack.proPerks, isNotEmpty, reason: pack.label);
+    }
+  });
+
+  test('route limit applies to free users at the limit only', () {
+    final pack = packFor(AppMode.cardDrops);
+    expect(pack.atRouteLimit(0, paying: false), isFalse);
+    expect(pack.atRouteLimit(pack.freeRouteLimit!, paying: false), isTrue);
+    expect(pack.atRouteLimit(99, paying: true), isFalse);
+    expect(packFor(AppMode.fieldSales).atRouteLimit(99, paying: false), isFalse);
+  });
+
+  test('every search suggestion has a quick-start icon', () {
+    for (final pack in modePacks.values) {
+      expect(pack.suggestionIcons.keys.toSet(), pack.searchSuggestions.toSet(), reason: pack.label);
+    }
+  });
+
   test('visit field definitions round-trip through JSON', () {
     const f = VisitFieldDefinition(key: 'c_bins', label: 'Bins', type: FieldType.number, isCustom: true);
     final back = VisitFieldDefinition.fromJson(f.toJson());
