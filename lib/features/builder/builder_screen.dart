@@ -19,6 +19,7 @@ import '../../state/map_state.dart';
 import '../../state/profile_state.dart';
 import '../../state/providers.dart';
 import '../../state/routes_state.dart';
+import '../../ui/map/pin_icons.dart';
 import '../../ui/widgets/kn_widgets.dart';
 import '../map/manual_stop_sheet.dart';
 
@@ -35,7 +36,7 @@ class BuilderScreen extends ConsumerStatefulWidget {
   ConsumerState<BuilderScreen> createState() => _BuilderScreenState();
 }
 
-class _BuilderScreenState extends ConsumerState<BuilderScreen> {
+class _BuilderScreenState extends ConsumerState<BuilderScreen> with PinIconsMixin {
   final _name = TextEditingController();
   _Order _order = _Order.preserve;
   DirectionsResult? _preview;
@@ -239,7 +240,13 @@ class _BuilderScreenState extends ConsumerState<BuilderScreen> {
                     liteModeEnabled: true,
                     markers: {
                       for (var i = 0; i < drafts.length; i++)
-                        Marker(markerId: MarkerId(drafts[i].id), position: LatLng(drafts[i].business.lat, drafts[i].business.lng), icon: BitmapDescriptor.defaultMarkerWithHue(270)),
+                        if (pinIcon(PinSpec.number(i + 1, fill: c.primary, ink: c.onPrimary)) case final icon?)
+                          Marker(
+                            markerId: MarkerId(drafts[i].id),
+                            position: LatLng(drafts[i].business.lat, drafts[i].business.lng),
+                            icon: icon,
+                            anchor: const Offset(0.5, 0.5),
+                          ),
                     },
                     polylines: polyline.isEmpty ? const {} : {Polyline(polylineId: const PolylineId('p'), points: polyline, color: c.primary, width: 4)},
                     onMapCreated: (ctl) {

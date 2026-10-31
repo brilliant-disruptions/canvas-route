@@ -12,6 +12,7 @@ import '../../data/models/stop.dart';
 import '../../state/profile_state.dart';
 import '../../state/providers.dart';
 import '../../state/routes_state.dart';
+import '../../ui/map/pin_icons.dart';
 import '../../ui/widgets/kn_widgets.dart';
 
 /// Run a saved route stop-by-stop. Non-linear: tap any stop to jump.
@@ -22,7 +23,7 @@ class RunnerScreen extends ConsumerStatefulWidget {
   ConsumerState<RunnerScreen> createState() => _RunnerScreenState();
 }
 
-class _RunnerScreenState extends ConsumerState<RunnerScreen> {
+class _RunnerScreenState extends ConsumerState<RunnerScreen> with PinIconsMixin {
   GoogleMapController? _map;
   String? _currentStopId;
   List<LatLng> _polyline = const [];
@@ -90,18 +91,24 @@ class _RunnerScreenState extends ConsumerState<RunnerScreen> {
     });
 
     final current = _current(route);
+    PinSpec spec(int i, Stop s) => s.id == current?.id
+        ? PinSpec.number(i + 1, fill: c.tertiary, ink: c.onTertiary, done: s.visited)
+        : s.visited
+            ? PinSpec.number(i + 1, fill: c.pinVisited, ink: c.surface, done: true)
+            : PinSpec.number(i + 1, fill: c.primary, ink: c.onPrimary);
     final markers = {
       for (var i = 0; i < route.stops.length; i++)
-        Marker(
-          markerId: MarkerId(route.stops[i].id),
-          position: LatLng(route.stops[i].lat, route.stops[i].lng),
-          icon: BitmapDescriptor.defaultMarkerWithHue(
-            route.stops[i].visited ? 0 : (route.stops[i].id == current?.id ? 270 : BitmapDescriptor.hueAzure),
+        if (pinIcon(spec(i, route.stops[i])) case final icon?)
+          Marker(
+            markerId: MarkerId(route.stops[i].id),
+            position: LatLng(route.stops[i].lat, route.stops[i].lng),
+            icon: icon,
+            anchor: const Offset(0.5, 0.5),
+            zIndexInt: route.stops[i].id == current?.id ? 2 : (route.stops[i].visited ? 0 : 1),
+            alpha: route.stops[i].visited && route.stops[i].id != current?.id ? 0.7 : 1,
+            infoWindow: InfoWindow(title: '${i + 1}. ${route.stops[i].name}'),
+            onTap: () => setState(() => _currentStopId = route.stops[i].id),
           ),
-          alpha: route.stops[i].visited ? 0.5 : 1,
-          infoWindow: InfoWindow(title: '${i + 1}. ${route.stops[i].name}'),
-          onTap: () => setState(() => _currentStopId = route.stops[i].id),
-        ),
     };
 
     return Scaffold(

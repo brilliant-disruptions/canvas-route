@@ -1,0 +1,20 @@
+// Short labels that fit on a map pin.
+
+/// "7a", "12:30p".
+String compactTime(DateTime t) {
+  final h = t.hour % 12 == 0 ? 12 : t.hour % 12;
+  final m = t.minute == 0 ? '' : ':${t.minute.toString().padLeft(2, '0')}';
+  return '$h$m${t.hour < 12 ? 'a' : 'p'}';
+}
+
+/// "7a–1p", or "From 7a" without a close.
+String compactWindow(DateTime opens, DateTime? closes) =>
+    closes == null ? 'From ${compactTime(opens)}' : '${compactTime(opens)}–${compactTime(closes)}';
+
+/// Drops parentheticals and dash suffixes and caps the length:
+/// "Collectors Cave (card shop)" → "Collectors Cave".
+String shortPlaceName(String name, {int max = 16}) {
+  var s = name.split(RegExp(r' [(—–-] ?')).first.trim();
+  if (s.isEmpty) s = name.trim();
+  return s.length <= max ? s : '${s.substring(0, max - 1).trimRight()}…';
+}

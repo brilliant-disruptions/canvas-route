@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 
 import '../../app/shell.dart';
 import '../../core/logic/geo.dart';
+import '../../core/logic/pin_labels.dart';
 import '../../core/logic/restock.dart';
 import '../../core/logic/spotlight.dart';
 import '../../core/theme/kn_colors.dart';
@@ -25,6 +26,7 @@ import '../../state/location_state.dart';
 import '../../state/map_state.dart';
 import '../../state/profile_state.dart';
 import '../../state/providers.dart';
+import '../../ui/map/pin_icons.dart';
 import '../../ui/widgets/kn_widgets.dart';
 import '../community/pin_sheet.dart';
 import 'business_sheet.dart';
@@ -38,7 +40,7 @@ class MapScreen extends ConsumerStatefulWidget {
   ConsumerState<MapScreen> createState() => _MapScreenState();
 }
 
-class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserver {
+class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserver, PinIconsMixin {
   GoogleMapController? _map;
   final _search = TextEditingController();
   LatLng? _center;
@@ -281,59 +283,64 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
     final showDeck = map.viewMode == MapViewMode.map && spots.isNotEmpty;
 
     final markers = <Marker>{};
+    // Route order shows on the map: picked stops become numbered dots.
+    void add(String id, Business b, PinSpec spec, VoidCallback onTap, {int z = 0, double alpha = 1}) {
+      final i = map.draftIndex(b);
+      final s = i < 0 ? spec : PinSpec.number(i + 1, fill: c.primary, ink: c.onPrimary);
+      final icon = pinIcon(s);
+      markers.add(Marker(
+        markerId: MarkerId(id),
+        position: LatLng(b.lat, b.lng),
+        icon: icon ?? BitmapDescriptor.defaultMarker,
+        visible: icon != null,
+        anchor: s.anchor,
+        alpha: alpha,
+        zIndexInt: i < 0 ? z : 10,
+        infoWindow: InfoWindow(title: b.name),
+        onTap: onTap,
+      ));
+    }
+
     for (final b in map.results) {
-      final added = map.isDraft(b);
-      markers.add(
-        Marker(
-          markerId: MarkerId('r:${b.identity}'),
-          position: LatLng(b.lat, b.lng),
-          icon: BitmapDescriptor.defaultMarkerWithHue(added ? 270 : BitmapDescriptor.hueAzure),
-          infoWindow: InfoWindow(title: b.name),
-          onTap: () => showBusinessSheet(context, b),
-        ),
-      );
+      add('r:${b.identity}', b, PinSpec.pill(shortPlaceName(b.name), fill: c.surfaceHighest, ink: c.onSurface, border: c.primary),
+          () => showBusinessSheet(context, b));
     }
     for (final d in map.draftStops) {
       if (map.results.any((r) => r.identity == d.business.identity)) continue;
       if (visiblePins.any((p) => p.id == d.business.pinId)) continue;
-      markers.add(
-        Marker(
-          markerId: MarkerId('d:${d.id}'),
-          position: LatLng(d.business.lat, d.business.lng),
-          icon: BitmapDescriptor.defaultMarkerWithHue(d.business.source == StopSource.manual ? 90 : 270),
-          infoWindow: InfoWindow(title: d.business.name),
-          onTap: () => showBusinessSheet(context, d.business),
-        ),
-      );
+      add('d:${d.id}', d.business, PinSpec.pill(shortPlaceName(d.business.name), fill: c.surfaceHighest, ink: c.onSurface),
+          () => showBusinessSheet(context, d.business));
     }
+    final now = DateTime.now();
     for (final p in visiblePins) {
-      double hue = BitmapDescriptor.hueOrange;
-      if (p.kind == PinKind.store) {
-        final tier = (summaries[p.id])?.tier ?? RestockTier.unknown;
-        hue = switch (tier) {
-          RestockTier.unknown => BitmapDescriptor.hueAzure,
-          RestockTier.emerging => BitmapDescriptor.hueYellow,
-          RestockTier.established => BitmapDescriptor.hueGreen,
-        };
+      PinSpec spec;
+      var z = 0;
+      var alpha = 1.0;
+      if (p.opensAt != null) {
+        final ended = p.closesAt != null && !p.closesAt!.isAfter(now);
+        final open = !now.isBefore(p.opensAt!) && !ended;
+        spec = PinSpec.pill(compactWindow(p.opensAt!, p.closesAt),
+            fill: c.surfaceHighest, ink: c.onSurface, border: open ? c.tertiary : c.outline, dot: open ? c.tertiary : null);
+        if (ended) alpha = 0.45;
+      } else {
         final rep = latest[p.id];
         final filter = map.productFilter;
-        if (rep != null &&
+        final live = rep != null &&
             isFresh(rep.createdAt) &&
             pack.reportStatuses.any((s) => s.value == rep.status && s.positive) &&
-            (filter == null || rep.productLabel.toLowerCase().contains(filter.toLowerCase()))) {
-          hue = BitmapDescriptor.hueMagenta;
-        }
+            (filter == null || rep.productLabel.toLowerCase().contains(filter.toLowerCase()));
+        final tier = summaries[p.id]?.tier ?? RestockTier.unknown;
+        spec = live
+            ? PinSpec.pill('${shortPlaceName(p.name, max: 12)} · ${_statusLabel(pack, rep.status)}',
+                fill: c.tertiary, ink: c.onTertiary, halo: true)
+            : PinSpec.pill(shortPlaceName(p.name), fill: c.surfaceHighest, ink: c.onSurface, dot: switch (tier) {
+                RestockTier.unknown => c.outline,
+                RestockTier.emerging => c.warning,
+                RestockTier.established => c.statusDone,
+              });
+        if (live) z = 5;
       }
-      if (map.isDraft(_pinToBusiness(p))) hue = 270;
-      markers.add(
-        Marker(
-          markerId: MarkerId('p:${p.id}'),
-          position: LatLng(p.lat, p.lng),
-          icon: BitmapDescriptor.defaultMarkerWithHue(hue),
-          infoWindow: InfoWindow(title: p.name),
-          onTap: () => showPinSheet(context, p),
-        ),
-      );
+      add('p:${p.id}', _pinToBusiness(p), spec, () => showPinSheet(context, p), z: z, alpha: alpha);
     }
 
     return Stack(
