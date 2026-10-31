@@ -63,7 +63,9 @@ class SpotlightDeck extends StatelessWidget {
       children: [
         if (showTip && !drafting && planCount > 0)
           _PlanTip(
-            text: 'One tap picks the best $planCount ${pack.stopNoun}s near you and puts them in the right order.',
+            text: planCount == 1
+                ? 'One tap plans a ${pack.routeNoun} to the best ${pack.stopNoun} near you.'
+                : 'One tap picks the best $planCount ${pack.stopNoun}s near you and puts them in the right order.',
             onDismiss: onDismissTip,
           ),
         Padding(
@@ -95,7 +97,9 @@ class SpotlightDeck extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
-                          drafting ? 'Tap to review' : 'Best $planCount, in order',
+                          drafting
+                              ? 'Tap to review'
+                              : (planCount == 1 ? 'The best one near you' : 'Best $planCount, in order'),
                           style: t.labelSmall?.copyWith(color: c.onSurfaceVariant),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
