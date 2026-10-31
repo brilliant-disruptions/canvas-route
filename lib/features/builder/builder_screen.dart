@@ -322,7 +322,8 @@ class _BuilderScreenState extends ConsumerState<BuilderScreen> with PinIconsMixi
                           _refreshPreview();
                         },
                         onEdit: () async {
-                          final r = await showManualStopSheet(context, address: d.business.address, requiresWindow: pack.usesTimeWindows && pack.requiresTimeWindow, initialName: d.business.name, initialOpens: d.business.opensAt, initialCloses: d.business.closesAt);
+                          final r = await showManualStopSheet(context, address: d.business.address, requiresWindow: pack.usesTimeWindows && pack.requiresTimeWindow, initialName: d.business.name,
+                            confirmLabel: 'Save', initialOpens: d.business.opensAt, initialCloses: d.business.closesAt);
                           if (r == null) return;
                           ref.read(mapProvider.notifier).updateDraft(d.id, (b) => b.copyWith(name: r.name, opensAt: r.opensAt, closesAt: r.closesAt));
                           _refreshPreview();

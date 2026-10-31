@@ -8,6 +8,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 
 import '../../app/shell.dart';
+import '../../core/logic/errors.dart';
 import '../../core/logic/pin_labels.dart';
 import '../../core/logic/restock.dart';
 import '../../core/logic/spotlight.dart';
@@ -119,13 +120,31 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
     listingUrl: p.listingUrl,
   );
 
-  Future<void> _onLongPress(LatLng at) async {
+  Future<void> _onLongPress(LatLng at) => _dropStop(at);
+
+  /// Spot a sale where you're standing (or the middle of the map without GPS).
+  Future<void> _spotHere() async {
+    final loc = await ref.read(locationServiceProvider).current();
+    final at = loc == null ? _centerOrDefault : LatLng(loc.lat, loc.lng);
+    _map?.animateCamera(CameraUpdate.newLatLng(at));
+    await _dropStop(at);
+  }
+
+  /// A stop dropped on the map: private by default, or shared as a community pin
+  /// (with a photo of the sign) in modes that allow spotting.
+  Future<void> _dropStop(LatLng at) async {
     final pack = ref.read(modePackProvider);
     final address = await ref.read(placesServiceProvider).reverseGeocode(at.latitude, at.longitude);
     if (!mounted) return;
-    final r = await showManualStopSheet(context, address: address, requiresWindow: pack.requiresTimeWindow);
-    if (r == null) return;
-    ref
+    final r = await showManualStopSheet(
+      context,
+      address: address,
+      requiresWindow: pack.requiresTimeWindow,
+      shareLabel: pack.spotLabel,
+      categories: pack.pinCategories,
+    );
+    if (r == null || !mounted) return;
+    void addPrivately() => ref
         .read(mapProvider.notifier)
         .addManual(
           name: r.name,
@@ -136,7 +155,49 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
           closesAt: r.closesAt,
           listingUrl: r.listingUrl,
         );
-    if (mounted) toast(context, 'Added "${r.name}" to your draft', icon: Icons.add_location_alt);
+    if (!r.share) {
+      addPrivately();
+      toast(context, 'Added "${r.name}" to your route', icon: Icons.add_location_alt);
+      return;
+    }
+    if (ref.read(isAnonymousProvider)) {
+      addPrivately();
+      context.push('/signin?reason=report');
+      return;
+    }
+    try {
+      final pin = await ref
+          .read(pinRepoProvider)
+          .createSpotted(
+            userId: ref.read(currentUserIdProvider)!,
+            mode: pack.id,
+            name: r.name,
+            address: r.address ?? address,
+            lat: at.latitude,
+            lng: at.longitude,
+            opensAt: r.opensAt,
+            closesAt: r.closesAt,
+            listingUrl: r.listingUrl,
+            categories: r.categories,
+            signPhoto: r.signPhoto!,
+          );
+      ref.read(mapProvider.notifier).addDraft(_pinToBusiness(pin));
+      if (mounted) {
+        toast(
+          context,
+          'Thanks! Other ${pack.communityNoun} will see it after a quick check.',
+          icon: Icons.campaign_outlined,
+        );
+      }
+    } catch (e) {
+      addPrivately();
+      if (mounted) {
+        toast(
+          context,
+          'Added to your route, but not shared. ${friendlyError(e, denied: 'Sharing unlocks after a few reports.')}',
+        );
+      }
+    }
   }
 
   Future<void> _addFromClipboard() async {
@@ -619,6 +680,20 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
+              if (!listView && pack.spotLabel != null) ...[
+                Padding(
+                  padding: const EdgeInsets.only(right: Sp.s4),
+                  child: FloatingActionButton.extended(
+                    heroTag: 'spot',
+                    onPressed: _spotHere,
+                    backgroundColor: c.surfaceHighest,
+                    foregroundColor: c.onSurface,
+                    icon: const Icon(Icons.add_a_photo_outlined),
+                    label: const Text('Spot a sale'),
+                  ),
+                ),
+                const SizedBox(height: Sp.s2),
+              ],
               if (!listView)
                 Padding(
                   padding: const EdgeInsets.only(right: Sp.s4),

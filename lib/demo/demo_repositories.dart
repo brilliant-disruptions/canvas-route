@@ -356,6 +356,7 @@ class DemoPinRepository implements PinRepository {
     DateTime? opensAt,
     DateTime? closesAt,
     String? listingUrl,
+    List<String> categories = const [],
     required XFile signPhoto,
   }) async {
     final r = _insert({
@@ -370,6 +371,7 @@ class DemoPinRepository implements PinRepository {
       'opens_at': opensAt == null ? null : DemoDb.iso(opensAt),
       'closes_at': closesAt == null ? null : DemoDb.iso(closesAt),
       'listing_url': listingUrl,
+      'categories': categories,
       'status': 'pending',
     });
     await addPhoto(r['id'] as String, userId, signPhoto);

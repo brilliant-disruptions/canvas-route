@@ -104,6 +104,7 @@ class PinRepository {
     DateTime? opensAt,
     DateTime? closesAt,
     String? listingUrl,
+    List<String> categories = const [],
     required XFile signPhoto,
   }) async {
     final row = await sb
@@ -120,6 +121,7 @@ class PinRepository {
           'opens_at': opensAt?.toUtc().toIso8601String(),
           'closes_at': closesAt?.toUtc().toIso8601String(),
           'listing_url': listingUrl,
+          'categories': categories,
           'status': 'pending',
         })
         .select()
@@ -165,6 +167,7 @@ class PinRepository {
 
   Future<List<Pin>> pendingForAdmin() async {
     final rows = await sb.from('pins').select().inFilter('status', ['pending', 'removed']).order('created_at');
-    return rows.map(Pin.fromRow).toList();
+    // Reviewers need the sign photo: it's the evidence for a spotted sale.
+    return [for (final r in rows) Pin.fromRow(r, photos: await _photoUrls(r['id'] as String))];
   }
 }

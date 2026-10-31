@@ -83,6 +83,7 @@ class ModePack {
     this.profileAsksCompany = false,
     this.pinsPlacesStops = false,
     this.saveVisitLabel = 'Save visit',
+    this.spotLabel,
     this.photoHint,
     this.productCatalog = false,
   });
@@ -180,6 +181,10 @@ class ModePack {
 
   /// The visit form's save button, e.g. "Save report".
   final String saveVisitLabel;
+
+  /// When set, a stop dropped on the map can be shared as a community pin
+  /// (with a photo of the sign), e.g. "Share it with nearby hunters".
+  final String? spotLabel;
 
   /// Shown under the visit photo picker when photos are shared with the community.
   final String? photoHint;
