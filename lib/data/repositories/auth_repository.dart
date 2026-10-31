@@ -43,4 +43,15 @@ class AuthRepository {
   }
 
   Future<void> signOut() => sb.auth.signOut();
+
+  /// Permanently deletes the account and its data (delete-account edge function),
+  /// then signs out. Store rules require deletion in the app, not just deactivation.
+  Future<void> deleteAccount() async {
+    final res = await sb.functions.invoke('delete-account');
+    final data = res.data;
+    if (data is! Map || data['deleted'] != true) {
+      throw StateError(data is Map && data['error'] is String ? data['error'] as String : 'Couldn\'t delete the account');
+    }
+    await sb.auth.signOut();
+  }
 }

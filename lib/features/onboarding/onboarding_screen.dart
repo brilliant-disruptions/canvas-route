@@ -11,6 +11,7 @@ import '../../state/profile_state.dart';
 import '../../ui/widgets/kn_widgets.dart';
 
 /// One screen in: pick a mode, see what it does, land on the map (spec §2.2).
+/// A build that ships one mode skips the picker and opens on that mode's pitch.
 /// Profile details are optional and live in the drawer, not in the way.
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
@@ -19,7 +20,7 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 }
 
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
-  AppMode? _mode;
+  AppMode? _mode = launchModes.length == 1 ? launchModes.single : null;
   bool _starting = false;
 
   Future<void> _start() async {
@@ -37,6 +38,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     final t = Theme.of(context).textTheme;
     final pack = _mode == null ? null : packFor(_mode!);
 
+    final single = launchModes.length == 1;
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -44,16 +46,35 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(Sp.s6, Sp.s8, Sp.s6, Sp.s6),
-                children: [
-                  Text('What are you\nhere to do?', style: t.displayMedium),
-                  const SizedBox(height: Sp.s2),
-                  Text('No sign-up. Switch any time.', style: t.bodyLarge?.copyWith(color: c.onSurfaceVariant)),
-                  const SizedBox(height: Sp.s8),
-                  for (final m in AppMode.values) ...[
-                    _ModeCard(pack: packFor(m), selected: _mode == m, onTap: () => setState(() => _mode = m)),
-                    const SizedBox(height: Sp.s3),
-                  ],
-                ],
+                children: single
+                    ? [
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Container(
+                            width: 64,
+                            height: 64,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(color: c.tertiary, borderRadius: BorderRadius.circular(Rad.xl)),
+                            child: Icon(pack!.icon, size: 34, color: c.onTertiary),
+                          ),
+                        ),
+                        const SizedBox(height: Sp.s6),
+                        Text(pack.tagline, style: t.displayMedium),
+                        const SizedBox(height: Sp.s2),
+                        Text('No sign-up. Free to start.', style: t.bodyLarge?.copyWith(color: c.onSurfaceVariant)),
+                        const SizedBox(height: Sp.s4),
+                        _ValueProps(pack: pack),
+                      ]
+                    : [
+                        Text('What are you\nhere to do?', style: t.displayMedium),
+                        const SizedBox(height: Sp.s2),
+                        Text('No sign-up. Switch any time.', style: t.bodyLarge?.copyWith(color: c.onSurfaceVariant)),
+                        const SizedBox(height: Sp.s8),
+                        for (final m in launchModes) ...[
+                          _ModeCard(pack: packFor(m), selected: _mode == m, onTap: () => setState(() => _mode = m)),
+                          const SizedBox(height: Sp.s3),
+                        ],
+                      ],
               ),
             ),
             AnimatedSwitcher(
@@ -64,7 +85,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       key: ValueKey(pack.id),
                       padding: const EdgeInsets.fromLTRB(Sp.s6, Sp.s2, Sp.s6, Sp.s6),
                       child: KnButton(
-                        label: 'Start with ${pack.label}',
+                        label: single ? pack.startLabel ?? 'Start with ${pack.label}' : 'Start with ${pack.label}',
                         icon: Icons.arrow_forward,
                         lime: true,
                         loading: _starting,
@@ -125,35 +146,52 @@ class _ModeCard extends StatelessWidget {
                   ),
                 ],
               ),
-              if (selected)
-                for (final p in pack.onboarding) ...[
-                  const SizedBox(height: Sp.s4),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(color: c.surfaceHigh, borderRadius: BorderRadius.circular(Rad.lg)),
-                        child: Icon(p.icon, size: 20, color: c.tertiary),
-                      ),
-                      const SizedBox(width: Sp.s3),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(p.headline, style: t.titleMedium),
-                            Text(p.subtext, style: t.bodySmall?.copyWith(color: c.onSurfaceVariant)),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+              if (selected) _ValueProps(pack: pack),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+/// The mode's value props: an icon tile, a headline and a line of detail each.
+class _ValueProps extends StatelessWidget {
+  const _ValueProps({required this.pack});
+  final ModePack pack;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.kn;
+    final t = Theme.of(context).textTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final p in pack.onboarding) ...[
+          const SizedBox(height: Sp.s4),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(color: c.surfaceHigh, borderRadius: BorderRadius.circular(Rad.lg)),
+                child: Icon(p.icon, size: 20, color: c.tertiary),
+              ),
+              const SizedBox(width: Sp.s3),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(p.headline, style: t.titleMedium),
+                    Text(p.subtext, style: t.bodySmall?.copyWith(color: c.onSurfaceVariant)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
     );
   }
 }

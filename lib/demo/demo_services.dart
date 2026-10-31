@@ -3,16 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../app/router.dart';
-import '../core/logic/geo.dart';
 import '../core/theme/kn_colors.dart';
 import '../core/theme/kn_theme.dart';
 import '../data/models/business.dart';
 import '../data/models/directions.dart';
 import '../data/models/stop.dart';
-import '../data/services/directions_service.dart';
+import '../data/services/estimate_directions.dart';
 import '../data/services/location_service.dart';
 import '../data/services/places_service.dart';
 import '../data/services/share_service.dart';
+import '../data/services/sign_reader.dart';
 import '../data/services/storage_service.dart';
 import 'demo_db.dart';
 
@@ -115,81 +115,19 @@ class DemoPlacesService implements PlacesService {
   }
 }
 
-String encodePolyline(List<Waypoint> pts) {
-  final sb = StringBuffer();
-  var pLat = 0, pLng = 0;
-  void enc(int v) {
-    var x = v < 0 ? -2 * v - 1 : 2 * v; // arithmetic zigzag; `~` is unsigned on the web
-    while (x >= 0x20) {
-      sb.writeCharCode((0x20 | (x & 0x1f)) + 63);
-      x >>= 5;
-    }
-    sb.writeCharCode(x + 63);
-  }
-
-  for (final p in pts) {
-    final lat = (p.lat * 1e5).round(), lng = (p.lng * 1e5).round();
-    enc(lat - pLat);
-    enc(lng - pLng);
-    pLat = lat;
-    pLng = lng;
-  }
-  return sb.toString();
-}
-
-/// Straight-line routing with a city-grid shape and a road factor. Optimizes
-/// with nearest-neighbor, which is what a demo needs.
-class DemoDirectionsService implements DirectionsService {
-  static double _m(Waypoint a, Waypoint b) => haversineMeters(a.lat, a.lng, b.lat, b.lng) * 1.3;
-  static int _sec(double meters) => (meters / 11.0 + 90).round();
-
+/// Free local estimates with a short think, so the demo feels like a network call.
+class DemoDirectionsService extends EstimateDirectionsService {
   @override
   Future<DirectionsResult> route(List<Waypoint> waypoints, {bool optimize = false, Waypoint? origin, Waypoint? destination}) async {
     await Future<void>.delayed(const Duration(milliseconds: 300));
-    if (waypoints.length < 2 && origin == null) throw DirectionsException('At least two waypoints are required');
-    if (waypoints.length > DirectionsService.maxWaypoints) {
-      throw DirectionsException('Routes support up to ${DirectionsService.maxWaypoints} stops');
-    }
-    final Waypoint o, d;
-    final List<Waypoint> mids;
-    if (origin != null && destination != null && optimize) {
-      o = origin;
-      d = destination;
-      mids = waypoints;
-    } else if (origin != null) {
-      o = origin;
-      d = waypoints.last;
-      mids = waypoints.sublist(0, waypoints.length - 1);
-    } else {
-      o = waypoints.first;
-      d = waypoints.last;
-      mids = waypoints.sublist(1, waypoints.length - 1);
-    }
-    var order = [for (var i = 0; i < mids.length; i++) i];
-    if (optimize && mids.length > 1) {
-      final left = {...order};
-      order = [];
-      var cur = o;
-      while (left.isNotEmpty) {
-        final next = left.reduce((a, b) => _m(cur, mids[a]) <= _m(cur, mids[b]) ? a : b);
-        order.add(next);
-        left.remove(next);
-        cur = mids[next];
-      }
-    }
-    final pts = [o, for (final i in order) mids[i], d];
-    final legs = [for (var i = 1; i < pts.length; i++) _m(pts[i - 1], pts[i])];
-    final road = <Waypoint>[];
-    for (var i = 0; i < pts.length; i++) {
-      if (i > 0) road.add(Waypoint(pts[i - 1].lat, pts[i].lng));
-      road.add(pts[i]);
-    }
+    final r = await super.route(waypoints, optimize: optimize, origin: origin, destination: destination);
+    // The demo stands in for Google, so it reads like a live answer.
     return DirectionsResult(
-      encodedPolyline: encodePolyline(road),
-      totalDistanceMeters: legs.fold(0.0, (s, x) => s + x).round(),
-      totalDurationSeconds: legs.fold(0, (s, x) => s + _sec(x)),
-      legDurationSeconds: [for (final l in legs) _sec(l)],
-      optimizedOrder: optimize ? order : null,
+      encodedPolyline: r.encodedPolyline,
+      totalDistanceMeters: r.totalDistanceMeters,
+      totalDurationSeconds: r.totalDurationSeconds,
+      legDurationSeconds: r.legDurationSeconds,
+      optimizedOrder: r.optimizedOrder,
     );
   }
 }
@@ -198,7 +136,7 @@ class DemoLocationService implements LocationService {
   @override
   Future<bool> ensurePermission() async => true;
   @override
-  Future<Waypoint?> current() async => DemoDb.home;
+  Future<Waypoint?> current() async => DemoDb.user;
 }
 
 /// Photos stay in the browser for the session; the picked file's blob URL is the path.
@@ -309,3 +247,16 @@ class _ShareDialogState extends State<_ShareDialog> {
   }
 }
 
+
+/// The demo "reads" a typical hand-lettered sign, so the snap-your-sign flow can
+/// be shown in a browser (real reading needs ML Kit on a phone).
+class DemoSignReader extends SignReader {
+  @override
+  bool get available => true;
+
+  @override
+  Future<String> read(XFile photo) async {
+    await Future<void>.delayed(const Duration(milliseconds: 700));
+    return 'GARAGE SALE\nSAT 7AM-2PM\n5927 GOLIAD AVE\nFURNITURE · TOOLS · BABY STUFF';
+  }
+}

@@ -26,4 +26,58 @@ void main() {
     expect(shortPlaceName('Multi-family sale'), 'Multi-family sa…');
     expect(shortPlaceName('Barnes & Noble Booksellers'), 'Barnes & Noble…');
   });
+
+  test('hunt filter: empty wants everything, wildcard always fits', () {
+    expect(matchesHunt(['Tools'], {}), isTrue);
+    expect(matchesHunt(['Tools', 'Kids'], {'Kids'}), isTrue);
+    expect(matchesHunt(['Furniture'], {'Kids'}), isFalse);
+    expect(matchesHunt(['Everything'], {'Kids'}, wildcard: 'Everything'), isTrue);
+    expect(matchesHunt(const [], {'Kids'}), isFalse);
+    expect(huntLabel({}), 'Any');
+    expect(huntLabel({'Tools'}), 'Tools');
+    expect(huntLabel({'Tools', 'Kids', 'Books'}), 'Tools +2');
+  });
+
+  group('sale status', () {
+    final opens = DateTime(2026, 11, 7, 7);
+    final closes = DateTime(2026, 11, 7, 11);
+    String at(DateTime now) => saleStatus(opens, closes, now);
+
+    test('a week out, the day before, and the last two hours', () {
+      expect(at(DateTime(2026, 10, 31, 15)), 'Opens Sat 7a · in 7 days');
+      expect(at(DateTime(2026, 11, 6, 20)), 'Opens tomorrow 7a');
+      expect(at(DateTime(2026, 11, 7, 6, 15)), 'Opens in 45 min');
+      expect(salePhase(opens, closes, DateTime(2026, 11, 7, 6, 15)), SalePhase.startingSoon);
+    });
+
+    test('open, closing soon, ended; reports only while it is on', () {
+      expect(at(DateTime(2026, 11, 7, 8)), 'Open now · until 11a');
+      expect(at(DateTime(2026, 11, 7, 10, 30)), 'Closing soon · until 11a');
+      expect(at(DateTime(2026, 11, 7, 11)), 'Ended');
+      expect(salePhaseTakesReports(salePhase(opens, closes, DateTime(2026, 11, 7, 8))), isTrue);
+      expect(salePhaseTakesReports(salePhase(opens, closes, DateTime(2026, 10, 31))), isFalse);
+      expect(salePhaseTakesReports(SalePhase.ended), isFalse);
+    });
+  });
+
+  group('posting windows', () {
+    test('next sale day rolls past a finished Saturday', () {
+      expect(nextSaleDay(DateTime(2026, 10, 29, 20)), DateTime(2026, 10, 31)); // Thursday
+      expect(nextSaleDay(DateTime(2026, 10, 31, 9)), DateTime(2026, 10, 31)); // Saturday morning
+      expect(nextSaleDay(DateTime(2026, 10, 31, 15)), DateTime(2026, 11, 7)); // Saturday afternoon
+    });
+
+    test('windows must end after they start, and in the future', () {
+      final now = DateTime(2026, 10, 31, 15);
+      expect(saleWindowError(DateTime(2026, 11, 7, 7), DateTime(2026, 11, 7, 13), now), isNull);
+      expect(saleWindowError(DateTime(2026, 11, 7, 13), DateTime(2026, 11, 7, 7), now), contains('after opening'));
+      expect(saleWindowError(DateTime(2026, 10, 31, 7), DateTime(2026, 10, 31, 13), now), contains('already passed'));
+    });
+
+    test('a spotted sale starts this hour and runs four hours, not past 11pm', () {
+      final w = spottedWindow(DateTime(2026, 10, 31, 15, 40));
+      expect((w.opens, w.closes), (DateTime(2026, 10, 31, 15), DateTime(2026, 10, 31, 19)));
+      expect(spottedWindow(DateTime(2026, 10, 31, 21, 5)).closes, DateTime(2026, 10, 31, 23));
+    });
+  });
 }

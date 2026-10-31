@@ -1,7 +1,7 @@
 -- Adds day_hits to store_summary: positive reports per weekday (Sun = 0), for the
 -- store sheet's restock rhythm chart. Same window and trust filter as 006.
 create or replace function public.store_summary(p_pin uuid)
-returns jsonb language sql stable security_invoker as $$
+returns jsonb language sql stable security invoker as $$
   with hist as (
     select dow, hour, sum(hits) as hits, sum(reports) as reports, max(last_seen) as last_seen
     from public.restock_patterns where pin_id = p_pin group by dow, hour

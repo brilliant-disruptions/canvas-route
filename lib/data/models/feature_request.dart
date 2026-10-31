@@ -65,7 +65,7 @@ class FeatureRequest {
         frequency: r['frequency'] as String?,
         impact: r['impact'] as String?,
         interviewOptIn: r['interview_opt_in'] as bool? ?? false,
-        interviewEmail: r['interview_email'] as String?,
+        interviewEmail: (r['feature_request_contacts'] as Map?)?['email'] as String? ?? r['interview_email'] as String?,
         status: r['status'] as String,
         summary: r['summary'] as String?,
         parentId: r['parent_id'] as String?,

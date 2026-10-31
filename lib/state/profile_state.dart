@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/env.dart';
 import '../data/models/app_mode.dart';
 import '../data/models/profile.dart';
 import '../data/models/settings.dart';
@@ -8,6 +9,7 @@ import '../modes/mode_pack.dart';
 import '../modes/registry.dart';
 import 'auth_state.dart';
 import 'providers.dart';
+import 'team_state.dart';
 
 class ProfileNotifier extends AsyncNotifier<Profile?> {
   @override
@@ -45,13 +47,34 @@ final profileProvider = AsyncNotifierProvider<ProfileNotifier, Profile?>(Profile
 
 final activeModeProvider = Provider<AppMode>((ref) {
   final p = ref.watch(profileProvider).value;
-  return p?.activeMode ?? ref.watch(localPrefsProvider).cachedMode;
+  return launchable(p?.activeMode ?? ref.watch(localPrefsProvider).cachedMode);
 });
 
 final modePackProvider = Provider<ModePack>((ref) => packFor(ref.watch(activeModeProvider)));
 
 final isAdminProvider = Provider<bool>((ref) => ref.watch(profileProvider).value?.isAdmin ?? false);
-final isPayingProvider = Provider<bool>((ref) => ref.watch(profileProvider).value?.isPaying ?? false);
+/// Has paid for the active vertical. A Season Pass doesn't unlock Field Sales Pro.
+final isPayingProvider = Provider<bool>((ref) {
+  final pack = ref.watch(modePackProvider);
+  final own = ref.watch(profileProvider).value?.owns(pack.proProductId, includedInPlan: pack.includedInPlan) ?? false;
+  // Reps on a manager's Team plan are covered without buying their own.
+  return own || (pack.teamPlan && (ref.watch(myTeamProvider).value?.covered ?? false));
+});
+
+/// The active vertical's paid tier can be bought here: web-billed plans where
+/// Stripe Checkout is allowed on this platform. In-app purchase isn't built yet,
+/// so store-billed passes can't be bought anywhere for now.
+final canBuyProProvider = Provider<bool>((ref) {
+  final pack = ref.watch(modePackProvider);
+  return pack.proProductId != null && pack.webBilling && Env.webCheckoutHere;
+});
+
+/// What gates features. Nothing is locked behind a tier the user can't buy here:
+/// an unpurchasable paywall gets apps rejected and helps no one.
+final hasProAccessProvider = Provider<bool>((ref) => ref.watch(isPayingProvider) || !ref.watch(canBuyProProvider));
+
+/// Has paid for any vertical, e.g. to file feature requests.
+final paysForAnythingProvider = Provider<bool>((ref) => ref.watch(profileProvider).value?.isPaying ?? false);
 
 class SettingsNotifier extends AsyncNotifier<Settings?> {
   @override

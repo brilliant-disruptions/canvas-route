@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/logic/dates.dart';
 import '../../core/logic/errors.dart';
 import '../../core/logic/geo.dart';
 import '../../core/logic/polyline.dart';
@@ -77,7 +78,7 @@ class _BuilderScreenState extends ConsumerState<BuilderScreen> with PinIconsMixi
     final ids = drafts.map((d) => d.business.pinId).whereType<String>().toList();
     if (ids.isEmpty) return {};
     final summaries = await ref.read(storeSummariesProvider(ids.join(',')).future);
-    final day = DateTime.now().hour >= 20 ? DateTime.now().add(const Duration(days: 1)) : DateTime.now();
+    final day = DateTime.now().hour >= 20 ? dayPlus(DateTime.now(), 1) : DateTime.now();
     final out = <String, StoreWindow>{};
     for (final e in summaries.entries) {
       final w = windowOnDay(e.value.bestWindows, day);
@@ -176,7 +177,7 @@ class _BuilderScreenState extends ConsumerState<BuilderScreen> with PinIconsMixi
     final pack = ref.read(modePackProvider);
     final saved = (await ref.read(routesProvider.future)).length; // may not be loaded yet
     if (!mounted) return;
-    if (map.editingRouteId == null && pack.atRouteLimit(saved, paying: ref.read(isPayingProvider))) {
+    if (map.editingRouteId == null && pack.atRouteLimit(saved, paying: ref.read(hasProAccessProvider))) {
       await showPaywall(context, pack, reason: freeLimitReason(pack));
       return;
     }
@@ -322,7 +323,8 @@ class _BuilderScreenState extends ConsumerState<BuilderScreen> with PinIconsMixi
                           _refreshPreview();
                         },
                         onEdit: () async {
-                          final r = await showManualStopSheet(context, address: d.business.address, requiresWindow: pack.usesTimeWindows && pack.requiresTimeWindow, initialName: d.business.name, initialOpens: d.business.opensAt, initialCloses: d.business.closesAt);
+                          final r = await showManualStopSheet(context, address: d.business.address, requiresWindow: pack.usesTimeWindows && pack.requiresTimeWindow, initialName: d.business.name,
+                            confirmLabel: 'Save', initialOpens: d.business.opensAt, initialCloses: d.business.closesAt);
                           if (r == null) return;
                           ref.read(mapProvider.notifier).updateDraft(d.id, (b) => b.copyWith(name: r.name, opensAt: r.opensAt, closesAt: r.closesAt));
                           _refreshPreview();
@@ -344,6 +346,7 @@ class _BuilderScreenState extends ConsumerState<BuilderScreen> with PinIconsMixi
                 Text(
                   [
                     '${drafts.length} ${pack.stopNoun}${drafts.length == 1 ? '' : 's'}',
+                    if (_preview?.estimated ?? false) 'drive times estimated',
                     // Last arrival plus the planner's dwell time at that stop.
                     if (_arrivals.length == drafts.length && drafts.isNotEmpty)
                       'done ~${DateFormat.jm().format(_arrivals.last.eta.add(const Duration(minutes: 15)))}',

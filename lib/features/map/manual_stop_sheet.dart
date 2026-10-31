@@ -1,17 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/logic/pin_labels.dart';
+import '../../core/logic/sale_text.dart';
 import '../../core/theme/kn_colors.dart';
 import '../../core/theme/kn_theme.dart';
+import '../../data/services/storage_service.dart';
 import '../../ui/widgets/kn_widgets.dart';
+import '../../ui/widgets/xfile_image.dart';
 
 class ManualStopResult {
-  const ManualStopResult({required this.name, this.address, this.opensAt, this.closesAt, this.listingUrl});
+  const ManualStopResult({
+    required this.name,
+    this.address,
+    this.opensAt,
+    this.closesAt,
+    this.listingUrl,
+    this.signPhoto,
+    this.categories = const [],
+  });
   final String name;
   final String? address;
   final DateTime? opensAt;
   final DateTime? closesAt;
   final String? listingUrl;
+
+  /// Set when the user chose to share the stop with the community.
+  final XFile? signPhoto;
+  final List<String> categories;
+
+  bool get share => signPhoto != null;
 }
 
 Future<ManualStopResult?> showManualStopSheet(
@@ -23,19 +42,28 @@ Future<ManualStopResult?> showManualStopSheet(
   String? initialName,
   DateTime? initialOpens,
   DateTime? initialCloses,
-}) =>
-    showKnSheet<ManualStopResult>(
-      context,
-      builder: (_) => _ManualStopForm(
-        address: address,
-        requiresWindow: requiresWindow,
-        listingUrl: listingUrl,
-        askAddress: askAddress,
-        initialName: initialName,
-        initialOpens: initialOpens,
-        initialCloses: initialCloses,
-      ),
-    );
+  String? shareLabel,
+  List<String> categories = const [],
+  String? confirmLabel,
+  Future<String> Function(XFile photo)? readSign,
+  Map<String, List<String>> categoryKeywords = const {},
+}) => showKnSheet<ManualStopResult>(
+  context,
+  builder: (_) => _ManualStopForm(
+    address: address,
+    requiresWindow: requiresWindow,
+    listingUrl: listingUrl,
+    askAddress: askAddress,
+    initialName: initialName,
+    initialOpens: initialOpens,
+    initialCloses: initialCloses,
+    shareLabel: shareLabel,
+    categories: categories,
+    confirmLabel: confirmLabel,
+    readSign: readSign,
+    categoryKeywords: categoryKeywords,
+  ),
+);
 
 class _ManualStopForm extends StatefulWidget {
   const _ManualStopForm({
@@ -46,6 +74,11 @@ class _ManualStopForm extends StatefulWidget {
     this.initialName,
     this.initialOpens,
     this.initialCloses,
+    this.shareLabel,
+    this.categories = const [],
+    this.confirmLabel,
+    this.readSign,
+    this.categoryKeywords = const {},
   });
   final String? address;
   final bool requiresWindow;
@@ -54,6 +87,15 @@ class _ManualStopForm extends StatefulWidget {
   final String? initialName;
   final DateTime? initialOpens;
   final DateTime? initialCloses;
+
+  /// Offers sharing as a community pin; null hides it.
+  final String? shareLabel;
+  final List<String> categories;
+  final String? confirmLabel;
+
+  /// Reads the sign photo's text (on-device OCR) to pre-fill the form; null skips it.
+  final Future<String> Function(XFile photo)? readSign;
+  final Map<String, List<String>> categoryKeywords;
 
   @override
   State<_ManualStopForm> createState() => _ManualStopFormState();
@@ -65,15 +107,44 @@ class _ManualStopFormState extends State<_ManualStopForm> {
   late DateTime _day;
   late TimeOfDay _open;
   late TimeOfDay _close;
+  late bool _share = widget.shareLabel != null;
+  String? _error;
+  XFile? _sign;
+  final _cats = <String>{};
 
   @override
   void initState() {
     super.initState();
     final now = DateTime.now();
-    final sat = now.add(Duration(days: (DateTime.saturday - now.weekday) % 7));
-    _day = widget.initialOpens ?? DateTime(sat.year, sat.month, sat.day);
-    _open = widget.initialOpens == null ? const TimeOfDay(hour: 7, minute: 0) : TimeOfDay.fromDateTime(widget.initialOpens!);
-    _close = widget.initialCloses == null ? const TimeOfDay(hour: 12, minute: 0) : TimeOfDay.fromDateTime(widget.initialCloses!);
+    // Spotting means the sale is in front of you, so default to now; planning
+    // defaults to the coming Saturday morning.
+    final spotted = widget.shareLabel != null ? spottedWindow(now) : null;
+    final day = spotted?.opens ?? nextSaleDay(now, closesHour: 12);
+    _day = widget.initialOpens ?? DateTime(day.year, day.month, day.day);
+    _open = TimeOfDay.fromDateTime(widget.initialOpens ?? spotted?.opens ?? DateTime(0, 1, 1, 7));
+    _close = TimeOfDay.fromDateTime(widget.initialCloses ?? spotted?.closes ?? DateTime(0, 1, 1, 12));
+  }
+
+  /// Pre-fills day, hours, name and categories from the sign. Silent on failure:
+  /// the photo is still attached and the form still works.
+  Future<void> _readSign(XFile x) async {
+    final read = widget.readSign;
+    if (read == null) return;
+    try {
+      final text = await read(x);
+      final d = parseSaleText(text, DateTime.now(), categoryKeywords: widget.categoryKeywords);
+      if (!mounted || d.filled == 0) return;
+      setState(() {
+        if (widget.requiresWindow) {
+          if (d.day != null) _day = d.day!;
+          if (d.opens case (final h, final m)) _open = TimeOfDay(hour: h, minute: m);
+          if (d.closes case (final h, final m)) _close = TimeOfDay(hour: h, minute: m);
+        }
+        if (_name.text.trim().isEmpty && d.name != null) _name.text = d.name!;
+        _cats.addAll(d.categories.where(widget.categories.contains));
+      });
+      toast(context, 'Filled in from the sign. Check it before you share.', icon: Icons.auto_fix_high);
+    } catch (_) {}
   }
 
   DateTime _at(TimeOfDay t) => DateTime(_day.year, _day.month, _day.day, t.hour, t.minute);
@@ -88,58 +159,149 @@ class _ManualStopFormState extends State<_ManualStopForm> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(widget.listingUrl != null ? 'Add from listing' : 'Name this stop', style: t.headlineSmall),
+          Text(
+            widget.listingUrl != null ? 'Add from listing' : (_share ? 'Spot a sale' : 'Name this stop'),
+            style: t.headlineSmall,
+          ),
           if (widget.address != null && !widget.askAddress) ...[
             const SizedBox(height: Sp.s1),
             Text(widget.address!, style: t.bodySmall?.copyWith(color: c.onSurfaceVariant)),
           ],
           const SizedBox(height: Sp.s4),
-          TextField(controller: _name, autofocus: true, decoration: const InputDecoration(labelText: 'Name'), textCapitalization: TextCapitalization.words),
+          TextField(
+            controller: _name,
+            autofocus: true,
+            decoration: const InputDecoration(labelText: 'Name'),
+            textCapitalization: TextCapitalization.words,
+          ),
           if (widget.askAddress) ...[
             const SizedBox(height: Sp.s3),
-            TextField(controller: _address, decoration: const InputDecoration(labelText: 'Address', hintText: 'Copy it from the listing')),
+            TextField(
+              controller: _address,
+              decoration: const InputDecoration(labelText: 'Address', hintText: 'Copy it from the listing'),
+            ),
           ],
           if (widget.requiresWindow) ...[
             const SizedBox(height: Sp.s4),
             Text('When', style: t.titleMedium),
             const SizedBox(height: Sp.s2),
-            Row(children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () async {
-                    final d = await showDatePicker(context: context, initialDate: _day, firstDate: DateTime.now().subtract(const Duration(days: 1)), lastDate: DateTime.now().add(const Duration(days: 90)));
-                    if (d != null) setState(() => _day = d);
-                  },
-                  icon: const Icon(Icons.event),
-                  label: Text(DateFormat.MMMEd().format(_day)),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      final d = await showDatePicker(
+                        context: context,
+                        initialDate: _day,
+                        firstDate: DateTime.now().subtract(const Duration(days: 1)),
+                        lastDate: DateTime.now().add(const Duration(days: 90)),
+                      );
+                      if (d != null) setState(() => _day = d);
+                    },
+                    icon: const Icon(Icons.event),
+                    label: Text(DateFormat.MMMEd().format(_day)),
+                  ),
                 ),
-              ),
-            ]),
+              ],
+            ),
             const SizedBox(height: Sp.s2),
-            Row(children: [
-              Expanded(child: _timeButton('Opens', _open, (v) => setState(() => _open = v))),
-              const SizedBox(width: Sp.s2),
-              Expanded(child: _timeButton('Closes', _close, (v) => setState(() => _close = v))),
-            ]),
+            Row(
+              children: [
+                Expanded(child: _timeButton('Opens', _open, (v) => setState(() => _open = v))),
+                const SizedBox(width: Sp.s2),
+                Expanded(child: _timeButton('Closes', _close, (v) => setState(() => _close = v))),
+              ],
+            ),
+          ],
+          if (widget.shareLabel != null) ...[
+            const SizedBox(height: Sp.s3),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(widget.shareLabel!),
+              subtitle: const Text('Needs a photo of the sign. Shown to others after a quick check.'),
+              value: _share,
+              onChanged: (v) => setState(() => _share = v),
+            ),
+            if (_share) ...[
+              Row(
+                children: [
+                  if (_sign != null) ...[
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(Rad.lg),
+                      child: XFileImage(_sign!, width: 64, height: 64),
+                    ),
+                    const SizedBox(width: Sp.s3),
+                  ],
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        final x = await ImagePicker().pickImage(
+                          source: ImageSource.camera,
+                          imageQuality: StorageService.photoQuality,
+                          maxWidth: StorageService.photoMaxWidth,
+                        );
+                        if (x == null) return;
+                        setState(() => _sign = x);
+                        await _readSign(x);
+                      },
+                      icon: const Icon(Icons.photo_camera_outlined),
+                      label: Text(_sign == null ? 'Snap the sign' : 'Retake'),
+                    ),
+                  ),
+                ],
+              ),
+              if (widget.categories.isNotEmpty) ...[
+                const SizedBox(height: Sp.s3),
+                Wrap(
+                  spacing: Sp.s2,
+                  runSpacing: Sp.s2,
+                  children: [
+                    for (final cat in widget.categories)
+                      FilterChip(
+                        label: Text(cat),
+                        selected: _cats.contains(cat),
+                        onSelected: (v) => setState(() => v ? _cats.add(cat) : _cats.remove(cat)),
+                      ),
+                  ],
+                ),
+              ],
+            ],
           ],
           const SizedBox(height: Sp.s5),
+          if (_error != null) ...[
+            const SizedBox(height: Sp.s3),
+            Text(_error!, style: t.bodySmall?.copyWith(color: c.error)),
+          ],
           KnButton(
-            label: 'Add to draft',
+            label: widget.confirmLabel ?? (_share ? 'Share and add to route' : 'Add to route'),
             lime: true,
-            onPressed: () {
-              final name = _name.text.trim();
-              if (name.isEmpty) return;
-              Navigator.pop(
-                context,
-                ManualStopResult(
-                  name: name,
-                  address: widget.askAddress ? _address.text.trim() : widget.address,
-                  opensAt: widget.requiresWindow ? _at(_open) : null,
-                  closesAt: widget.requiresWindow ? _at(_close) : null,
-                  listingUrl: widget.listingUrl,
-                ),
-              );
-            },
+            // Sharing needs the sign photo; turn sharing off to add it privately.
+            onPressed: _share && _sign == null
+                ? null
+                : () {
+                    final name = _name.text.trim();
+                    if (name.isEmpty) return;
+                    // A shared sale is public, so its window has to make sense.
+                    if (_share && widget.requiresWindow) {
+                      final error = saleWindowError(_at(_open), _at(_close), DateTime.now());
+                      if (error != null) {
+                        setState(() => _error = error);
+                        return;
+                      }
+                    }
+                    Navigator.pop(
+                      context,
+                      ManualStopResult(
+                        name: name,
+                        address: widget.askAddress ? _address.text.trim() : widget.address,
+                        opensAt: widget.requiresWindow ? _at(_open) : null,
+                        closesAt: widget.requiresWindow ? _at(_close) : null,
+                        listingUrl: widget.listingUrl,
+                        signPhoto: _share ? _sign : null,
+                        categories: _share ? _cats.toList() : const [],
+                      ),
+                    );
+                  },
           ),
         ],
       ),
@@ -147,10 +309,11 @@ class _ManualStopFormState extends State<_ManualStopForm> {
   }
 
   Widget _timeButton(String label, TimeOfDay v, ValueChanged<TimeOfDay> on) => OutlinedButton(
-        onPressed: () async {
-          final r = await showTimePicker(context: context, initialTime: v);
-          if (r != null) on(r);
-        },
-        child: Text('$label ${v.format(context)}'),
-      );
+    onPressed: () async {
+      final r = await showTimePicker(context: context, initialTime: v);
+      if (r != null) on(r);
+    },
+    // One line even for "Closes 12:00 PM" in a half-width button.
+    child: FittedBox(fit: BoxFit.scaleDown, child: Text('$label ${v.format(context)}', maxLines: 1)),
+  );
 }

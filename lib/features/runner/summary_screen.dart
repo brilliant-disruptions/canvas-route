@@ -7,19 +7,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/logic/crm_export.dart';
 import '../../core/logic/csv_export.dart';
 import '../../core/logic/recap.dart';
 import '../../core/theme/kn_colors.dart';
 import '../../core/theme/kn_theme.dart';
 import '../../data/models/route_model.dart';
 import '../../data/models/visit.dart';
+import '../../state/digest_state.dart';
 import '../../state/auth_state.dart';
 import '../../state/profile_state.dart';
 import '../../state/providers.dart';
 import '../../state/routes_state.dart';
+import '../../state/trips_state.dart';
 import '../../state/visits_state.dart';
 import '../../ui/widgets/celebration.dart';
 import '../../ui/widgets/kn_widgets.dart';
+import '../settings/paywall_sheet.dart';
 import 'recap_card.dart';
 
 /// The finish line: a shareable recap card first, bookkeeping second.
@@ -34,6 +38,7 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
   final _cardKey = GlobalKey();
   bool _sharing = false;
   bool _buzzed = false;
+  bool _tripLogged = false;
 
   Future<void> _shareRecap(RouteModel route, RunRecap recap) async {
     final pack = ref.read(modePackProvider);
@@ -58,6 +63,57 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
     } finally {
       if (mounted) setState(() => _sharing = false);
     }
+  }
+
+  /// Plain CSV, or for modes with CRM export, a choice of import formats.
+  Future<void> _export(RouteModel route, List<Visit> list) async {
+    final pack = ref.read(modePackProvider);
+    if (!pack.crmExport) return _exportCsv(route, list);
+    // A record so "CSV" and "dismissed" (null) are different answers.
+    final choice = await showKnSheet<({CrmFormat? crm})>(
+      context,
+      builder: (ctx) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.table_view_outlined),
+            title: const Text('Spreadsheet (CSV)'),
+            subtitle: const Text('Your export columns'),
+            onTap: () => Navigator.pop(ctx, (crm: null)),
+          ),
+          for (final (f, name) in const [(CrmFormat.hubspot, 'HubSpot'), (CrmFormat.salesforce, 'Salesforce')])
+            ListTile(
+              leading: const Icon(Icons.cloud_upload_outlined),
+              title: Text('$name import file'),
+              subtitle: Text(f == CrmFormat.hubspot ? 'Contacts + companies, lead status, notes' : 'Leads, lead status, description'),
+              trailing: ref.read(hasProAccessProvider) ? null : KnBadge(pack.proLabel.toUpperCase()),
+              onTap: () => Navigator.pop(ctx, (crm: f)),
+            ),
+          const SizedBox(height: Sp.s4),
+        ],
+      ),
+    );
+    if (!mounted || choice == null) return;
+    final format = choice.crm;
+    if (format == null) return _exportCsv(route, list);
+    if (!await requirePro(context, ref, 'CRM import files are part of ${pack.proLabel}.')) return;
+    final byStop = {for (final v in list) v.stopId: v};
+    final csv = buildCrmCsv(format, [
+      for (final s in route.stops)
+        if (byStop[s.id] case final v?)
+          CrmLead(
+            company: s.name,
+            address: s.address,
+            contactName: v.contactName,
+            phone: v.phone,
+            email: v.email,
+            outcome: v.outcome,
+            notes: v.notes,
+            followUp: v.followUpDate,
+            visitedAt: v.createdAt,
+          ),
+    ]);
+    await ref.read(shareServiceProvider).shareCsv(csv, csvFileName(route.name, format.name), subject: 'Leads: ${route.name}');
   }
 
   Future<void> _exportCsv(RouteModel route, List<Visit> list) async {
@@ -108,10 +164,15 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
     if (route == null) return const Scaffold(body: LoadingView());
 
     return KnScaffold(
-      title: route.allVisited ? 'Run complete' : 'Summary',
+      title: route.allVisited ? '${pack.routesTab.substring(0, pack.routesTab.length - 1)} complete' : 'Summary',
       body: AsyncView(
         value: visits,
         data: (list) {
+          if (!_tripLogged) {
+            _tripLogged = true;
+            // Mileage is bookkeeping: never block or fail the summary over it.
+            Future.microtask(() => ref.read(tripLoggerProvider).logRun(route, list)).catchError((_) {});
+          }
           final byStop = {for (final v in list) v.stopId: v};
           final recap = buildRecap([
             for (final s in route.stops)
@@ -130,6 +191,10 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
                 list.fold<double>(0, (s, v) => s + ((v.customFields[key] as num?)?.toDouble() ?? 0)),
               ),
           };
+          final counted = pack.summaryCountField;
+          final itemCount = counted == null
+              ? 0
+              : list.fold<int>(0, (s, v) => s + countLines(v.customFields[counted.key]));
 
           // Celebrate a run finished just now, not every reopen of an old summary.
           final lastVisit = list
@@ -158,7 +223,13 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
                       child: FittedBox(
                         child: RepaintBoundary(
                           key: _cardKey,
-                          child: RecapCard(pack: pack, routeName: route.name, recap: recap, totals: totals),
+                          child: RecapCard(
+                            pack: pack,
+                            routeName: route.name,
+                            recap: recap,
+                            totals: totals,
+                            extra: itemCount == 0 ? null : countNoun(itemCount, counted!.noun),
+                          ),
                         ),
                       ),
                     ),
@@ -171,6 +242,11 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
                     loading: _sharing,
                     onPressed: recap.visited == 0 ? null : () => _shareRecap(route, recap),
                   ),
+                  // Right after a good run is when "tell me next Friday" lands.
+                  if (pack.weekendDigest && ref.watch(weekendDigestOptInProvider) == null) ...[
+                    const SizedBox(height: Sp.s3),
+                    const _DigestOffer(),
+                  ],
                   const SizedBox(height: Sp.s2),
                   OutlinedButton.icon(
                     onPressed: () => context.go('/map'),
@@ -182,9 +258,9 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
                     children: [
                       Expanded(
                         child: TextButton.icon(
-                          onPressed: list.isEmpty ? null : () => _exportCsv(route, list),
+                          onPressed: list.isEmpty ? null : () => _export(route, list),
                           icon: const Icon(Icons.table_view_outlined),
-                          label: const Text('Export CSV'),
+                          label: Text(pack.crmExport ? 'Export' : 'Export CSV'),
                         ),
                       ),
                       Expanded(
@@ -216,5 +292,57 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
     if (v is List) return v.map((e) => e is Map ? e['name'] : e).join('; ');
     if (v is bool) return v ? 'Yes' : 'No';
     return v.toString();
+  }
+}
+
+class _DigestOffer extends ConsumerWidget {
+  const _DigestOffer();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.kn;
+    final t = Theme.of(context).textTheme;
+    final pack = ref.watch(modePackProvider);
+    return KnCard(
+      tier: 3,
+      accent: c.tertiary,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.notifications_active_outlined, color: c.tertiary),
+              const SizedBox(width: Sp.s3),
+              Expanded(child: Text('Heads-up next Friday?', style: t.titleMedium)),
+            ],
+          ),
+          const SizedBox(height: Sp.s1),
+          Text(
+            'Friday at 5:30 we\'ll tell you how many ${pack.stopNoun}s are on near you that weekend. One note a week.',
+            style: t.bodySmall?.copyWith(color: c.onSurfaceVariant),
+          ),
+          const SizedBox(height: Sp.s3),
+          Row(
+            children: [
+              Expanded(
+                child: KnButton(
+                  label: 'Yes, remind me',
+                  lime: true,
+                  onPressed: () async {
+                    await ref.read(weekendDigestOptInProvider.notifier).set(true);
+                    if (context.mounted) toast(context, 'See you Friday', icon: Icons.notifications_active_outlined);
+                  },
+                ),
+              ),
+              const SizedBox(width: Sp.s2),
+              TextButton(
+                onPressed: () => ref.read(weekendDigestOptInProvider.notifier).set(false),
+                child: const Text('No thanks'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }

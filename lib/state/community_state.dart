@@ -21,6 +21,11 @@ final nearbyPinsProvider = FutureProvider.family<List<Pin>, NearbyKey>((ref, k) 
 
 final pinByIdProvider = FutureProvider.family<Pin?, String>((ref, id) => ref.read(pinRepoProvider).byId(id));
 
+/// How many other people have a pin you own in their route (hosts only).
+final pinInterestProvider = FutureProvider.family<int?, String>(
+  (ref, pinId) => ref.read(pinRepoProvider).interest(pinId),
+);
+
 final myPinsProvider = FutureProvider<List<Pin>>((ref) async {
   final uid = ref.watch(currentUserIdProvider);
   if (uid == null) return const [];

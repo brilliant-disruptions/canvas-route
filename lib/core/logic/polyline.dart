@@ -28,3 +28,26 @@ List<({double lat, double lng})> decodePolyline(String encoded) {
   }
   return points;
 }
+
+/// Encodes (lat, lng) pairs as a Google encoded polyline (precision 5).
+String encodePolyline(Iterable<({double lat, double lng})> pts) {
+  final sb = StringBuffer();
+  var pLat = 0, pLng = 0;
+  void enc(int v) {
+    var x = v < 0 ? -2 * v - 1 : 2 * v; // arithmetic zigzag; `~` is unsigned on the web
+    while (x >= 0x20) {
+      sb.writeCharCode((0x20 | (x & 0x1f)) + 63);
+      x >>= 5;
+    }
+    sb.writeCharCode(x + 63);
+  }
+
+  for (final p in pts) {
+    final lat = (p.lat * 1e5).round(), lng = (p.lng * 1e5).round();
+    enc(lat - pLat);
+    enc(lng - pLng);
+    pLat = lat;
+    pLng = lng;
+  }
+  return sb.toString();
+}

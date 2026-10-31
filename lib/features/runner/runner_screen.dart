@@ -6,6 +6,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../core/logic/errors.dart';
 import '../../core/logic/polyline.dart';
+import '../../core/logic/restock.dart';
 import '../../core/theme/kn_colors.dart';
 import '../../core/theme/kn_theme.dart';
 import '../../data/models/directions.dart';
@@ -13,6 +14,7 @@ import '../../data/models/route_model.dart';
 import '../../data/models/stop.dart';
 import '../../data/models/visit.dart';
 import '../../modes/mode_pack.dart';
+import '../../state/community_state.dart';
 import '../../state/profile_state.dart';
 import '../../state/providers.dart';
 import '../../state/routes_state.dart';
@@ -193,6 +195,17 @@ class _RunnerScreenState extends ConsumerState<RunnerScreen> with PinIconsMixin 
                 children: [
                   Center(child: Container(width: 36, height: 4, decoration: BoxDecoration(color: c.outline, borderRadius: BorderRadius.circular(Rad.full)))),
                   const SizedBox(height: Sp.s3),
+                  // Before you drive there: what people at this stop just reported.
+                  if (current != null && !current.visited && current.pinId != null && pack.communityReports)
+                    _LiveHeadsUp(
+                      pack: pack,
+                      pinId: current.pinId!,
+                      onSkip: () {
+                        final i = route.stops.indexOf(current);
+                        final next = [...route.stops.skip(i + 1), ...route.stops.take(i)].where((s) => !s.visited).firstOrNull;
+                        if (next != null) setState(() => _currentStopId = next.id);
+                      },
+                    ),
                   if (current != null)
                     KnCard(
                       tier: 3,
@@ -337,4 +350,55 @@ class _Glass extends StatelessWidget {
         decoration: BoxDecoration(color: context.kn.glass, borderRadius: BorderRadius.circular(Rad.full), border: Border.all(color: context.kn.ghostBorder)),
         child: child,
       );
+}
+
+/// "Reported packed up 12 min ago · Skip it" above the current stop. Updates as
+/// reports stream in, so a sale that closed while you drove is caught in time.
+class _LiveHeadsUp extends ConsumerWidget {
+  const _LiveHeadsUp({required this.pack, required this.pinId, required this.onSkip});
+  final ModePack pack;
+  final String pinId;
+  final VoidCallback onSkip;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.kn;
+    final t = Theme.of(context).textTheme;
+    ref.listen(reportStreamProvider, (_, next) {
+      if (next.value?.any((r) => r['pin_id'] == pinId) ?? false) ref.invalidate(latestReportsProvider(pinId));
+    });
+    final rep = ref.watch(latestReportsProvider(pinId)).value?[pinId];
+    if (rep == null) return const SizedBox.shrink();
+    final st = pack.reportStatuses.where((s) => s.value == rep.status).firstOrNull;
+    final age = DateTime.now().difference(rep.createdAt);
+    // Only recent news is worth a banner: "packed up" holds for the day, the rest for an hour.
+    final style = switch (st) {
+      final s? when s.ends && age <= const Duration(hours: 6) => (c.errorContainer, c.onErrorContainer, true),
+      final s? when s.caution && age <= const Duration(hours: 1) => (c.warning, Colors.black, false),
+      final s? when s.positive && age <= const Duration(hours: 1) => (c.tertiaryContainer, c.onTertiaryContainer, false),
+      _ => null,
+    };
+    if (style == null) return const SizedBox.shrink();
+    final (tint, ink, skip) = style;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: Sp.s3),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(Sp.s4, Sp.s2, Sp.s2, Sp.s2),
+        decoration: BoxDecoration(color: tint, borderRadius: BorderRadius.circular(Rad.lg)),
+        child: Row(
+          children: [
+            Icon(st!.icon, color: ink, size: 20),
+            const SizedBox(width: Sp.s2),
+            Expanded(
+              child: Text(
+                'Reported ${st.label.toLowerCase()} ${relativeAge(rep.createdAt)}',
+                style: t.titleSmall?.copyWith(color: ink),
+              ),
+            ),
+            if (skip) TextButton(onPressed: onSkip, style: TextButton.styleFrom(foregroundColor: ink), child: const Text('Skip it')),
+          ],
+        ),
+      ),
+    );
+  }
 }

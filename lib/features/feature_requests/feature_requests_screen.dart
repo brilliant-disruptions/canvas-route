@@ -24,7 +24,7 @@ class _State extends ConsumerState<FeatureRequestsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final paying = ref.watch(isPayingProvider);
+    final paying = ref.watch(paysForAnythingProvider);
     return DefaultTabController(
       length: 2,
       child: Scaffold(
@@ -32,8 +32,10 @@ class _State extends ConsumerState<FeatureRequestsScreen> {
           title: const Text('Feature requests'),
           bottom: const TabBar(tabs: [Tab(text: 'All requests'), Tab(text: 'My requests')]),
           actions: [
-            // Free users get the reason and the upgrade, not a silently disabled button.
-            TextButton.icon(
+            // Free users get the reason and the upgrade, not a silently disabled button,
+            // where an upgrade can be bought. Elsewhere the board is read-and-upvote.
+            if (paying || ref.watch(canBuyProProvider))
+              TextButton.icon(
               onPressed: () => paying
                   ? showKnSheet(context, builder: (_) => const _NewRequestSheet())
                   : showPaywall(

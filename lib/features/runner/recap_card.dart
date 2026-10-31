@@ -18,6 +18,7 @@ class RecapCard extends StatelessWidget {
     required this.routeName,
     required this.recap,
     this.totals = const {},
+    this.extra,
   });
 
   static const size = Size(360, 450);
@@ -25,6 +26,9 @@ class RecapCard extends StatelessWidget {
   final ModePack pack;
   final String routeName;
   final RunRecap recap;
+
+  /// One more stat for the subtitle, e.g. "7 items".
+  final String? extra;
 
   /// Label → formatted value, e.g. {"Spent": "$72.50"}.
   final Map<String, String> totals;
@@ -41,6 +45,7 @@ class RecapCard extends StatelessWidget {
       '${recap.visited} of ${recap.stops.length} ${pack.stopNoun}s',
       if (recap.duration != null) formatDuration(recap.duration!.inSeconds),
       ...totals.entries.map((e) => '${e.value} ${e.key.toLowerCase()}'),
+      ?extra,
     ].join(' · ');
 
     return SizedBox.fromSize(

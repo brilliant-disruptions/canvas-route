@@ -26,7 +26,7 @@ class AlertsScreen extends ConsumerWidget {
 
   Future<void> _follow(BuildContext context, WidgetRef ref, ModePack pack, String productId) async {
     final follows = ref.read(followsProvider).value ?? {};
-    if (!ref.read(isPayingProvider) && follows.isNotEmpty) {
+    if (!ref.read(hasProAccessProvider) && follows.isNotEmpty) {
       await showPaywall(context, pack, reason: 'Free follows 1 product. Watch every set you collect.');
       return;
     }
@@ -49,7 +49,7 @@ class AlertsScreen extends ConsumerWidget {
     final byId = {for (final p in products) p.id: p};
     final sightings = ref.watch(nearbySightingsProvider).value ?? const <Sighting>[];
     final alerts = ref.watch(alertsProvider);
-    final paying = ref.watch(isPayingProvider);
+    final paying = ref.watch(hasProAccessProvider);
     final anon = ref.watch(isAnonymousProvider);
     final statuses = watchStatuses(follows.where(byId.containsKey).toList(), sightings);
     final trending = trendingProducts(sightings, follows).where(byId.containsKey).toList();

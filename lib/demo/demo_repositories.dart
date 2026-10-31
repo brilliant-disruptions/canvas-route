@@ -1,12 +1,14 @@
 import 'package:cross_file/cross_file.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show AuthState, OAuthProvider, User;
 
+import '../core/logic/geo.dart';
 import '../core/logic/restock.dart';
 import '../data/models/alert_item.dart';
 import '../data/models/app_mode.dart';
 import '../data/models/business.dart';
 import '../data/models/draft_stop.dart';
 import '../data/models/feature_request.dart';
+import '../data/models/json_utils.dart';
 import '../data/models/pin.dart';
 import '../data/models/product.dart';
 import '../data/models/profile.dart';
@@ -14,10 +16,13 @@ import '../data/models/report.dart';
 import '../data/models/route_model.dart';
 import '../data/models/settings.dart';
 import '../data/models/stop.dart';
+import '../data/models/team.dart';
+import '../data/models/trip.dart';
 import '../data/models/store_summary.dart';
 import '../data/models/visit.dart';
 import '../data/repositories/alert_repository.dart';
 import '../data/repositories/auth_repository.dart';
+import '../data/repositories/demand_repository.dart';
 import '../data/repositories/feature_request_repository.dart';
 import '../data/repositories/pin_repository.dart';
 import '../data/repositories/product_repository.dart';
@@ -26,6 +31,8 @@ import '../data/repositories/report_repository.dart';
 import '../data/repositories/route_repository.dart';
 import '../data/repositories/settings_repository.dart';
 import '../data/repositories/share_repository.dart';
+import '../data/repositories/team_repository.dart';
+import '../data/repositories/trip_repository.dart';
 import '../data/repositories/visit_repository.dart';
 import '../data/services/storage_service.dart';
 import 'demo_db.dart';
@@ -52,6 +59,8 @@ class DemoAuthRepository implements AuthRepository {
   Future<bool> signInWithOAuth(OAuthProvider provider) async => true;
   @override
   Future<void> signOut() async {}
+  @override
+  Future<void> deleteAccount() async {}
 }
 
 class DemoProfileRepository implements ProfileRepository {
@@ -78,7 +87,6 @@ class DemoProfileRepository implements ProfileRepository {
   @override
   Future<Profile> setHome(String userId, double lat, double lng) => update(userId, {'home_lat': lat, 'home_lng': lng});
   @override
-  Future<Profile> deactivate(String userId) => update(userId, {'plan': 'free', 'handle': null, 'name': null});
   @override
   Future<bool> handleAvailable(String handle) async => !db.profiles.values.any((p) => p['handle'] == handle);
 }
@@ -257,6 +265,10 @@ class DemoVisitRepository implements VisitRepository {
   });
 
   @override
+  Future<void> setFollowUp(String visitId, DateTime? date) =>
+      _later(() => db.visits[visitId]?['follow_up_date'] = date == null ? null : dateOnly(date));
+
+  @override
   Future<void> delete(String visitId) async => db.visits.remove(visitId);
 }
 
@@ -292,6 +304,8 @@ class DemoPinRepository implements PinRepository {
     final rows = db.pins.values.where((p) => p['mode'] == mode.id && p['status'] == 'live').toList();
     final now = DateTime.now();
     rows.removeWhere((p) => p['closes_at'] != null && DateTime.parse(p['closes_at'] as String).isBefore(now));
+    // Same radius filter as the nearby_pins RPC.
+    rows.removeWhere((p) => haversineMeters(lat, lng, (p['lat'] as num).toDouble(), (p['lng'] as num).toDouble()) > radiusMi * 1609.344);
     return rows.map(_pin).toList();
   });
 
@@ -356,6 +370,7 @@ class DemoPinRepository implements PinRepository {
     DateTime? opensAt,
     DateTime? closesAt,
     String? listingUrl,
+    List<String> categories = const [],
     required XFile signPhoto,
   }) async {
     final r = _insert({
@@ -370,6 +385,7 @@ class DemoPinRepository implements PinRepository {
       'opens_at': opensAt == null ? null : DemoDb.iso(opensAt),
       'closes_at': closesAt == null ? null : DemoDb.iso(closesAt),
       'listing_url': listingUrl,
+      'categories': categories,
       'status': 'pending',
     });
     await addPhoto(r['id'] as String, userId, signPhoto);
@@ -408,6 +424,17 @@ class DemoPinRepository implements PinRepository {
 
   @override
   Future<void> update(String pinId, Map<String, dynamic> patch) async => db.pins[pinId]?.addAll(patch);
+
+  /// Mirrors migration 011, plus the demo's seeded interest from other hunters.
+  @override
+  Future<int?> interest(String pinId) => _later(() {
+    final pin = db.pins[pinId];
+    if (pin == null || pin['owner_id'] != DemoDb.userId) return null;
+    final planners = {
+      for (final s in db.stops.values.where((s) => s['pin_id'] == pinId)) db.routes[s['route_id']]?['user_id'],
+    }..remove(DemoDb.userId);
+    return planners.length + (db.pinInterest[pinId] ?? 0);
+  });
 
   @override
   Future<List<Pin>> pendingForAdmin() => _later(
@@ -527,7 +554,25 @@ class DemoReportRepository implements ReportRepository {
     final etb = db.products.values
         .where((p) => p['display_name'] == 'Prismatic Evolutions — Elite Trainer Box')
         .firstOrNull;
-    if (target == null) return;
+    // And on a sale morning, the first sale on most plans packs up early, so the
+    // runner's "reported packed up · Skip it" heads-up can be seen mid-route.
+    final now = DateTime.now();
+    final moving = db.pins.values.where((p) => (p['name'] as String).startsWith('Moving sale')).firstOrNull;
+    if (moving != null) {
+      final opens = DateTime.parse(moving['opens_at'] as String).toLocal();
+      final closes = DateTime.parse(moving['closes_at'] as String).toLocal();
+      if (now.isAfter(opens) && now.isBefore(closes)) {
+        final rid = DemoDb.newId();
+        db.reports[rid] = {
+          'id': rid, 'pin_id': moving['id'], 'user_id': 'community-3', 'status': 'packed_up',
+          'trust_at_filing': 70, 'created_at': DemoDb.nowIso(),
+        };
+      }
+    }
+    if (target == null) {
+      yield latest();
+      return;
+    }
     final id = DemoDb.newId();
     db.reports[id] = {
       'id': id,
@@ -725,4 +770,132 @@ class DemoShareRepository implements ShareRepository {
       ownerHandle: db.profiles[r['user_id']]?['handle'] as String?,
     );
   });
+}
+
+class DemoTripRepository implements TripRepository {
+  DemoTripRepository(this.db);
+  final DemoDb db;
+
+  @override
+  Future<List<Trip>> forUser(String userId, String mode) => _later(() {
+    final rows = db.trips.values.where((t) => t['user_id'] == userId && t['mode'] == mode).map(Trip.fromRow).toList();
+    return rows..sort((a, b) => b.day.compareTo(a.day));
+  });
+
+  @override
+  Future<Trip> upsert(Map<String, dynamic> insert) => _later(() {
+    final existing = db.trips.values.where((t) => t['route_id'] == insert['route_id'] && t['day'] == insert['day']).firstOrNull;
+    final row = existing ?? {'id': DemoDb.newId()};
+    row.addAll(insert);
+    db.trips[row['id'] as String] = row;
+    return Trip.fromRow(row);
+  });
+}
+
+/// A three-person team with the demo user as manager, so the Team screen and the
+/// teammates line on business sheets have something to show.
+class DemoTeamRepository implements TeamRepository {
+  DemoTeamRepository(this.db);
+  final DemoDb db;
+  bool _member = true;
+
+  static const _team = Team(id: 'team-demo', name: 'Dallas Field Team', joinCode: '7KQ2MX', ownerId: DemoDb.userId, covered: true);
+
+  @override
+  Future<Team?> mine() => _later(() => _member ? _team : null);
+
+  @override
+  Future<List<TeamMember>> roster() => _later(() => _member
+      ? const [
+          TeamMember(userId: DemoDb.userId, name: 'Sam Demo', isManager: true),
+          TeamMember(userId: 'rep-rae', name: 'Rae Okafor', isManager: false),
+          TeamMember(userId: 'rep-luis', name: 'Luis Patel', isManager: false),
+        ]
+      : const []);
+
+  @override
+  Future<List<RepActivity>> activity(int days) => _later(() {
+    final k = days >= 30 ? 4 : 1;
+    final now = DateTime.now();
+    return [
+      RepActivity(userId: 'rep-rae', name: 'Rae Okafor', visits: 23 * k, meters: (41.2 * k * 1609.344).round(),
+          outcomes: {'Interested': 6 * k, 'Contacted': 9 * k, 'No Answer': 6 * k, 'Not Interested': 2 * k},
+          lastVisitAt: now.subtract(const Duration(hours: 3))),
+      RepActivity(userId: DemoDb.userId, name: 'Sam Demo', visits: 9 * k, meters: (18.6 * k * 1609.344).round(),
+          outcomes: {'Interested': 3 * k, 'Contacted': 3 * k, 'No Answer': 3 * k},
+          lastVisitAt: now.subtract(const Duration(hours: 2))),
+      RepActivity(userId: 'rep-luis', name: 'Luis Patel', visits: 4 * k, meters: (7.9 * k * 1609.344).round(),
+          outcomes: {'Contacted': 2 * k, 'No Answer': 2 * k}, lastVisitAt: now.subtract(const Duration(days: 4))),
+    ];
+  });
+
+  @override
+  Future<List<TeammateVisit>> visitsAt(String placeId) => _later(() {
+    // Rae has already worked part of Lakewood's dental offices.
+    final dental = [for (final p in demoCatalog['dental']!) p['place_id']];
+    final i = dental.indexOf(placeId);
+    if (!_member || i < 2 || i > 4) return const <TeammateVisit>[];
+    return [
+      TeammateVisit(name: 'Rae Okafor', outcome: i == 3 ? 'Not Interested' : 'No Answer',
+          visitedAt: DateTime.now().subtract(Duration(days: i))),
+    ];
+  });
+
+  @override
+  Future<Team> create(String name) => _later(() => _team);
+
+  @override
+  Future<Team> join(String code) => _later(() {
+    _member = true;
+    return _team;
+  });
+
+  @override
+  Future<void> leave() => _later(() => _member = false);
+
+  @override
+  Future<String> rotateCode() => _later(() => _team.joinCode);
+
+  @override
+  Future<void> remove(String userId) => _later(() {});
+}
+
+/// Demand in the demo: a few dozen hunters already waiting, and the demo's own
+/// sales as the nearest live area (so "away" builds can browse back to Dallas).
+class DemoDemandRepository implements DemandRepository {
+  DemoDemandRepository(this.db);
+  final DemoDb db;
+  final _mine = <String>{};
+  static String _cell(AppMode m, double lat, double lng) => '${m.id}:${lat.toStringAsFixed(1)},${lng.toStringAsFixed(1)}';
+
+  @override
+  Future<int> register(AppMode mode, double lat, double lng) => _later(() {
+    _mine.add(_cell(mode, lat, lng));
+    return 37 + _mine.length;
+  });
+
+  @override
+  Future<int> waiting(AppMode mode, double lat, double lng) => _later(() => 37 + _mine.length);
+
+  @override
+  Future<bool> mine(AppMode mode, double lat, double lng) => _later(() => _mine.contains(_cell(mode, lat, lng)));
+
+  @override
+  Future<NearestLive?> nearestLive(AppMode mode, double lat, double lng) => _later(() {
+    NearestLive? best;
+    for (final p in db.pins.values.where((p) => p['mode'] == mode.id && p['status'] == 'live')) {
+      final pl = (p['lat'] as num).toDouble(), pg = (p['lng'] as num).toDouble();
+      final miles = haversineMeters(lat, lng, pl, pg) / 1609.344;
+      if (best == null || miles < best.miles) best = NearestLive(lat: pl, lng: pg, miles: miles, address: p['address'] as String?);
+    }
+    return best;
+  });
+
+  @override
+  Future<List<DemandCell>> cells(AppMode mode) => _later(() => [
+        DemandCell(lat: 36.2, lng: -96.0, hunters: 41, liveSales: 0, newest: DateTime.now().subtract(const Duration(hours: 2))),
+        DemandCell(lat: 30.3, lng: -97.7, hunters: 26, liveSales: 1, newest: DateTime.now().subtract(const Duration(hours: 9))),
+        DemandCell(lat: 32.8, lng: -96.8, hunters: 19, liveSales: 11, newest: DateTime.now().subtract(const Duration(days: 1))),
+        DemandCell(lat: 35.5, lng: -97.5, hunters: 12, liveSales: 0, newest: DateTime.now().subtract(const Duration(days: 3))),
+      ]);
 }

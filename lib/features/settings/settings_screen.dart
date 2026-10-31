@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/env.dart';
 import '../../core/theme/kn_colors.dart';
 import '../../core/theme/kn_theme.dart';
 import '../../data/models/settings.dart';
 import '../../state/appearance_state.dart';
 import '../../state/auth_state.dart';
+import '../../state/digest_state.dart';
 import '../../state/profile_state.dart';
 import '../../state/providers.dart';
 import '../../ui/widgets/kn_widgets.dart';
@@ -86,7 +88,7 @@ class SettingsScreen extends ConsumerWidget {
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: const Text('Auto-share my visits as reports'),
-              subtitle: const Text('What you see on the shelf helps everyone nearby. Never includes your location.'),
+              subtitle: Text('What you log at each ${pack.stopNoun} helps ${pack.communityNoun} nearby. Never includes your location.'),
               value: profile.autoShareReports,
               onChanged: (v) => ref.read(profileProvider.notifier).patch({'auto_share_reports': v}),
             ),
@@ -100,6 +102,31 @@ class SettingsScreen extends ConsumerWidget {
                 onTap: () => context.push('/alerts'),
               ),
           ],
+          if (pack.weekendDigest) ...[
+            const SectionHeader('Notifications'),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Friday heads-up'),
+              subtitle: Text('How many ${pack.stopNoun}s are on near you that weekend, Fridays at 5:30.'),
+              value: ref.watch(weekendDigestOptInProvider) ?? false,
+              onChanged: (v) => ref.read(weekendDigestOptInProvider.notifier).set(v),
+            ),
+          ],
+          const SectionHeader('About'),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.privacy_tip_outlined),
+            title: const Text('Privacy policy'),
+            trailing: const Icon(Icons.open_in_new, size: 18),
+            onTap: () => ref.read(navLauncherProvider).open(Env.privacyUrl),
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.description_outlined),
+            title: const Text('Terms of service'),
+            trailing: const Icon(Icons.open_in_new, size: 18),
+            onTap: () => ref.read(navLauncherProvider).open(Env.termsUrl),
+          ),
           const SizedBox(height: Sp.s8),
           if (!anon)
             TextButton(

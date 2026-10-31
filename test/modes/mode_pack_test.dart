@@ -1,10 +1,29 @@
 import 'package:canvas_route/data/models/app_mode.dart';
+import 'package:canvas_route/data/models/profile.dart';
 import 'package:canvas_route/data/models/visit_field.dart';
 import 'package:canvas_route/modes/mode_pack.dart';
 import 'package:canvas_route/modes/registry.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  group('launch modes', () {
+    test('v1 ships Yard Sales alone', () {
+      expect(launchModes, [AppMode.yardSales]);
+      expect(launchable(AppMode.fieldSales), AppMode.yardSales);
+      expect(launchable(AppMode.yardSales), AppMode.yardSales);
+    });
+
+    test('parses ids in order, dropping blanks, unknowns and repeats', () {
+      expect(parseLaunchModes(' card_drops, yard_sales,,nope,card_drops'), [AppMode.cardDrops, AppMode.yardSales]);
+      expect(parseLaunchModes('field_sales,yard_sales,card_drops'), AppMode.values);
+    });
+
+    test('an unusable list falls back to Yard Sales', () {
+      expect(parseLaunchModes(''), [AppMode.yardSales]);
+      expect(parseLaunchModes('bogus'), [AppMode.yardSales]);
+    });
+  });
+
   test('every mode has a pack', () {
     for (final m in AppMode.values) {
       expect(packFor(m).id, m);
@@ -67,7 +86,10 @@ void main() {
     expect(pack.atRouteLimit(0, paying: false), isFalse);
     expect(pack.atRouteLimit(pack.freeRouteLimit!, paying: false), isTrue);
     expect(pack.atRouteLimit(99, paying: true), isFalse);
-    expect(packFor(AppMode.fieldSales).atRouteLimit(99, paying: false), isFalse);
+    // Field Sales: free reps keep 3 saved routes; Pro is unlimited.
+    expect(packFor(AppMode.fieldSales).atRouteLimit(2, paying: false), isFalse);
+    expect(packFor(AppMode.fieldSales).atRouteLimit(3, paying: false), isTrue);
+    expect(packFor(AppMode.fieldSales).atRouteLimit(99, paying: true), isFalse);
   });
 
   test('every search suggestion has a quick-start icon', () {
@@ -82,5 +104,36 @@ void main() {
     expect(back.key, 'c_bins');
     expect(back.type, FieldType.number);
     expect(back.isCustom, isTrue);
+  });
+
+  group('paid access per vertical', () {
+    Profile who({Plan plan = Plan.free, List<String> owns = const []}) =>
+        Profile.fromRow({'id': 'u', 'plan': plan.name, 'entitlements': owns});
+    bool pays(Profile p, AppMode m) => p.owns(packFor(m).proProductId, includedInPlan: packFor(m).includedInPlan);
+
+    test('a Season Pass unlocks Yard Sales only', () {
+      final p = who(owns: [packFor(AppMode.yardSales).proProductId!]);
+      expect(pays(p, AppMode.yardSales), isTrue);
+      expect(pays(p, AppMode.fieldSales), isFalse);
+      expect(pays(p, AppMode.cardDrops), isFalse);
+      expect(p.isPaying, isTrue);
+    });
+
+    test('a Field Sales Pro plan unlocks Field Sales only', () {
+      final p = who(plan: Plan.pro);
+      expect(pays(p, AppMode.fieldSales), isTrue);
+      expect(pays(p, AppMode.yardSales), isFalse);
+    });
+
+    test('free users own nothing', () {
+      final p = who();
+      expect(AppMode.values.any((m) => pays(p, m)), isFalse);
+      expect(p.isPaying, isFalse);
+    });
+
+    test('every paid vertical has its own product id', () {
+      final ids = [for (final p in modePacks.values) ?p.proProductId];
+      expect(ids.toSet(), hasLength(ids.length));
+    });
   });
 }

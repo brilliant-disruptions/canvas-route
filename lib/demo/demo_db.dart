@@ -12,11 +12,24 @@ class DemoDb {
   static const userId = 'demo-user';
   static const home = Waypoint(32.8140, -96.7900); // Dallas, between Uptown and Lakewood
 
+  /// `--dart-define=DEMO_AWAY=true` puts the demo user in Tulsa, outside the
+  /// seeded area, to show what a city with no listings yet looks like.
+  static const away = bool.fromEnvironment('DEMO_AWAY');
+  /// `--dart-define=DEMO_AT_SALE=true` stands the user at the multi-family sale, to
+  /// show the "Still going?" check-in.
+  static const atSale = bool.fromEnvironment('DEMO_AT_SALE');
+  static const user = away
+      ? Waypoint(36.1540, -95.9928)
+      : atSale
+          ? Waypoint(32.8240, -96.7680) // home + (0.010, 0.022): the multi-family sale
+          : home;
+
   final profiles = <String, Map<String, dynamic>>{};
   final settings = <String, Map<String, dynamic>>{};
   final routes = <String, Map<String, dynamic>>{};
   final stops = <String, Map<String, dynamic>>{};
   final visits = <String, Map<String, dynamic>>{};
+  final trips = <String, Map<String, dynamic>>{};
   final pins = <String, Map<String, dynamic>>{};
   final pinPhotos = <Map<String, dynamic>>[];
   final products = <String, Map<String, dynamic>>{};
@@ -27,6 +40,7 @@ class DemoDb {
   final upvotes = <String>{}; // "$userId|$requestId"
   final comments = <Map<String, dynamic>>[];
   final shares = <String, String>{}; // token → routeId
+  final pinInterest = <String, int>{}; // pinId → other hunters planning to go (seeded)
 
   static String newId() => const Uuid().v4();
   static String iso(DateTime d) => d.toUtc().toIso8601String();
@@ -45,10 +59,12 @@ class DemoDb {
 // Seed data. Places are real Dallas neighborhoods; businesses are fictional.
 // ---------------------------------------------------------------------------
 
+/// The Saturday the demo's sales are on: this one, unless it's Saturday
+/// afternoon and they'd all be over, in which case next week's.
 DateTime _nextSaturday(DateTime from) {
   final d = DateTime(from.year, from.month, from.day);
   final add = (DateTime.saturday - d.weekday) % 7;
-  return d.add(Duration(days: add));
+  return d.add(Duration(days: add == 0 && from.hour >= 13 ? 7 : add));
 }
 
 void _seed(DemoDb db) {
@@ -72,6 +88,7 @@ void _seed(DemoDb db) {
     'office_lng': -96.7985,
     'is_admin': true,
     'plan': 'pro',
+    'entitlements': ['canvasroute_season_pass', 'canvasroute_drop_alerts_pro'],
     'active_mode': 'field_sales',
     'trust_score': 62,
     'home_lat': h.lat,
@@ -152,14 +169,38 @@ void _seed(DemoDb db) {
   addRoute('field_sales', 'Lakewood dentists', dental.take(6).toList(),
       visited: 2, status: 'in_progress', lastRun: now.subtract(const Duration(hours: 2)), optimized: true, visitValues: [
     {'outcome': 'Interested', 'contact_name': 'Dr. Priya Shah', 'phone': '(214) 555-0118', 'notes': 'Wants a quote on sterilization pouches. Office manager is Dana.', 'follow_up_date': _date(now.add(const Duration(days: 3)))},
-    {'outcome': 'No Answer', 'notes': 'Closed for lunch until 1:30.'},
+    {'outcome': 'No Answer', 'notes': 'Closed for lunch until 1:30.', 'follow_up_date': _date(now)},
   ]);
   addRoute('field_sales', 'Uptown med spas', demoCatalog['salons']!.take(5).toList());
   addRoute('field_sales', 'Deep Ellum restaurants', demoCatalog['restaurants']!.take(7).toList(),
       visited: 7, status: 'complete', lastRun: now.subtract(const Duration(days: 6)), optimized: true, visitValues: [
-    for (final o in ['Contacted', 'Interested', 'Not Interested', 'Contacted', 'No Answer', 'Interested', 'Contacted'])
-      {'outcome': o, 'notes': o == 'Interested' ? 'Asked for pricing sheet.' : null},
+    for (final (i, o) in ['Contacted', 'Interested', 'Not Interested', 'Contacted', 'No Answer', 'Interested', 'Contacted'].indexed)
+      {
+        'outcome': o,
+        'notes': o == 'Interested' ? 'Asked for pricing sheet.' : null,
+        // One lead from last week's run has slipped: the overdue row in Follow-ups.
+        if (i == 1) ...{
+          'follow_up_date': _date(now.subtract(const Duration(days: 2))),
+          'contact_name': 'Marco (owner)',
+          'phone': '(214) 555-0164',
+        },
+      },
   ]);
+
+  // Mileage from earlier runs this month and last.
+  for (final (daysAgo, name, miles, stops) in [
+    (6, 'Deep Ellum restaurants', 9.4, 7),
+    (13, 'Preston Center offices', 22.8, 9),
+    (20, 'Lakewood dentists (week 1)', 14.1, 6),
+    (34, 'Richardson auto shops', 31.5, 10),
+  ]) {
+    final id = DemoDb.newId();
+    db.trips[id] = {
+      'id': id, 'route_id': null, 'mode': 'field_sales', 'user_id': uid, 'route_name': name,
+      'day': _date(now.subtract(Duration(days: daysAgo))), 'distance_m': (miles * 1609.344).round(),
+      'stops_visited': stops, 'estimated': false,
+    };
+  }
 
   // ---- Yard sale pins (this Saturday, plus one next week) ----
   String pin(Map<String, dynamic> row) {
@@ -187,6 +228,9 @@ void _seed(DemoDb db) {
     pin(sale('Moving sale — everything goes', '4431 Bryan St, Dallas, TX', -0.010, -0.004, 7, 11, ['Everything'], early: 'welcome')),
     pin(sale('Kids clothes & toys', '6810 La Vista Dr, Dallas, TX', 0.020, 0.040, 7, 12, ['Kids', 'Clothing'])),
     pin(sale('Garage cleanout', '5302 Vickery Blvd, Dallas, TX', 0.026, 0.004, 8, 12, ['Tools'], origin: 'spotted', confirms: 2)),
+    pin(sale('Garage sale', '5927 Goliad Ave, Dallas, TX', -0.018, 0.016, 7, 14, ['Furniture', 'Tools'], origin: 'permit',
+        notes: 'Furniture, Lawn Equipment, Miscellaneous Household Items\n'
+            'Hours not posted; most sales run about 7 AM to 2 PM.\nGarage-sale permit data: City of Dallas, Texas (demo)')),
     pin(sale('Church rummage sale', '4015 Normandy Ave, Dallas, TX', 0.034, -0.030, 7, 13, ['Everything', 'Books'])),
     pin(sale('Neighborhood sale — 12 homes', 'Lakewood Heights, Dallas, TX', -0.002, 0.050, 7, 14, ['Everything'],
         notes: 'Look for the orange balloons. Maps at the corner of Lakewood Blvd and Abrams.')),
@@ -197,6 +241,24 @@ void _seed(DemoDb db) {
   ];
 
   db.pins[ys.last]!['share_token'] = 'demo-sale'; // the demo host's sign QR: /s/demo-sale
+
+  // Saturday-morning reports, only when the demo's sales are today (the app only
+  // takes reports while a sale is open): one confirmed, one closing, one packed up.
+  if (sat.year == now.year && sat.month == now.month && sat.day == now.day) {
+    String byName(String n) => ys.firstWhere((id) => (db.pins[id]!['name'] as String).startsWith(n));
+    for (final (name, status, minsAgo) in [
+      ('Multi-family sale', 'still_open', 12),
+      ('Kids clothes', 'closing_soon', 6),
+      ('Garage cleanout', 'packed_up', 25),
+    ]) {
+      final id = DemoDb.newId();
+      db.reports[id] = {
+        'id': id, 'pin_id': byName(name), 'user_id': 'community-${name.length}', 'status': status,
+        'trust_at_filing': 64, 'created_at': DemoDb.iso(now.subtract(Duration(minutes: minsAgo))),
+      };
+    }
+  }
+  db.pinInterest[ys.last] = 14;
 
   final lastSales = [
     for (final (name, dLat, dLng) in [

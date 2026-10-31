@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/env.dart';
 import '../../core/logic/errors.dart';
 import '../../core/logic/recap.dart';
 import '../../core/theme/kn_colors.dart';
@@ -61,6 +62,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       'report' => 'Join nearby ${pack.communityNoun}',
       'share' => 'Share your ${pack.routeNoun}',
       'host' => 'Post your sale',
+      'upgrade' => 'Sign in to upgrade',
+      'team' => 'Sign in to join your team',
       _ => 'Keep everything you\'ve built',
     };
     // Linking keeps the same uid, so nothing a guest made is lost: say so.
@@ -159,6 +162,14 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
             'Free. No spam. We never post anything as you.',
             textAlign: TextAlign.center,
             style: t.labelSmall?.copyWith(color: c.onSurfaceVariant),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              TextButton(onPressed: () => ref.read(navLauncherProvider).open(Env.termsUrl), child: const Text('Terms')),
+              Text('·', style: t.labelSmall?.copyWith(color: c.onSurfaceVariant)),
+              TextButton(onPressed: () => ref.read(navLauncherProvider).open(Env.privacyUrl), child: const Text('Privacy')),
+            ],
           ),
         ],
       ),

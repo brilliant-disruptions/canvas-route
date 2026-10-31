@@ -7,10 +7,12 @@ import '../features/alerts/alerts_screen.dart';
 import '../features/auth/sign_in_screen.dart';
 import '../features/builder/builder_screen.dart';
 import '../features/feature_requests/feature_requests_screen.dart';
+import '../features/follow_ups/follow_ups_screen.dart';
 import '../features/host/host_sale_screen.dart';
 import '../features/host/my_sales_screen.dart';
 import '../features/host/sale_sign_screen.dart';
 import '../features/map/map_screen.dart';
+import '../features/mileage/mileage_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
 import '../features/routes/routes_screen.dart';
 import '../features/runner/runner_screen.dart';
@@ -21,8 +23,10 @@ import '../features/settings/profile_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/shared/sale_landing_screen.dart';
 import '../features/shared/shared_route_screen.dart';
+import '../features/team/team_screen.dart';
 import '../features/visit/visit_logger_screen.dart';
 import '../state/providers.dart';
+import '../ui/widgets/kn_widgets.dart';
 import 'shell.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -73,6 +77,20 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/feature-requests', builder: (_, _) => const FeatureRequestsScreen()),
       GoRoute(path: '/admin', builder: (_, _) => const AdminScreen()),
       GoRoute(path: '/alerts', builder: (_, _) => const AlertsScreen()),
+      GoRoute(path: '/follow-ups', builder: (_, _) => const FollowUpsScreen()),
+      GoRoute(path: '/mileage', builder: (_, _) => const MileageScreen()),
+      GoRoute(path: '/team', builder: (_, _) => const TeamScreen()),
+      // Stripe Checkout's success page. The webhook has (or soon will have) set the plan.
+      GoRoute(
+        path: '/billing/done',
+        builder: (_, _) => const Scaffold(
+          body: EmptyState(
+            icon: Icons.verified_outlined,
+            title: 'You\'re all set',
+            body: 'Payment received. Pro turns on in the app within a minute; reopen it if it hasn\'t yet.',
+          ),
+        ),
+      ),
       GoRoute(path: '/host', builder: (_, _) => const MySalesScreen(), routes: [
         GoRoute(path: 'new', builder: (_, _) => const HostSaleScreen()),
         GoRoute(path: 'sign/:pinId', builder: (_, s) => SaleSignScreen(pinId: s.pathParameters['pinId']!)),

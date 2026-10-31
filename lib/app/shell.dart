@@ -4,10 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../core/theme/kn_colors.dart';
 import '../core/theme/kn_theme.dart';
-import '../data/models/app_mode.dart';
 import '../modes/mode_pack.dart';
 import '../modes/registry.dart';
 import '../state/auth_state.dart';
+import '../state/follow_ups_state.dart';
 import '../state/profile_state.dart';
 import '../ui/widgets/kn_widgets.dart';
 
@@ -52,7 +52,9 @@ class ProfileDrawer extends ConsumerWidget {
     final isAdmin = ref.watch(isAdminProvider);
     final anon = ref.watch(isAnonymousProvider);
     final paying = ref.watch(isPayingProvider);
+    final canBuy = ref.watch(canBuyProProvider);
     final active = ref.watch(activeModeProvider);
+    final dueFollowUps = pack.followUpsLabel == null ? 0 : ref.watch(followUpsDueProvider);
 
     void go(String path) {
       Navigator.of(context).pop();
@@ -97,7 +99,7 @@ class ProfileDrawer extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  if (pack.proProductId != null)
+                  if (pack.proProductId != null && (paying || canBuy))
                     KnBadge(
                       paying ? 'PRO' : 'FREE',
                       color: paying ? c.tertiary : c.surfaceHighest,
@@ -107,28 +109,29 @@ class ProfileDrawer extends ConsumerWidget {
               ),
             ),
             // Modes inline: switching is one tap, and the other verticals stay visible.
-            Padding(
-              padding: const EdgeInsets.fromLTRB(Sp.s4, 0, Sp.s4, Sp.s3),
-              child: Row(
-                children: [
-                  for (final m in AppMode.values) ...[
-                    if (m != AppMode.values.first) const SizedBox(width: Sp.s2),
-                    Expanded(
-                      child: _ModeTile(
-                        pack: packFor(m),
-                        active: m == active,
-                        onTap: () async {
-                          Navigator.of(context).pop();
-                          if (m != active) await ref.read(profileProvider.notifier).setMode(m);
-                          if (context.mounted) context.go('/map');
-                        },
+            if (launchModes.length > 1)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(Sp.s4, 0, Sp.s4, Sp.s3),
+                child: Row(
+                  children: [
+                    for (final m in launchModes) ...[
+                      if (m != launchModes.first) const SizedBox(width: Sp.s2),
+                      Expanded(
+                        child: _ModeTile(
+                          pack: packFor(m),
+                          active: m == active,
+                          onTap: () async {
+                            Navigator.of(context).pop();
+                            if (m != active) await ref.read(profileProvider.notifier).setMode(m);
+                            if (context.mounted) context.go('/map');
+                          },
+                        ),
                       ),
-                    ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-            if (!paying && pack.proProductId != null)
+            if (!paying && canBuy)
               Padding(
                 padding: const EdgeInsets.fromLTRB(Sp.s4, 0, Sp.s4, Sp.s3),
                 child: KnCard(
@@ -169,6 +172,19 @@ class ProfileDrawer extends ConsumerWidget {
               onTap: () => go('/settings/account'),
             ),
             ListTile(leading: const Icon(Icons.tune), title: const Text('Preferences'), onTap: () => go('/settings')),
+            if (pack.followUpsLabel != null)
+              ListTile(
+                leading: const Icon(Icons.event_repeat_outlined),
+                title: Text(pack.followUpsLabel!),
+                trailing: dueFollowUps == 0
+                    ? null
+                    : KnBadge('$dueFollowUps due', color: c.tertiary, onColor: c.onTertiary),
+                onTap: () => go('/follow-ups'),
+              ),
+            if (pack.teamPlan)
+              ListTile(leading: const Icon(Icons.groups_outlined), title: const Text('Team'), onTap: () => go('/team')),
+            if (pack.mileageLog)
+              ListTile(leading: const Icon(Icons.speed), title: const Text('Mileage'), onTap: () => go('/mileage')),
             if (pack.alerts.isNotEmpty && pack.hasCommunity)
               ListTile(
                 leading: const Icon(Icons.notifications_outlined),

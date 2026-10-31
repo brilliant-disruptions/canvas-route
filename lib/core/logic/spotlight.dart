@@ -5,7 +5,7 @@ import 'geo.dart';
 import 'restock.dart';
 
 /// Why a spot ranked where it did; drives the card's headline and tone.
-enum SpotReason { liveStock, recentPositive, restockNow, restockLater, openNow, opensSoon, upcoming, soldOut, nearby }
+enum SpotReason { liveStock, recentPositive, restockNow, restockLater, openNow, opensSoon, upcoming, closingSoon, packedUp, soldOut, nearby }
 
 enum SpotTone { hot, good, neutral, warn }
 
@@ -18,6 +18,8 @@ class SpotCandidate {
     this.closesAt,
     this.reportStatus,
     this.reportPositive = false,
+    this.reportCaution = false,
+    this.reportEnds = false,
     this.reportedAt,
     this.reportProduct,
     this.tier = RestockTier.unknown,
@@ -33,6 +35,10 @@ class SpotCandidate {
   /// Latest community report, if any.
   final String? reportStatus;
   final bool reportPositive;
+
+  /// The latest report says hurry (closing soon) or that it's over (packed up).
+  final bool reportCaution;
+  final bool reportEnds;
   final DateTime? reportedAt;
   final String? reportProduct;
   final RestockTier tier;
@@ -49,7 +55,7 @@ class Spot {
   final double distanceMeters;
 
   /// Worth auto-adding to a plan; a recent sell-out is shown but not planned.
-  bool get plannable => reason != SpotReason.soldOut;
+  bool get plannable => reason != SpotReason.soldOut && reason != SpotReason.packedUp;
 }
 
 /// Ranks candidates around ([fromLat], [fromLng]). Ended windows are dropped.
@@ -105,7 +111,14 @@ List<Spot> rankSpots(
       RestockTier.emerging => 8,
       RestockTier.unknown => 0,
     };
-    if (age != null && !c.reportPositive && age <= const Duration(hours: 6) && best < 60) {
+    if (age != null && c.reportCaution && age <= const Duration(hours: 1)) {
+      // Still open, but go now or not at all: ranks between "open" and "live".
+      reason = SpotReason.closingSoon;
+      score += 50 - best;
+    } else if (age != null && c.reportEnds && age <= const Duration(hours: 6)) {
+      score -= 80;
+      reason = SpotReason.packedUp;
+    } else if (age != null && !c.reportPositive && !c.reportCaution && !c.reportEnds && age <= const Duration(hours: 6) && best < 60) {
       score -= 40;
       reason = SpotReason.soldOut;
     }
@@ -121,7 +134,7 @@ List<Spot> pickPlan(List<Spot> ranked, int max) => ranked.where((s) => s.plannab
 SpotTone toneFor(SpotReason r) => switch (r) {
   SpotReason.liveStock || SpotReason.restockNow => SpotTone.hot,
   SpotReason.recentPositive || SpotReason.openNow || SpotReason.opensSoon || SpotReason.restockLater => SpotTone.good,
-  SpotReason.soldOut => SpotTone.warn,
+  SpotReason.soldOut || SpotReason.closingSoon || SpotReason.packedUp => SpotTone.warn,
   SpotReason.upcoming || SpotReason.nearby => SpotTone.neutral,
 };
 
@@ -142,6 +155,8 @@ String spotHeadline(Spot s, {required DateTime now, required String Function(Str
   return switch (s.reason) {
     SpotReason.liveStock ||
     SpotReason.recentPositive ||
+    SpotReason.closingSoon ||
+    SpotReason.packedUp ||
     SpotReason.soldOut => '${statusLabel(c.reportStatus!)} · ${relativeAge(c.reportedAt!, now: now)}',
     SpotReason.restockNow => 'Restock window now · until ${_clock(c.restockToday!.end)}',
     SpotReason.restockLater => 'Restocks ${_clock(c.restockToday!.start)}–${_clock(c.restockToday!.end)}',

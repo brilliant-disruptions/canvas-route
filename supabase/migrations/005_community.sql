@@ -104,7 +104,7 @@ create index alerts_user_idx on public.alerts (user_id, sent_at desc);
 create table public.route_shares (
   id         uuid primary key default gen_random_uuid(),
   route_id   uuid not null references public.routes(id) on delete cascade,
-  token      text unique not null default encode(gen_random_bytes(9), 'base64url'),
+  token      text unique not null default translate(encode(gen_random_bytes(9), 'base64'), '+/', '-_'),  -- base64url; the 'base64url' encoding needs PG18
   can_fork   boolean not null default true,
   created_at timestamptz not null default now()
 );
@@ -155,7 +155,7 @@ $$;
 
 -- Nearby pins for the map, by mode, within radius miles of a point.
 create or replace function public.nearby_pins(p_mode text, p_lat double precision, p_lng double precision, p_radius_mi double precision default 10)
-returns setof public.pins language sql stable security_invoker as $$
+returns setof public.pins language sql stable security invoker as $$
   select * from public.pins
   where mode = p_mode and status = 'live'
     and earth_box(ll_to_earth(p_lat, p_lng), p_radius_mi * 1609.34) @> ll_to_earth(lat, lng)

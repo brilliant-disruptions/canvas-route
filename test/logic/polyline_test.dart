@@ -29,4 +29,14 @@ void main() {
   test('empty string decodes to no points', () {
     expect(decodePolyline(''), isEmpty);
   });
+
+  test('encode round-trips through decode, including negative deltas', () {
+    const pts = [(lat: 32.7767, lng: -96.797), (lat: 32.7555, lng: -97.3308), (lat: 33.0, lng: -96.5)];
+    final back = decodePolyline(encodePolyline(pts));
+    expect(back, hasLength(3));
+    for (var i = 0; i < pts.length; i++) {
+      expect(back[i].lat, closeTo(pts[i].lat, 1e-5));
+      expect(back[i].lng, closeTo(pts[i].lng, 1e-5));
+    }
+  });
 }

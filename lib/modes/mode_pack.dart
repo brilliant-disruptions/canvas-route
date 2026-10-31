@@ -10,13 +10,19 @@ enum OptimizerKind { distance, timeWindow, restockWindow }
 enum AlertKind { followUp, newPinNearby, stockReportNearby }
 
 class ReportStatusOption {
-  const ReportStatusOption(this.value, this.label, this.icon, {this.positive = false});
+  const ReportStatusOption(this.value, this.label, this.icon, {this.positive = false, this.caution = false, this.ends = false});
   final String value;
   final String label;
   final IconData icon;
 
   /// Positive statuses light the freshness ring (in stock, still open).
   final bool positive;
+
+  /// Still worth a stop, but hurry (closing soon).
+  final bool caution;
+
+  /// The listing is over for the day (packed up): greyed on the map, never planned.
+  final bool ends;
 }
 
 class ProPerk {
@@ -72,6 +78,16 @@ class ModePack {
     this.pinCategories = const [],
     this.freeRouteLimit,
     this.proProductId,
+    this.includedInPlan = false,
+    this.customFieldsPro = false,
+    this.visitHistoryPro = false,
+    this.mileageLog = false,
+    this.webBilling = false,
+    this.crmExport = false,
+    this.teamPlan = false,
+    this.waitlistLabel,
+    this.categoryKeywords = const {},
+    this.weekendDigest = false,
     this.proLabel = 'Pro',
     this.proPrice = '',
     this.proPitch = '',
@@ -83,6 +99,11 @@ class ModePack {
     this.profileAsksCompany = false,
     this.pinsPlacesStops = false,
     this.saveVisitLabel = 'Save visit',
+    this.spotLabel,
+    this.startLabel,
+    this.followUpsLabel,
+    this.pinCategoryWildcard,
+    this.summaryCountField,
     this.photoHint,
     this.productCatalog = false,
   });
@@ -149,6 +170,45 @@ class ModePack {
   final List<String> pinCategories;
   final int? freeRouteLimit;
   final String? proProductId;
+
+  /// A Pro/Team plan unlocks this vertical without its own product (Field Sales).
+  final bool includedInPlan;
+
+  /// Adding outcomes or custom visit fields needs the paid tier.
+  final bool customFieldsPro;
+
+  /// The last outcome and notes at a place you've visited need the paid tier;
+  /// "Visited 3×" itself is always shown.
+  final bool visitHistoryPro;
+
+  /// Log each run's miles for expense reports, with the IRS rate applied.
+  final bool mileageLog;
+
+  /// Sold on the web (Stripe Checkout) rather than through the app stores:
+  /// business plans, often expensed.
+  final bool webBilling;
+
+  /// Offer HubSpot and Salesforce import files next to the plain CSV (paid tier).
+  final bool crmExport;
+
+  /// Teams: a manager's activity view, a join code for reps, and teammates'
+  /// recent outcomes on business sheets. Creating a team needs the Team plan.
+  final bool teamPlan;
+
+  /// When set, an area with no listings shows a "not here yet" card whose main
+  /// button (this label, e.g. "I'm hunting here") counts the user as waiting, and
+  /// hosts see how many are waiting near them.
+  final String? waitlistLabel;
+
+  /// Words that put a pasted post in a category (prefix match), e.g.
+  /// Kids: ['kid', 'baby', 'toy']. Empty disables category detection.
+  final Map<String, List<String>> categoryKeywords;
+
+  /// Offer a Friday-evening notification about the coming weekend's listings.
+  final bool weekendDigest;
+
+  /// Store product for the Team plan, billed per seat on the web.
+  static const teamProductId = 'canvasroute_team_monthly';
   final String proLabel;
 
   /// Display price, e.g. "\$4.99 / mo".
@@ -180,6 +240,24 @@ class ModePack {
 
   /// The visit form's save button, e.g. "Save report".
   final String saveVisitLabel;
+
+  /// When set, a stop dropped on the map can be shared as a community pin
+  /// (with a photo of the sign), e.g. "Share it with nearby hunters".
+  /// Onboarding button when this build ships only this mode ("Show me sales near me").
+  /// Null reads "Start with <label>".
+  final String? startLabel;
+
+  /// When set, visits with a follow-up date are gathered on a screen with this
+  /// title ("Follow-ups"), reachable from the drawer and the routes list.
+  final String? followUpsLabel;
+
+  final String? spotLabel;
+
+  /// The category that matches any hunt filter, e.g. "Everything".
+  final String? pinCategoryWildcard;
+
+  /// A one-per-line visit field whose lines the recap counts, e.g. items bought.
+  final ({String key, String noun})? summaryCountField;
 
   /// Shown under the visit photo picker when photos are shared with the community.
   final String? photoHint;

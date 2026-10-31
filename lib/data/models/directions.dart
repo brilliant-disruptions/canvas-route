@@ -12,6 +12,7 @@ class DirectionsResult {
     required this.totalDurationSeconds,
     required this.legDurationSeconds,
     this.optimizedOrder,
+    this.estimated = false,
   });
 
   final String encodedPolyline;
@@ -21,4 +22,7 @@ class DirectionsResult {
 
   /// Present only when optimize was requested; indexes into the intermediates.
   final List<int>? optimizedOrder;
+
+  /// Computed on the device from straight-line distance, not by Google.
+  final bool estimated;
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platform_interface.dart';
 
 import 'app/app.dart';
@@ -18,7 +19,9 @@ import 'state/providers.dart';
 ///   flutter build web -t lib/main_demo.dart --no-web-resources-cdn
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  GoogleMapsFlutterPlatform.instance = DemoMapsPlatform(myLocation: LatLng(DemoDb.home.lat, DemoDb.home.lng));
+  // Real paths on the web: shared links and sign QRs are <origin>/s/<token>, not /#/s/.
+  usePathUrlStrategy();
+  GoogleMapsFlutterPlatform.instance = DemoMapsPlatform(myLocation: LatLng(DemoDb.user.lat, DemoDb.user.lng));
   final prefs = LocalPrefs.memory(); // fresh onboarding on every load
   final db = DemoDb.seeded();
   final storage = DemoStorageService();
@@ -40,6 +43,10 @@ Future<void> main() async {
       featureRequestRepoProvider.overrideWithValue(DemoFeatureRequestRepository(db)),
       alertRepoProvider.overrideWithValue(DemoAlertRepository(db)),
       shareRepoProvider.overrideWithValue(DemoShareRepository(db)),
+      tripRepoProvider.overrideWithValue(DemoTripRepository(db)),
+      teamRepoProvider.overrideWithValue(DemoTeamRepository(db)),
+      demandRepoProvider.overrideWithValue(DemoDemandRepository(db)),
+      signReaderProvider.overrideWithValue(DemoSignReader()),
       placesServiceProvider.overrideWithValue(DemoPlacesService()),
       directionsServiceProvider.overrideWithValue(DemoDirectionsService()),
       locationServiceProvider.overrideWithValue(DemoLocationService()),

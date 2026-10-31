@@ -45,8 +45,8 @@ const yardSalesPack = ModePack(
   communityReports: true,
   reportStatuses: [
     ReportStatusOption('still_open', 'Still going', Icons.check_circle_outline, positive: true),
-    ReportStatusOption('closing_soon', 'Closing soon', Icons.schedule),
-    ReportStatusOption('packed_up', 'Packed up', Icons.cancel_outlined),
+    ReportStatusOption('closing_soon', 'Closing soon', Icons.schedule, caution: true),
+    ReportStatusOption('packed_up', 'Packed up', Icons.cancel_outlined, ends: true),
   ],
   outcomeToReportStatus: {
     'Bought': 'still_open',
@@ -100,6 +100,21 @@ const yardSalesPack = ModePack(
     ProPerk(Icons.group_outlined, 'Share routes with your crew'),
   ],
   summaryTotals: ['spent'],
+  summaryCountField: (key: 'items', noun: 'item'),
   supportsHosting: true,
   hostSignHeadline: 'YARD SALE',
+  spotLabel: 'Share it with nearby hunters',
+  startLabel: 'Show me sales near me',
+  waitlistLabel: 'I\'m hunting here',
+  weekendDigest: true,
+  categoryKeywords: {
+    'Furniture': ['furniture', 'couch', 'sofa', 'dresser', 'desk', 'dining set', 'recliner', 'bookshel', 'bed frame'],
+    'Kids': ['kid', 'baby', 'toy', 'children', 'stroller', 'crib', 'nursery'],
+    'Tools': ['tool', 'lawn', 'garden', 'mower', 'drill', 'workbench', 'equipment'],
+    'Collectibles': ['antique', 'collect', 'vinyl', 'record', 'vintage', 'coins', 'memorabilia'],
+    'Clothing': ['cloth', 'apparel', 'shoes', 'jacket', 'purse', 'handbag'],
+    'Electronics': ['electronic', 'tv', 'computer', 'laptop', 'gaming', 'console', 'speaker', 'camera'],
+    'Books': ['book', 'dvd', 'cds'],
+  },
+  pinCategoryWildcard: 'Everything',
 );
