@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/logic/crm_export.dart';
 import '../../core/logic/csv_export.dart';
 import '../../core/logic/recap.dart';
 import '../../core/theme/kn_colors.dart';
@@ -17,10 +18,11 @@ import '../../state/auth_state.dart';
 import '../../state/profile_state.dart';
 import '../../state/providers.dart';
 import '../../state/routes_state.dart';
-import '../../state/visits_state.dart';
 import '../../state/trips_state.dart';
+import '../../state/visits_state.dart';
 import '../../ui/widgets/celebration.dart';
 import '../../ui/widgets/kn_widgets.dart';
+import '../settings/paywall_sheet.dart';
 import 'recap_card.dart';
 
 /// The finish line: a shareable recap card first, bookkeeping second.
@@ -60,6 +62,55 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
     } finally {
       if (mounted) setState(() => _sharing = false);
     }
+  }
+
+  /// Plain CSV, or for modes with CRM export, a choice of import formats.
+  Future<void> _export(RouteModel route, List<Visit> list) async {
+    final pack = ref.read(modePackProvider);
+    if (!pack.crmExport) return _exportCsv(route, list);
+    final choice = await showKnSheet<CrmFormat?>(
+      context,
+      builder: (ctx) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.table_view_outlined),
+            title: const Text('Spreadsheet (CSV)'),
+            subtitle: const Text('Your export columns'),
+            onTap: () => Navigator.pop(ctx),
+          ),
+          for (final (f, name) in const [(CrmFormat.hubspot, 'HubSpot'), (CrmFormat.salesforce, 'Salesforce')])
+            ListTile(
+              leading: const Icon(Icons.cloud_upload_outlined),
+              title: Text('$name import file'),
+              subtitle: Text(f == CrmFormat.hubspot ? 'Contacts + companies, lead status, notes' : 'Leads, lead status, description'),
+              trailing: ref.read(isPayingProvider) ? null : KnBadge(pack.proLabel.toUpperCase()),
+              onTap: () => Navigator.pop(ctx, f),
+            ),
+          const SizedBox(height: Sp.s4),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    if (choice == null) return _exportCsv(route, list);
+    if (!await requirePro(context, ref, 'CRM import files are part of ${pack.proLabel}.')) return;
+    final byStop = {for (final v in list) v.stopId: v};
+    final csv = buildCrmCsv(choice, [
+      for (final s in route.stops)
+        if (byStop[s.id] case final v?)
+          CrmLead(
+            company: s.name,
+            address: s.address,
+            contactName: v.contactName,
+            phone: v.phone,
+            email: v.email,
+            outcome: v.outcome,
+            notes: v.notes,
+            followUp: v.followUpDate,
+            visitedAt: v.createdAt,
+          ),
+    ]);
+    await ref.read(shareServiceProvider).shareCsv(csv, csvFileName(route.name, choice.name), subject: 'Leads: ${route.name}');
   }
 
   Future<void> _exportCsv(RouteModel route, List<Visit> list) async {
@@ -199,9 +250,9 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
                     children: [
                       Expanded(
                         child: TextButton.icon(
-                          onPressed: list.isEmpty ? null : () => _exportCsv(route, list),
+                          onPressed: list.isEmpty ? null : () => _export(route, list),
                           icon: const Icon(Icons.table_view_outlined),
-                          label: const Text('Export CSV'),
+                          label: Text(pack.crmExport ? 'Export' : 'Export CSV'),
                         ),
                       ),
                       Expanded(

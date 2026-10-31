@@ -77,6 +77,7 @@ class ModePack {
     this.visitHistoryPro = false,
     this.mileageLog = false,
     this.webBilling = false,
+    this.crmExport = false,
     this.proLabel = 'Pro',
     this.proPrice = '',
     this.proPitch = '',
@@ -176,6 +177,9 @@ class ModePack {
   /// Sold on the web (Stripe Checkout) rather than through the app stores:
   /// business plans, often expensed.
   final bool webBilling;
+
+  /// Offer HubSpot and Salesforce import files next to the plain CSV (paid tier).
+  final bool crmExport;
   final String proLabel;
 
   /// Display price, e.g. "\$4.99 / mo".

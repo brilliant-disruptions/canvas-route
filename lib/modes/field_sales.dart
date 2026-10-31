@@ -90,6 +90,7 @@ const fieldSalesPack = ModePack(
   visitHistoryPro: true,
   mileageLog: true,
   webBilling: true,
+  crmExport: true,
   freeRouteLimit: 3,
   proLabel: 'Pro',
   profileAsksCompany: true,
@@ -102,5 +103,6 @@ const fieldSalesPack = ModePack(
     ProPerk(Icons.history, 'Visit history on every business'),
     ProPerk(Icons.speed, 'Mileage log for expenses'),
     ProPerk(Icons.tune, 'Custom outcomes and fields'),
+    ProPerk(Icons.cloud_upload_outlined, 'HubSpot and Salesforce import files'),
   ],
 );
