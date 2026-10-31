@@ -128,11 +128,12 @@ class _HostSaleScreenState extends ConsumerState<HostSaleScreen> {
           const SectionHeader('Early birds'),
           SegmentedButton<String?>(
             segments: const [
-              ButtonSegment(value: null, label: Text('No preference')),
+              ButtonSegment(value: null, label: Text('Either')),
               ButtonSegment(value: 'welcome', label: Text('Welcome')),
               ButtonSegment(value: 'not_welcome', label: Text('Please don\'t')),
             ],
             selected: {_earlyBirds},
+            showSelectedIcon: false, // the check squeezed "No preference" onto three lines
             onSelectionChanged: (s) => setState(() => _earlyBirds = s.first),
           ),
           const SectionHeader('Photos'),
