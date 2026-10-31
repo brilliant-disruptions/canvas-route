@@ -38,7 +38,7 @@ class BusinessSheet extends ConsumerWidget {
     final added = map.isDraft(business);
     final dist = haversineMeters(center.lat, center.lng, business.lat, business.lng);
     final history = ref.watch(visitHistoryProvider)[business.identity];
-    final seeHistory = !pack.visitHistoryPro || ref.watch(isPayingProvider);
+    final seeHistory = !pack.visitHistoryPro || ref.watch(hasProAccessProvider);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(Sp.s5, 0, Sp.s5, Sp.s5),

@@ -52,6 +52,7 @@ class ProfileDrawer extends ConsumerWidget {
     final isAdmin = ref.watch(isAdminProvider);
     final anon = ref.watch(isAnonymousProvider);
     final paying = ref.watch(isPayingProvider);
+    final canBuy = ref.watch(canBuyProProvider);
     final active = ref.watch(activeModeProvider);
     final dueFollowUps = pack.followUpsLabel == null ? 0 : ref.watch(followUpsDueProvider);
 
@@ -98,7 +99,7 @@ class ProfileDrawer extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  if (pack.proProductId != null)
+                  if (pack.proProductId != null && (paying || canBuy))
                     KnBadge(
                       paying ? 'PRO' : 'FREE',
                       color: paying ? c.tertiary : c.surfaceHighest,
@@ -130,7 +131,7 @@ class ProfileDrawer extends ConsumerWidget {
                   ],
                 ),
               ),
-            if (!paying && pack.proProductId != null)
+            if (!paying && canBuy)
               Padding(
                 padding: const EdgeInsets.fromLTRB(Sp.s4, 0, Sp.s4, Sp.s3),
                 child: KnCard(

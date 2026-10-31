@@ -75,7 +75,7 @@ Future<void> showPaywall(BuildContext context, ModePack pack, {required String r
 /// True when the user has the active vertical's paid tier; otherwise shows the
 /// paywall with [reason] and returns false. Use at the tap, not to hide the button.
 Future<bool> requirePro(BuildContext context, WidgetRef ref, String reason) async {
-  if (ref.read(isPayingProvider)) return true;
+  if (ref.read(hasProAccessProvider)) return true;
   await showPaywall(context, ref.read(modePackProvider), reason: reason);
   return false;
 }

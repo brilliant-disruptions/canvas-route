@@ -90,8 +90,12 @@ The webhook writes `plan`, `entitlements`, `billing_date` and `stripe_id` with t
 Users can't write those columns themselves (migration 013). Test the billing rules with
 `node --experimental-strip-types --test supabase/functions/_shared/billing_test.ts`.
 
-**iOS note:** linking out to a web checkout from the iOS app is allowed on the US storefront.
-Elsewhere, hide the button on iOS or offer in-app purchase.
+**Where checkout appears:** `WEB_CHECKOUT` (a `--dart-define`, default `web`) lists the platforms
+allowed to open Stripe Checkout. Apple allows an in-app purchase link only on the US storefront,
+and Google only under its US external-offers rules, so add `ios` or `android` only for builds that
+meet those terms. Where a mode's paid tier can't be bought on a platform, the app hides plans and
+upgrade buttons and **unlocks** those features rather than showing a paywall that can't be paid.
+In-app purchase for the consumer passes isn't built yet, so Yard Sales v1 has no paywall at all.
 
 ## Architecture
 

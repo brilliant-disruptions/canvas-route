@@ -85,7 +85,7 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
               leading: const Icon(Icons.cloud_upload_outlined),
               title: Text('$name import file'),
               subtitle: Text(f == CrmFormat.hubspot ? 'Contacts + companies, lead status, notes' : 'Leads, lead status, description'),
-              trailing: ref.read(isPayingProvider) ? null : KnBadge(pack.proLabel.toUpperCase()),
+              trailing: ref.read(hasProAccessProvider) ? null : KnBadge(pack.proLabel.toUpperCase()),
               onTap: () => Navigator.pop(ctx, (crm: f)),
             ),
           const SizedBox(height: Sp.s4),

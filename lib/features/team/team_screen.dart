@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/env.dart';
 import '../../core/logic/errors.dart';
 import '../../core/logic/geo.dart';
 import '../../core/theme/kn_colors.dart';
@@ -119,12 +120,16 @@ class _NoTeamState extends ConsumerState<_NoTeam> {
             _run(() => ref.read(teamRepoProvider).join(_code.text.trim()));
           },
         ),
-        const SectionHeader('Managing reps?'),
-        OutlinedButton.icon(
-          onPressed: _busy ? null : _create,
-          icon: const Icon(Icons.groups_outlined),
-          label: const Text('Start a team'),
-        ),
+        // Starting a team means buying the Team plan unless you already have it, so
+        // offer it only where that purchase is allowed (see Env.webCheckout).
+        if (Env.webCheckoutHere || ref.watch(profileProvider).value?.plan == Plan.team) ...[
+          const SectionHeader('Managing reps?'),
+          OutlinedButton.icon(
+            onPressed: _busy ? null : _create,
+            icon: const Icon(Icons.groups_outlined),
+            label: const Text('Start a team'),
+          ),
+        ],
       ],
     );
   }

@@ -25,7 +25,7 @@ class RoutesScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final pack = ref.watch(modePackProvider);
     final routes = ref.watch(routesProvider);
-    final paying = ref.watch(isPayingProvider);
+    final paying = ref.watch(hasProAccessProvider);
     final dueFollowUps = pack.followUpsLabel == null ? 0 : ref.watch(followUpsDueProvider);
 
     Future<void> newRoute() async {
@@ -252,7 +252,7 @@ class _RouteCard extends ConsumerWidget {
   Future<void> _runAgain(BuildContext context, WidgetRef ref) async {
     final pack = ref.read(modePackProvider);
     final saved = ref.read(routesProvider).value?.length ?? 0;
-    if (pack.atRouteLimit(saved, paying: ref.read(isPayingProvider))) {
+    if (pack.atRouteLimit(saved, paying: ref.read(hasProAccessProvider))) {
       await showPaywall(context, pack, reason: freeLimitReason(pack));
       return;
     }

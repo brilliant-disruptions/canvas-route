@@ -22,13 +22,16 @@ class AccountScreen extends ConsumerWidget {
     final pack = ref.watch(modePackProvider);
     final anon = ref.watch(isAnonymousProvider);
     final paying = ref.watch(isPayingProvider);
+    // Only show plans that can be bought here (see canBuyProProvider).
+    final canBuy = ref.watch(canBuyProProvider);
     if (p == null) return const Scaffold(body: LoadingView());
     return KnScaffold(
       title: 'Account',
       body: ListView(
         padding: const EdgeInsets.all(Sp.s4),
         children: [
-          KnCard(
+          if (paying || canBuy)
+            KnCard(
             tier: 3,
             child: Row(children: [
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -40,11 +43,13 @@ class AccountScreen extends ConsumerWidget {
               Icon(Icons.workspace_premium_outlined, color: c.tertiary, size: 36),
             ]),
           ),
-          const SectionHeader('Plans'),
-          _PlanRow(name: 'Free', price: '\$0', perks: 'Map, routes${pack.freeRouteLimit != null ? ' (${pack.freeRouteLimit} saved)' : ''}, visit logging, reporting'),
-          _PlanRow(name: pack.proLabel, price: pack.proPrice, perks: ['Everything in Free', ...pack.proPerks.map((p) => p.label)].join(' · '), highlight: true),
-          const SizedBox(height: Sp.s4),
-          if (!paying)
+          if (canBuy) ...[
+            const SectionHeader('Plans'),
+            _PlanRow(name: 'Free', price: '\$0', perks: 'Map, routes${pack.freeRouteLimit != null ? ' (${pack.freeRouteLimit} saved)' : ''}, visit logging, reporting'),
+            _PlanRow(name: pack.proLabel, price: pack.proPrice, perks: ['Everything in Free', ...pack.proPerks.map((p) => p.label)].join(' · '), highlight: true),
+            const SizedBox(height: Sp.s4),
+          ],
+          if (!paying && canBuy)
             KnButton(
               label: 'Upgrade to ${pack.proLabel}',
               lime: true,
