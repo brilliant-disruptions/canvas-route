@@ -12,7 +12,6 @@ import '../features/host/my_sales_screen.dart';
 import '../features/map/map_screen.dart';
 import '../features/onboarding/mode_picker_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
-import '../features/onboarding/profile_capture_screen.dart';
 import '../features/routes/routes_screen.dart';
 import '../features/runner/runner_screen.dart';
 import '../features/runner/summary_screen.dart';
@@ -40,9 +39,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
-      GoRoute(path: '/onboarding', builder: (_, _) => const OnboardingScreen(), routes: [
-        GoRoute(path: 'profile', builder: (_, _) => const ProfileCaptureScreen()),
-      ]),
+      GoRoute(path: '/onboarding', builder: (_, _) => const OnboardingScreen()),
       GoRoute(path: '/mode', builder: (_, _) => const ModePickerScreen()),
       GoRoute(path: '/signin', builder: (_, s) => SignInScreen(reason: s.uri.queryParameters['reason'])),
       ShellRoute(

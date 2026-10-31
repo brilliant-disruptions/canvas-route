@@ -24,6 +24,8 @@ class SpotlightDeck extends StatelessWidget {
     required this.onPlan,
     required this.onOpenDraft,
     required this.statusLabel,
+    this.showTip = false,
+    this.onDismissTip,
   });
 
   final ModePack pack;
@@ -38,6 +40,10 @@ class SpotlightDeck extends StatelessWidget {
   final VoidCallback onOpenDraft;
   final String Function(String status) statusLabel;
 
+  /// First-run coach mark above the plan button.
+  final bool showTip;
+  final VoidCallback? onDismissTip;
+
   @override
   Widget build(BuildContext context) {
     final c = context.kn;
@@ -51,6 +57,11 @@ class SpotlightDeck extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (showTip && !drafting && planCount > 0)
+          _PlanTip(
+            text: 'One tap picks the best $planCount ${pack.stopNoun}s near you and puts them in the right order.',
+            onDismiss: onDismissTip,
+          ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: Sp.s4),
           child: Container(
@@ -127,6 +138,63 @@ class SpotlightDeck extends StatelessWidget {
       ],
     );
   }
+}
+
+class _PlanTip extends StatelessWidget {
+  const _PlanTip({required this.text, this.onDismiss});
+  final String text;
+  final VoidCallback? onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.kn;
+    final t = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(Sp.s8, 0, Sp.s4, Sp.s1),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+        Material(
+          color: c.tertiary,
+          borderRadius: BorderRadius.circular(Rad.lg),
+          child: InkWell(
+            onTap: onDismiss,
+            borderRadius: BorderRadius.circular(Rad.lg),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(Sp.s4, Sp.s3, Sp.s2, Sp.s3),
+              child: Row(children: [
+                Icon(Icons.bolt, color: c.onTertiary, size: 20),
+                const SizedBox(width: Sp.s2),
+                Expanded(child: Text(text, style: t.bodyMedium?.copyWith(color: c.onTertiary, fontWeight: FontWeight.w600))),
+                Semantics(
+                  button: true,
+                  label: 'Dismiss tip',
+                  child: Icon(Icons.close, color: c.onTertiary, size: 18),
+                ),
+              ]),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(right: 64),
+          child: CustomPaint(size: const Size(16, 8), painter: _Notch(c.tertiary)),
+        ),
+      ]),
+    );
+  }
+}
+
+class _Notch extends CustomPainter {
+  const _Notch(this.color);
+  final Color color;
+  @override
+  void paint(Canvas canvas, Size size) => canvas.drawPath(
+        Path()
+          ..lineTo(size.width, 0)
+          ..lineTo(size.width / 2, size.height)
+          ..close(),
+        Paint()..color = color,
+      );
+  @override
+  bool shouldRepaint(_Notch old) => old.color != color;
 }
 
 class _SpotCard extends StatelessWidget {

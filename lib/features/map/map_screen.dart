@@ -204,6 +204,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
 
   /// One tap: an empty draft gets the top-ranked stops; then straight to the builder.
   void _plan(ModePack pack, List<SpotEntry> entries) {
+    _dismissPlanTip();
     final n = ref.read(mapProvider.notifier);
     if (ref.read(mapProvider).draftStops.isNotEmpty) {
       context.push('/route/builder');
@@ -221,6 +222,13 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
     if (b.pinId == null) return showBusinessSheet(context, b);
     final pin = pins.where((p) => p.id == b.pinId).firstOrNull;
     if (pin != null) await showPinSheet(context, pin);
+  }
+
+  void _dismissPlanTip() {
+    final prefs = ref.read(localPrefsProvider);
+    if (prefs.hasSeenPlanTip) return;
+    prefs.setHasSeenPlanTip(true);
+    if (mounted) setState(() {});
   }
 
   String _statusLabel(ModePack pack, String status) =>
@@ -498,6 +506,8 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
                   onPlan: () => _plan(pack, spots),
                   onOpenDraft: () => showDraftTray(context),
                   statusLabel: (s) => _statusLabel(pack, s),
+                  showTip: !ref.read(localPrefsProvider).hasSeenPlanTip,
+                  onDismissTip: _dismissPlanTip,
                 )
               else
                 Padding(
