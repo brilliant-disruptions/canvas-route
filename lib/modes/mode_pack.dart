@@ -72,6 +72,7 @@ class ModePack {
     this.pinCategories = const [],
     this.freeRouteLimit,
     this.proProductId,
+    this.includedInPlan = false,
     this.proLabel = 'Pro',
     this.proPrice = '',
     this.proPitch = '',
@@ -153,6 +154,9 @@ class ModePack {
   final List<String> pinCategories;
   final int? freeRouteLimit;
   final String? proProductId;
+
+  /// A Pro/Team plan unlocks this vertical without its own product (Field Sales).
+  final bool includedInPlan;
   final String proLabel;
 
   /// Display price, e.g. "\$4.99 / mo".

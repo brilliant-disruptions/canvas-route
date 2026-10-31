@@ -85,6 +85,7 @@ const fieldSalesPack = ModePack(
   routeNoun: 'route',
   routesTitle: 'Saved routes',
   proProductId: 'canvasroute_pro_monthly',
+  includedInPlan: true,
   proLabel: 'Pro',
   profileAsksCompany: true,
   proPrice: '\$19 / rep / mo',

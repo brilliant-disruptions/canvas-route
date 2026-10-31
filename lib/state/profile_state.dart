@@ -51,7 +51,14 @@ final activeModeProvider = Provider<AppMode>((ref) {
 final modePackProvider = Provider<ModePack>((ref) => packFor(ref.watch(activeModeProvider)));
 
 final isAdminProvider = Provider<bool>((ref) => ref.watch(profileProvider).value?.isAdmin ?? false);
-final isPayingProvider = Provider<bool>((ref) => ref.watch(profileProvider).value?.isPaying ?? false);
+/// Has paid for the active vertical. A Season Pass doesn't unlock Field Sales Pro.
+final isPayingProvider = Provider<bool>((ref) {
+  final pack = ref.watch(modePackProvider);
+  return ref.watch(profileProvider).value?.owns(pack.proProductId, includedInPlan: pack.includedInPlan) ?? false;
+});
+
+/// Has paid for any vertical, e.g. to file feature requests.
+final paysForAnythingProvider = Provider<bool>((ref) => ref.watch(profileProvider).value?.isPaying ?? false);
 
 class SettingsNotifier extends AsyncNotifier<Settings?> {
   @override

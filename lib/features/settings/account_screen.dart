@@ -20,6 +20,7 @@ class AccountScreen extends ConsumerWidget {
     final p = ref.watch(profileProvider).value;
     final pack = ref.watch(modePackProvider);
     final anon = ref.watch(isAnonymousProvider);
+    final paying = ref.watch(isPayingProvider);
     if (p == null) return const Scaffold(body: LoadingView());
     return KnScaffold(
       title: 'Account',
@@ -30,8 +31,9 @@ class AccountScreen extends ConsumerWidget {
             tier: 3,
             child: Row(children: [
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Current plan', style: t.labelMedium?.copyWith(color: c.onSurfaceVariant)),
-                Text(p.plan.name.toUpperCase(), style: t.headlineMedium?.copyWith(color: c.tertiary)),
+                // Paid tiers are per vertical: show the one for the mode you're in.
+                Text('${pack.label} plan', style: t.labelMedium?.copyWith(color: c.onSurfaceVariant)),
+                Text((paying ? pack.proLabel : 'Free').toUpperCase(), style: t.headlineMedium?.copyWith(color: c.tertiary)),
                 if (p.billingDate != null) Text('Next billing ${DateFormat.yMMMd().format(p.billingDate!)}', style: t.bodySmall),
               ])),
               Icon(Icons.workspace_premium_outlined, color: c.tertiary, size: 36),
@@ -41,7 +43,7 @@ class AccountScreen extends ConsumerWidget {
           _PlanRow(name: 'Free', price: '\$0', perks: 'Map, routes${pack.freeRouteLimit != null ? ' (${pack.freeRouteLimit} saved)' : ''}, visit logging, reporting'),
           _PlanRow(name: pack.proLabel, price: pack.proPrice, perks: ['Everything in Free', ...pack.proPerks.map((p) => p.label)].join(' · '), highlight: true),
           const SizedBox(height: Sp.s4),
-          KnButton(label: 'Upgrade to ${pack.proLabel}', lime: true, onPressed: () => toast(context, 'Store billing arrives in the next release. Email us for early access.')),
+          if (!paying) KnButton(label: 'Upgrade to ${pack.proLabel}', lime: true, onPressed: () => toast(context, 'Store billing arrives in the next release. Email us for early access.')),
           if (anon) ...[
             const SectionHeader('Sign in'),
             Text('You\'re using CanvasRoute as a guest. Sign in to keep your routes across devices and to share or report.', style: t.bodyMedium?.copyWith(color: c.onSurfaceVariant)),

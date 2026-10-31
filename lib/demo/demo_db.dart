@@ -75,6 +75,7 @@ void _seed(DemoDb db) {
     'office_lng': -96.7985,
     'is_admin': true,
     'plan': 'pro',
+    'entitlements': ['canvasroute_season_pass', 'canvasroute_drop_alerts_pro'],
     'active_mode': 'field_sales',
     'trust_score': 62,
     'home_lat': h.lat,

@@ -24,7 +24,7 @@ class _State extends ConsumerState<FeatureRequestsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final paying = ref.watch(isPayingProvider);
+    final paying = ref.watch(paysForAnythingProvider);
     return DefaultTabController(
       length: 2,
       child: Scaffold(

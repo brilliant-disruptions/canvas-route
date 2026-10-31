@@ -115,6 +115,12 @@ source ships disabled**: get the city's written OK, then
 show how each run went. Multi-day sales show today's window and roll to the next day at close.
 An admin removing a permit pin keeps it removed.
 
+Migration `013` closes two holes in `profiles` (**apply it before launch**): it removes a read policy
+that exposed every user's email, phone and home location, and limits users to editing their own
+details, not `is_admin`, `plan` or `trust_score`. Migration `014` adds `entitlements`, the store
+product ids a user has paid for. Paid tiers are per vertical: a Season Pass unlocks Yard Sales,
+not Field Sales Pro. Store webhooks write it with the service role.
+
 The demo build seeds two share tokens (`/#/r/demo-run`, `/#/s/demo-sale`) and simulates one
 community sighting about 20 seconds after launch, so the invite, sign and live-drop flows can be
 shown without a backend.

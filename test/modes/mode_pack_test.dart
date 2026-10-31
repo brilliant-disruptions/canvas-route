@@ -1,4 +1,5 @@
 import 'package:canvas_route/data/models/app_mode.dart';
+import 'package:canvas_route/data/models/profile.dart';
 import 'package:canvas_route/data/models/visit_field.dart';
 import 'package:canvas_route/modes/mode_pack.dart';
 import 'package:canvas_route/modes/registry.dart';
@@ -100,5 +101,36 @@ void main() {
     expect(back.key, 'c_bins');
     expect(back.type, FieldType.number);
     expect(back.isCustom, isTrue);
+  });
+
+  group('paid access per vertical', () {
+    Profile who({Plan plan = Plan.free, List<String> owns = const []}) =>
+        Profile.fromRow({'id': 'u', 'plan': plan.name, 'entitlements': owns});
+    bool pays(Profile p, AppMode m) => p.owns(packFor(m).proProductId, includedInPlan: packFor(m).includedInPlan);
+
+    test('a Season Pass unlocks Yard Sales only', () {
+      final p = who(owns: [packFor(AppMode.yardSales).proProductId!]);
+      expect(pays(p, AppMode.yardSales), isTrue);
+      expect(pays(p, AppMode.fieldSales), isFalse);
+      expect(pays(p, AppMode.cardDrops), isFalse);
+      expect(p.isPaying, isTrue);
+    });
+
+    test('a Field Sales Pro plan unlocks Field Sales only', () {
+      final p = who(plan: Plan.pro);
+      expect(pays(p, AppMode.fieldSales), isTrue);
+      expect(pays(p, AppMode.yardSales), isFalse);
+    });
+
+    test('free users own nothing', () {
+      final p = who();
+      expect(AppMode.values.any((m) => pays(p, m)), isFalse);
+      expect(p.isPaying, isFalse);
+    });
+
+    test('every paid vertical has its own product id', () {
+      final ids = [for (final p in modePacks.values) ?p.proProductId];
+      expect(ids.toSet(), hasLength(ids.length));
+    });
   });
 }
