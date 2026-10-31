@@ -64,7 +64,15 @@ class _Requests extends ConsumerWidget {
                   },
                 ),
               ]),
-              Text('${r.category} · +${r.upvoteCount} · ${r.role ?? '—'} · ${r.frequency ?? '—'} · ${r.impact ?? '—'}${r.interviewOptIn ? ' · interview: ${r.interviewEmail}' : ''}', style: t.bodySmall?.copyWith(color: c.onSurfaceVariant)),
+              Text(
+                [
+                  // Codes read as words; the email stays exactly as entered.
+                  for (final code in [r.category, ?r.role, ?r.frequency, ?r.impact]) code.replaceAll('_', ' '),
+                  '${r.upvoteCount} vote${r.upvoteCount == 1 ? '' : 's'}',
+                  if (r.interviewOptIn) 'interview: ${r.interviewEmail}',
+                ].join(' · '),
+                style: t.bodySmall?.copyWith(color: c.onSurfaceVariant),
+              ),
               if (r.problem != null && r.problem!.isNotEmpty) Text(r.problem!, style: t.bodySmall),
               TextButton(
                 onPressed: () async {
