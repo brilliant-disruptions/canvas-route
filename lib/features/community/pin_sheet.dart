@@ -112,6 +112,8 @@ class PinSheet extends ConsumerWidget {
                   onColor: c.onTertiaryContainer,
                   icon: Icons.verified_outlined,
                 ),
+              if (pin.origin == PinOrigin.permit)
+                KnBadge('City permit', icon: Icons.assignment_turned_in_outlined),
               if (pin.origin == PinOrigin.spotted)
                 KnBadge('Spotted · ${pin.confirmations} confirm', icon: Icons.visibility_outlined),
               if (pin.earlyBirds == 'not_welcome')

@@ -190,6 +190,9 @@ void _seed(DemoDb db) {
     pin(sale('Moving sale — everything goes', '4431 Bryan St, Dallas, TX', -0.010, -0.004, 7, 11, ['Everything'], early: 'welcome')),
     pin(sale('Kids clothes & toys', '6810 La Vista Dr, Dallas, TX', 0.020, 0.040, 7, 12, ['Kids', 'Clothing'])),
     pin(sale('Garage cleanout', '5302 Vickery Blvd, Dallas, TX', 0.026, 0.004, 8, 12, ['Tools'], origin: 'spotted', confirms: 2)),
+    pin(sale('Garage sale', '5927 Goliad Ave, Dallas, TX', -0.018, 0.016, 7, 14, ['Furniture', 'Tools'], origin: 'permit',
+        notes: 'Furniture, Lawn Equipment, Miscellaneous Household Items\n'
+            'Hours not posted; most sales run about 7 AM to 2 PM.\nGarage-sale permit data: City of Dallas, Texas (demo)')),
     pin(sale('Church rummage sale', '4015 Normandy Ave, Dallas, TX', 0.034, -0.030, 7, 13, ['Everything', 'Books'])),
     pin(sale('Neighborhood sale — 12 homes', 'Lakewood Heights, Dallas, TX', -0.002, 0.050, 7, 14, ['Everything'],
         notes: 'Look for the orange balloons. Maps at the corner of Lakewood Blvd and Abrams.')),

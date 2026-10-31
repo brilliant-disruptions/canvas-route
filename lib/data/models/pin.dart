@@ -3,7 +3,9 @@ import 'json_utils.dart';
 
 enum PinKind { yardSale, store }
 
-enum PinOrigin { host, spotted, places }
+/// Where a pin came from. `permit` is imported nightly from a city's public
+/// garage-sale permits (migration 012).
+enum PinOrigin { host, spotted, places, permit }
 
 enum PinStatus { draft, pending, live, ended, removed }
 

@@ -107,6 +107,14 @@ Migration `010` adds per-weekday sighting counts to `store_summary` for the stor
 chart; without it the sheet falls back to the text card. Migration `011` adds `pin_interest`, which
 tells a host how many other people have their sale in a route (owner and admins only).
 
+Migration `012` imports city garage-sale permits (Arlington and McKinney, TX to start) as live
+yard-sale pins every night at 4:20 AM Central, using Postgres's `http` extension. **Every
+source ships disabled**: get the city's written OK, then
+`update permit_sources set enabled = true where id = 'arlington_tx';` and run
+`select import_permits();` once. `last_run_at`, `last_count` and `last_error` on `permit_sources`
+show how each run went. Multi-day sales show today's window and roll to the next day at close.
+An admin removing a permit pin keeps it removed.
+
 The demo build seeds two share tokens (`/#/r/demo-run`, `/#/s/demo-sale`) and simulates one
 community sighting about 20 seconds after launch, so the invite, sign and live-drop flows can be
 shown without a backend.
