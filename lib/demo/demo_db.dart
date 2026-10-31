@@ -45,10 +45,12 @@ class DemoDb {
 // Seed data. Places are real Dallas neighborhoods; businesses are fictional.
 // ---------------------------------------------------------------------------
 
+/// The Saturday the demo's sales are on: this one, unless it's Saturday
+/// afternoon and they'd all be over, in which case next week's.
 DateTime _nextSaturday(DateTime from) {
   final d = DateTime(from.year, from.month, from.day);
   final add = (DateTime.saturday - d.weekday) % 7;
-  return d.add(Duration(days: add));
+  return d.add(Duration(days: add == 0 && from.hour >= 13 ? 7 : add));
 }
 
 void _seed(DemoDb db) {
