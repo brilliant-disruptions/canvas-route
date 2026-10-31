@@ -8,6 +8,7 @@ import '../modes/mode_pack.dart';
 import '../modes/registry.dart';
 import 'auth_state.dart';
 import 'providers.dart';
+import 'team_state.dart';
 
 class ProfileNotifier extends AsyncNotifier<Profile?> {
   @override
@@ -54,7 +55,9 @@ final isAdminProvider = Provider<bool>((ref) => ref.watch(profileProvider).value
 /// Has paid for the active vertical. A Season Pass doesn't unlock Field Sales Pro.
 final isPayingProvider = Provider<bool>((ref) {
   final pack = ref.watch(modePackProvider);
-  return ref.watch(profileProvider).value?.owns(pack.proProductId, includedInPlan: pack.includedInPlan) ?? false;
+  final own = ref.watch(profileProvider).value?.owns(pack.proProductId, includedInPlan: pack.includedInPlan) ?? false;
+  // Reps on a manager's Team plan are covered without buying their own.
+  return own || (pack.teamPlan && (ref.watch(myTeamProvider).value?.covered ?? false));
 });
 
 /// Has paid for any vertical, e.g. to file feature requests.

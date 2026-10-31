@@ -15,6 +15,7 @@ import '../data/models/report.dart';
 import '../data/models/route_model.dart';
 import '../data/models/settings.dart';
 import '../data/models/stop.dart';
+import '../data/models/team.dart';
 import '../data/models/trip.dart';
 import '../data/models/store_summary.dart';
 import '../data/models/visit.dart';
@@ -28,6 +29,7 @@ import '../data/repositories/report_repository.dart';
 import '../data/repositories/route_repository.dart';
 import '../data/repositories/settings_repository.dart';
 import '../data/repositories/share_repository.dart';
+import '../data/repositories/team_repository.dart';
 import '../data/repositories/trip_repository.dart';
 import '../data/repositories/visit_repository.dart';
 import '../data/services/storage_service.dart';
@@ -765,4 +767,69 @@ class DemoTripRepository implements TripRepository {
     db.trips[row['id'] as String] = row;
     return Trip.fromRow(row);
   });
+}
+
+/// A three-person team with the demo user as manager, so the Team screen and the
+/// teammates line on business sheets have something to show.
+class DemoTeamRepository implements TeamRepository {
+  DemoTeamRepository(this.db);
+  final DemoDb db;
+  bool _member = true;
+
+  static const _team = Team(id: 'team-demo', name: 'Dallas Field Team', joinCode: '7KQ2MX', ownerId: DemoDb.userId, covered: true);
+
+  @override
+  Future<Team?> mine() => _later(() => _member ? _team : null);
+
+  @override
+  Future<List<TeamMember>> roster() => _later(() => _member
+      ? const [
+          TeamMember(userId: DemoDb.userId, name: 'Sam Demo', isManager: true),
+          TeamMember(userId: 'rep-rae', name: 'Rae Okafor', isManager: false),
+          TeamMember(userId: 'rep-luis', name: 'Luis Patel', isManager: false),
+        ]
+      : const []);
+
+  @override
+  Future<List<RepActivity>> activity(int days) => _later(() {
+    final k = days >= 30 ? 4 : 1;
+    final now = DateTime.now();
+    return [
+      RepActivity(userId: 'rep-rae', name: 'Rae Okafor', visits: 23 * k, meters: (41.2 * k * 1609.344).round(),
+          outcomes: {'Interested': 6 * k, 'Contacted': 9 * k, 'No Answer': 6 * k, 'Not Interested': 2 * k},
+          lastVisitAt: now.subtract(const Duration(hours: 3))),
+      RepActivity(userId: DemoDb.userId, name: 'Sam Demo', visits: 9 * k, meters: (18.6 * k * 1609.344).round(),
+          outcomes: {'Interested': 3 * k, 'Contacted': 3 * k, 'No Answer': 3 * k},
+          lastVisitAt: now.subtract(const Duration(hours: 2))),
+      RepActivity(userId: 'rep-luis', name: 'Luis Patel', visits: 4 * k, meters: (7.9 * k * 1609.344).round(),
+          outcomes: {'Contacted': 2 * k, 'No Answer': 2 * k}, lastVisitAt: now.subtract(const Duration(days: 4))),
+    ];
+  });
+
+  @override
+  Future<List<TeammateVisit>> visitsAt(String placeId) => _later(() {
+    // Rae has already worked part of Lakewood's dental offices.
+    final dental = [for (final p in demoCatalog['dental']!) p['place_id']];
+    final i = dental.indexOf(placeId);
+    if (!_member || i < 2 || i > 4) return const <TeammateVisit>[];
+    return [
+      TeammateVisit(name: 'Rae Okafor', outcome: i == 3 ? 'Not Interested' : 'No Answer',
+          visitedAt: DateTime.now().subtract(Duration(days: i))),
+    ];
+  });
+
+  @override
+  Future<Team> create(String name) => _later(() => _team);
+
+  @override
+  Future<Team> join(String code) => _later(() {
+    _member = true;
+    return _team;
+  });
+
+  @override
+  Future<void> leave() => _later(() => _member = false);
+
+  @override
+  Future<void> remove(String userId) => _later(() {});
 }

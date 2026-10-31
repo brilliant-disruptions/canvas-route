@@ -62,6 +62,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       'share' => 'Share your ${pack.routeNoun}',
       'host' => 'Post your sale',
       'upgrade' => 'Sign in to upgrade',
+      'team' => 'Sign in to join your team',
       _ => 'Keep everything you\'ve built',
     };
     // Linking keeps the same uid, so nothing a guest made is lost: say so.

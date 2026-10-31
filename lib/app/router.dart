@@ -7,11 +7,11 @@ import '../features/alerts/alerts_screen.dart';
 import '../features/auth/sign_in_screen.dart';
 import '../features/builder/builder_screen.dart';
 import '../features/feature_requests/feature_requests_screen.dart';
+import '../features/follow_ups/follow_ups_screen.dart';
 import '../features/host/host_sale_screen.dart';
 import '../features/host/my_sales_screen.dart';
 import '../features/host/sale_sign_screen.dart';
 import '../features/map/map_screen.dart';
-import '../features/follow_ups/follow_ups_screen.dart';
 import '../features/mileage/mileage_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
 import '../features/routes/routes_screen.dart';
@@ -23,6 +23,7 @@ import '../features/settings/profile_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/shared/sale_landing_screen.dart';
 import '../features/shared/shared_route_screen.dart';
+import '../features/team/team_screen.dart';
 import '../features/visit/visit_logger_screen.dart';
 import '../state/providers.dart';
 import '../ui/widgets/kn_widgets.dart';
@@ -78,6 +79,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/alerts', builder: (_, _) => const AlertsScreen()),
       GoRoute(path: '/follow-ups', builder: (_, _) => const FollowUpsScreen()),
       GoRoute(path: '/mileage', builder: (_, _) => const MileageScreen()),
+      GoRoute(path: '/team', builder: (_, _) => const TeamScreen()),
       // Stripe Checkout's success page. The webhook has (or soon will have) set the plan.
       GoRoute(
         path: '/billing/done',

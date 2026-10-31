@@ -7,11 +7,13 @@ import '../../core/theme/kn_colors.dart';
 import '../../core/theme/kn_theme.dart';
 import '../../data/models/business.dart';
 import '../../data/models/stop.dart';
+import '../../data/models/team.dart';
 import '../../state/follow_ups_state.dart';
 import '../../state/location_state.dart';
 import '../../state/map_state.dart';
 import '../../state/profile_state.dart';
 import '../../state/providers.dart';
+import '../../state/team_state.dart';
 import '../../ui/widgets/kn_widgets.dart';
 import '../community/report_sheet.dart';
 import '../settings/paywall_sheet.dart';
@@ -86,6 +88,24 @@ class BusinessSheet extends ConsumerWidget {
               ),
             ),
           ],
+          // Don't double-knock: who on the team has been here lately (outcome only).
+          if (pack.teamPlan && business.placeId != null)
+            for (final v in ref.watch(teammateVisitsProvider(business.placeId!)).value ?? const <TeammateVisit>[])
+              Padding(
+                padding: const EdgeInsets.only(top: Sp.s2),
+                child: Row(
+                  children: [
+                    Icon(Icons.groups_outlined, size: 18, color: c.onSurfaceVariant),
+                    const SizedBox(width: Sp.s2),
+                    Expanded(
+                      child: Text(
+                        '${v.name} visited ${visitHistoryLine(VisitHistory(count: 1, lastAt: v.visitedAt), DateTime.now()).replaceFirst('Visited ', '')}${v.outcome == null ? '' : ' · ${v.outcome}'}',
+                        style: t.bodySmall?.copyWith(color: c.onSurfaceVariant),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
           if (business.placeId != null)
             FutureBuilder(
               future: ref.read(placesServiceProvider).details(business.placeId!),

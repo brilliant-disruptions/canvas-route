@@ -78,6 +78,7 @@ class ModePack {
     this.mileageLog = false,
     this.webBilling = false,
     this.crmExport = false,
+    this.teamPlan = false,
     this.proLabel = 'Pro',
     this.proPrice = '',
     this.proPitch = '',
@@ -180,6 +181,13 @@ class ModePack {
 
   /// Offer HubSpot and Salesforce import files next to the plain CSV (paid tier).
   final bool crmExport;
+
+  /// Teams: a manager's activity view, a join code for reps, and teammates'
+  /// recent outcomes on business sheets. Creating a team needs the Team plan.
+  final bool teamPlan;
+
+  /// Store product for the Team plan, billed per seat on the web.
+  static const teamProductId = 'canvasroute_team_monthly';
   final String proLabel;
 
   /// Display price, e.g. "\$4.99 / mo".

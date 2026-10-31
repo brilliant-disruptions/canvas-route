@@ -142,6 +142,21 @@ details, not `is_admin`, `plan` or `trust_score`. Migration `014` adds `entitlem
 product ids a user has paid for. Paid tiers are per vertical: a Season Pass unlocks Yard Sales,
 not Field Sales Pro. Store webhooks write it with the service role.
 
+Migration `015` adds `trips`, the mileage log: one row per route run, written when its summary
+opens. Migration `016` adds teams for the Field Sales Team plan, using security-definer functions
+scoped to the caller's team:
+- `create_team` needs `plan = 'team'`; `join_team` takes the join code.
+- `team_roster` lists the team.
+- `team_activity` is for managers only.
+- `team_visits_at` shows teammates' recent outcomes at a business, never their notes.
+
+Members of a team whose owner holds the Team plan get Pro. Seat counts aren't enforced yet.
+
+Follow-up reminders are local notifications (`flutter_local_notifications`). Android enables
+core library desugaring plus the plugin's scheduling receivers; iOS asks for permission the first
+time a reminder is scheduled. **Check both on a device**: this repo's CI has no Android or iOS
+toolchain.
+
 The demo build seeds two share tokens (`/#/r/demo-run`, `/#/s/demo-sale`) and simulates one
 community sighting about 20 seconds after launch, so the invite, sign and live-drop flows can be
 shown without a backend.
