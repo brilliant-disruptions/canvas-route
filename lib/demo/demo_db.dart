@@ -15,7 +15,14 @@ class DemoDb {
   /// `--dart-define=DEMO_AWAY=true` puts the demo user in Tulsa, outside the
   /// seeded area, to show what a city with no listings yet looks like.
   static const away = bool.fromEnvironment('DEMO_AWAY');
-  static const user = away ? Waypoint(36.1540, -95.9928) : home;
+  /// `--dart-define=DEMO_AT_SALE=true` stands the user at the multi-family sale, to
+  /// show the "Still going?" check-in.
+  static const atSale = bool.fromEnvironment('DEMO_AT_SALE');
+  static const user = away
+      ? Waypoint(36.1540, -95.9928)
+      : atSale
+          ? Waypoint(32.8240, -96.7680) // home + (0.010, 0.022): the multi-family sale
+          : home;
 
   final profiles = <String, Map<String, dynamic>>{};
   final settings = <String, Map<String, dynamic>>{};

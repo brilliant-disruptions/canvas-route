@@ -8,6 +8,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 
 import '../../app/shell.dart';
+import '../../core/logic/check_in.dart';
 import '../../core/logic/dates.dart';
 import '../../core/logic/errors.dart';
 import '../../core/logic/pin_labels.dart';
@@ -35,6 +36,7 @@ import '../../ui/map/pin_icons.dart';
 import '../../ui/widgets/kn_widgets.dart';
 import '../community/pin_sheet.dart';
 import 'business_sheet.dart';
+import 'check_in_banner.dart';
 import 'cold_start_card.dart';
 import 'draft_tray.dart';
 import 'manual_stop_sheet.dart';
@@ -59,17 +61,22 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
   ({Pin pin, String status})? _liveDrop;
   Timer? _liveDropTimer;
 
+  /// Re-reads GPS while the map is open, so "Still going?" knows where you are.
+  Timer? _locationTimer;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _checkClipboard();
+    _locationTimer = Timer.periodic(const Duration(seconds: 90), (_) => ref.invalidate(currentLocationProvider));
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _liveDropTimer?.cancel();
+    _locationTimer?.cancel();
     _search.dispose();
     super.dispose();
   }
@@ -422,6 +429,23 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
       });
     }
 
+    // Standing at an open listing (signed in, so the report can be filed): ask once.
+    final here = ref.watch(currentLocationProvider).value;
+    final doneToday = ref.read(localPrefsProvider).checkInsDone;
+    final checkInId = !pack.communityReports || !pack.requiresTimeWindow || here == null || ref.watch(isAnonymousProvider)
+        ? null
+        : checkInCandidate(
+            [
+              for (final p in pins)
+                if (p.opensAt != null && !doneToday.contains(checkInKey(p.id, DateTime.now())))
+                  (id: p.id, lat: p.lat, lng: p.lng, opensAt: p.opensAt!, closesAt: p.closesAt),
+            ],
+            here.lat,
+            here.lng,
+            DateTime.now(),
+          );
+    final checkIn = checkInId == null ? null : pins.firstWhere((p) => p.id == checkInId);
+
     final spots = _spotEntries(pack: pack, map: map, pins: visiblePins, latest: latest, summaries: summaries);
     final listView = map.viewMode == MapViewMode.list;
     final showDeck = spots.isNotEmpty;
@@ -695,6 +719,19 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
                         ),
                       ),
               ),
+              if (checkIn != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(Sp.s4, Sp.s2, Sp.s4, 0),
+                  child: CheckInBanner(
+                    key: ValueKey(checkIn.id),
+                    pack: pack,
+                    pin: checkIn,
+                    onDone: () async {
+                      await ref.read(localPrefsProvider).addCheckInDone(checkInKey(checkIn.id, DateTime.now()));
+                      if (mounted) setState(() {});
+                    },
+                  ),
+                ),
               if (map.error != null)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(Sp.s4, Sp.s2, Sp.s4, 0),

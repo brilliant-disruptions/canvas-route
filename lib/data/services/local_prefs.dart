@@ -74,4 +74,12 @@ class LocalPrefs {
 
   String? get lastSeenClipboardUrl => _str('lastClipboardUrl');
   Future<void> setLastSeenClipboardUrl(String v) => _put('lastClipboardUrl', v);
+
+  /// "Still going?" prompts already answered or dismissed, as checkInKey values.
+  Set<String> get checkInsDone => (_str('checkInsDone') ?? '').split('\n').where((s) => s.isNotEmpty).toSet();
+  Future<void> addCheckInDone(String key) {
+    // Keep the last 50; old days don't matter.
+    final keys = [...checkInsDone, key];
+    return _put('checkInsDone', keys.skip(keys.length > 50 ? keys.length - 50 : 0).join('\n'));
+  }
 }
