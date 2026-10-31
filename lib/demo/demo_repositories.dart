@@ -411,6 +411,17 @@ class DemoPinRepository implements PinRepository {
   @override
   Future<void> update(String pinId, Map<String, dynamic> patch) async => db.pins[pinId]?.addAll(patch);
 
+  /// Mirrors migration 011, plus the demo's seeded interest from other hunters.
+  @override
+  Future<int?> interest(String pinId) => _later(() {
+    final pin = db.pins[pinId];
+    if (pin == null || pin['owner_id'] != DemoDb.userId) return null;
+    final planners = {
+      for (final s in db.stops.values.where((s) => s['pin_id'] == pinId)) db.routes[s['route_id']]?['user_id'],
+    }..remove(DemoDb.userId);
+    return planners.length + (db.pinInterest[pinId] ?? 0);
+  });
+
   @override
   Future<List<Pin>> pendingForAdmin() => _later(
     () => db.pins.values.where((p) => p['status'] == 'pending' || p['status'] == 'removed').map(_pin).toList(),

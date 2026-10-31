@@ -11,13 +11,10 @@ class PinRepository {
   final StorageService _storage;
 
   Future<List<Pin>> nearby(AppMode mode, double lat, double lng, {double radiusMi = 15}) async {
-    final rows = (await sb.rpc('nearby_pins', params: {
-      'p_mode': mode.id,
-      'p_lat': lat,
-      'p_lng': lng,
-      'p_radius_mi': radiusMi,
-    }) as List)
-        .cast<Map<String, dynamic>>();
+    final rows = (await sb.rpc(
+      'nearby_pins',
+      params: {'p_mode': mode.id, 'p_lat': lat, 'p_lng': lng, 'p_radius_mi': radiusMi},
+    ) as List).cast<Map<String, dynamic>>();
     if (rows.isEmpty) return const [];
     final ids = rows.map((r) => r['id'] as String).toList();
     final photos = await sb.from('pin_photos').select('pin_id, storage_path').inFilter('pin_id', ids);
@@ -164,6 +161,9 @@ class PinRepository {
       sb.from('pins').update({'status': status.name}).eq('id', pinId);
 
   Future<void> update(String pinId, Map<String, dynamic> patch) => sb.from('pins').update(patch).eq('id', pinId);
+
+  /// People other than the host with this pin in a route; null unless you own it.
+  Future<int?> interest(String pinId) async => (await sb.rpc('pin_interest', params: {'p_pin': pinId})) as int?;
 
   Future<List<Pin>> pendingForAdmin() async {
     final rows = await sb.from('pins').select().inFilter('status', ['pending', 'removed']).order('created_at');

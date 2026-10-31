@@ -21,12 +21,23 @@ class MySalesScreen extends ConsumerWidget {
     final pins = ref.watch(myPinsProvider);
     return KnScaffold(
       title: 'My sales',
-      actions: [TextButton.icon(onPressed: () => context.push('/host/new'), icon: const Icon(Icons.add), label: const Text('Post'))],
+      actions: [
+        TextButton.icon(
+          onPressed: () => context.push('/host/new'),
+          icon: const Icon(Icons.add),
+          label: const Text('Post'),
+        ),
+      ],
       body: AsyncView(
         value: pins,
         onRetry: () => ref.invalidate(myPinsProvider),
         data: (list) => list.isEmpty
-            ? EmptyState(icon: Icons.sell_outlined, title: 'No sales posted', body: 'Post once, get a link and a QR for your sign.', action: KnButton(label: 'Post a sale', lime: true, onPressed: () => context.push('/host/new')))
+            ? EmptyState(
+                icon: Icons.sell_outlined,
+                title: 'No sales posted',
+                body: 'Post once, get a link and a QR for your sign.',
+                action: KnButton(label: 'Post a sale', lime: true, onPressed: () => context.push('/host/new')),
+              )
             : ListView.separated(
                 padding: const EdgeInsets.all(Sp.s4),
                 itemCount: list.length,
@@ -35,27 +46,75 @@ class MySalesScreen extends ConsumerWidget {
                   final p = list[i];
                   return KnCard(
                     accent: p.isLive ? c.tertiary : null,
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Row(children: [
-                        Expanded(child: Text(p.name, style: t.titleLarge)),
-                        KnBadge(p.status.name, color: p.isLive ? c.statusDone : c.statusBacklog, onColor: c.surface),
-                      ]),
-                      if (p.opensAt != null) Text('${DateFormat.yMMMEd().format(p.opensAt!)} · ${DateFormat.jm().format(p.opensAt!)}–${p.closesAt == null ? '' : DateFormat.jm().format(p.closesAt!)}', style: t.bodySmall?.copyWith(color: c.onSurfaceVariant)),
-                      const SizedBox(height: Sp.s3),
-                      Wrap(spacing: Sp.s2, runSpacing: Sp.s2, children: [
-                        OutlinedButton.icon(onPressed: () => showShareSaleSheet(context, p), icon: const Icon(Icons.qr_code_2), label: const Text('Sign QR')),
-                        if (p.isLive)
-                          TextButton(
-                            onPressed: () async {
-                              if (await confirm(context, title: 'Mark as packed up?', body: 'The sale disappears from the map.', confirmLabel: 'Packed up')) {
-                                await ref.read(pinRepoProvider).setStatus(p.id, PinStatus.ended);
-                                ref.invalidate(myPinsProvider);
-                              }
-                            },
-                            child: const Text('Packed up'),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(child: Text(p.name, style: t.titleLarge)),
+                            KnBadge(
+                              p.status.name,
+                              color: p.isLive ? c.statusDone : c.statusBacklog,
+                              onColor: c.surface,
+                            ),
+                          ],
+                        ),
+                        if (p.opensAt != null)
+                          Text(
+                            '${DateFormat.yMMMEd().format(p.opensAt!)} · ${DateFormat.jm().format(p.opensAt!)}–${p.closesAt == null ? '' : DateFormat.jm().format(p.closesAt!)}',
+                            style: t.bodySmall?.copyWith(color: c.onSurfaceVariant),
                           ),
-                      ]),
-                    ]),
+                        // Hosts are the supply side: show them it's working, or nudge them to share.
+                        if (ref.watch(pinInterestProvider(p.id)).value case final n?) ...[
+                          const SizedBox(height: Sp.s2),
+                          Row(
+                            children: [
+                              Icon(
+                                n > 0 ? Icons.groups_outlined : Icons.campaign_outlined,
+                                size: 18,
+                                color: c.tertiary,
+                              ),
+                              const SizedBox(width: Sp.s2),
+                              Expanded(
+                                child: Text(
+                                  n > 0
+                                      ? '$n ${n == 1 ? 'hunter has' : 'hunters have'} your sale in their route'
+                                      : 'No one has it in a route yet. Share your sign to spread the word.',
+                                  style: t.bodyMedium?.copyWith(color: n > 0 ? c.tertiary : c.onSurfaceVariant),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                        const SizedBox(height: Sp.s3),
+                        Wrap(
+                          spacing: Sp.s2,
+                          runSpacing: Sp.s2,
+                          children: [
+                            OutlinedButton.icon(
+                              onPressed: () => showShareSaleSheet(context, p),
+                              icon: const Icon(Icons.qr_code_2),
+                              label: const Text('Sign & QR'),
+                            ),
+                            if (p.isLive)
+                              TextButton(
+                                onPressed: () async {
+                                  if (await confirm(
+                                    context,
+                                    title: 'Mark as packed up?',
+                                    body: 'The sale disappears from the map.',
+                                    confirmLabel: 'Packed up',
+                                  )) {
+                                    await ref.read(pinRepoProvider).setStatus(p.id, PinStatus.ended);
+                                    ref.invalidate(myPinsProvider);
+                                  }
+                                },
+                                child: const Text('Packed up'),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
                   );
                 },
               ),

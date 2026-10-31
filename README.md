@@ -91,7 +91,8 @@ Share links are generated as `<webOrigin>/r/<token>` (routes) and `/s/<token>` (
 Both are routed in the app, but phones only open them in the app once Android App Links and iOS
 Associated Domains are configured and the matching verification files are hosted on that domain.
 Migration `010` adds per-weekday sighting counts to `store_summary` for the store sheet's restock
-chart; without it the sheet falls back to the text card.
+chart; without it the sheet falls back to the text card. Migration `011` adds `pin_interest`, which
+tells a host how many other people have their sale in a route (owner and admins only).
 
 The demo build seeds two share tokens (`/#/r/demo-run`, `/#/s/demo-sale`) and simulates one
 community sighting about 20 seconds after launch, so the invite, sign and live-drop flows can be

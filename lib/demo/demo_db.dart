@@ -27,6 +27,7 @@ class DemoDb {
   final upvotes = <String>{}; // "$userId|$requestId"
   final comments = <Map<String, dynamic>>[];
   final shares = <String, String>{}; // token → routeId
+  final pinInterest = <String, int>{}; // pinId → other hunters planning to go (seeded)
 
   static String newId() => const Uuid().v4();
   static String iso(DateTime d) => d.toUtc().toIso8601String();
@@ -199,6 +200,7 @@ void _seed(DemoDb db) {
   ];
 
   db.pins[ys.last]!['share_token'] = 'demo-sale'; // the demo host's sign QR: /s/demo-sale
+  db.pinInterest[ys.last] = 14;
 
   final lastSales = [
     for (final (name, dLat, dLng) in [
