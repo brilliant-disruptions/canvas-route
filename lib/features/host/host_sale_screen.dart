@@ -155,8 +155,11 @@ class _HostSaleScreenState extends ConsumerState<HostSaleScreen> {
   }
 }
 
+/// Public link for a hosted sale; the sign's QR encodes it.
+String saleLink(Pin pin) => '${Env.webOrigin}/s/${pin.shareToken}';
+
 Future<void> showShareSaleSheet(BuildContext context, Pin pin) {
-  final link = '${Env.webOrigin}/s/${pin.shareToken}';
+  final link = saleLink(pin);
   return showKnSheet(
     context,
     builder: (ctx) {
@@ -177,7 +180,17 @@ Future<void> showShareSaleSheet(BuildContext context, Pin pin) {
           const SizedBox(height: Sp.s3),
           SelectableText(link, style: t.labelMedium, textAlign: TextAlign.center),
           const SizedBox(height: Sp.s4),
-          Consumer(builder: (_, ref, _) => KnButton(label: 'Share link', icon: Icons.ios_share, onPressed: () => ref.read(shareServiceProvider).shareText('${pin.name} — $link', subject: pin.name))),
+          KnButton(
+            label: 'Make a printable sign',
+            icon: Icons.print_outlined,
+            lime: true,
+            onPressed: () {
+              Navigator.pop(ctx);
+              context.push('/host/sign/${pin.id}');
+            },
+          ),
+          const SizedBox(height: Sp.s2),
+          Consumer(builder: (_, ref, _) => OutlinedButton.icon(onPressed: () => ref.read(shareServiceProvider).shareText('${pin.name} — $link', subject: pin.name), icon: const Icon(Icons.ios_share), label: const Text('Share link'))),
         ]),
       );
     },

@@ -17,6 +17,7 @@ import '../../state/routes_state.dart';
 import '../../ui/map/pin_icons.dart';
 import '../../ui/widgets/kn_widgets.dart';
 import '../settings/paywall_sheet.dart';
+import 'newcomer_pitch.dart';
 
 /// Where a share link lands, often for someone who has never opened the app.
 /// Shows the route on a map, pitches the mode to newcomers, and runs it in one tap.
@@ -174,26 +175,7 @@ class _SharedRouteScreenState extends ConsumerState<SharedRouteScreen> with PinI
                     ),
                     if (newcomer) ...[
                       const SizedBox(height: Sp.s5),
-                      KnCard(
-                        tier: 3,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('New to CanvasRoute?', style: t.titleMedium),
-                            Text(pack.tagline, style: t.bodySmall?.copyWith(color: c.onSurfaceVariant)),
-                            for (final p in pack.onboarding) ...[
-                              const SizedBox(height: Sp.s3),
-                              Row(
-                                children: [
-                                  Icon(p.icon, size: 20, color: c.tertiary),
-                                  const SizedBox(width: Sp.s3),
-                                  Expanded(child: Text(p.headline, style: t.bodyMedium)),
-                                ],
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
+                      NewcomerPitch(pack: pack),
                     ],
                     const SizedBox(height: Sp.s5),
                     for (var i = 0; i < r.stops.length; i++)

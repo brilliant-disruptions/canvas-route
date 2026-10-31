@@ -196,6 +196,8 @@ void _seed(DemoDb db) {
         owner: uid, notes: 'Posted from the demo account.')),
   ];
 
+  db.pins[ys.last]!['share_token'] = 'demo-sale'; // the demo host's sign QR: /s/demo-sale
+
   final lastSales = [
     for (final (name, dLat, dLng) in [
       ('Swiss Ave estate sale', 0.002, 0.018), ('Junius Heights garage sale', -0.004, 0.026), ('Lowest Greenville moving sale', -0.012, 0.008),

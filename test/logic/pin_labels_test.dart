@@ -14,6 +14,11 @@ void main() {
     expect(compactWindow(DateTime(2026, 10, 31, 8), null), 'From 8a');
   });
 
+  test('sign windows', () {
+    expect(signWindow(DateTime(2026, 10, 31, 7), DateTime(2026, 10, 31, 13)), '7AM–1PM');
+    expect(signWindow(DateTime(2026, 10, 31, 8, 30), null), 'FROM 8:30AM');
+  });
+
   test('short place names drop suffixes and cap length', () {
     expect(shortPlaceName('Collectors Cave (card shop)'), 'Collectors Cave');
     expect(shortPlaceName('Moving sale — everything goes'), 'Moving sale');

@@ -18,3 +18,9 @@ String shortPlaceName(String name, {int max = 16}) {
   if (s.isEmpty) s = name.trim();
   return s.length <= max ? s : '${s.substring(0, max - 1).trimRight()}…';
 }
+
+/// Sign-style window, read from across a street: "7AM–1PM", "FROM 8AM".
+String signWindow(DateTime opens, DateTime? closes) {
+  String time(DateTime t) => '${compactTime(t).toUpperCase()}M';
+  return closes == null ? 'FROM ${time(opens)}' : '${time(opens)}–${time(closes)}';
+}

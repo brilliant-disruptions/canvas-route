@@ -79,6 +79,7 @@ class ModePack {
     this.suggestionIcons = const {},
     this.summaryTotals = const [],
     this.supportsHosting = false,
+    this.hostSignHeadline = 'SALE',
     this.productCatalog = false,
   });
 
@@ -163,6 +164,9 @@ class ModePack {
   /// Custom-field keys summed on the Route Summary (e.g. "spent").
   final List<String> summaryTotals;
   final bool supportsHosting;
+
+  /// The big word on a host's printable sign.
+  final String hostSignHeadline;
   final bool productCatalog;
 
   bool get usesTimeWindows => optimizer != OptimizerKind.distance;

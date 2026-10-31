@@ -101,4 +101,5 @@ const yardSalesPack = ModePack(
   ],
   summaryTotals: ['spent'],
   supportsHosting: true,
+  hostSignHeadline: 'YARD SALE',
 );
