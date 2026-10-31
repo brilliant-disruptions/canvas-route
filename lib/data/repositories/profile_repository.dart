@@ -22,8 +22,7 @@ class ProfileRepository {
 
 
   Future<bool> handleAvailable(String handle) async {
-    // Other users' rows aren't readable; the public view exposes only id, handle and trust.
-    final row = await sb.from('profiles_public').select('id').eq('handle', handle).maybeSingle();
-    return row == null;
+    // A yes/no answer only: handles must not resolve to user ids (migration 019).
+    return await sb.rpc('handle_available', params: {'p_handle': handle}) as bool? ?? false;
   }
 }

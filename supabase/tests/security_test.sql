@@ -201,4 +201,15 @@ do $$ begin
 end $$;
 reset role;
 
+-- ── handles don't resolve to user ids ──
+update profiles set handle = 'bee' where id = '00000000-0000-0000-0000-00000000000b';
+select pg_temp.act('00000000-0000-0000-0000-00000000000a');
+set role authenticated;
+do $$ begin
+  if not pg_temp.fails('select id from profiles_public where handle = ''bee''') then
+    raise exception 'FAIL: a handle resolved to a user id'; end if;
+  if handle_available('BEE') or not handle_available('free_one') then raise exception 'FAIL: handle_available is wrong'; end if;
+end $$;
+reset role;
+
 \echo 'security tests passed'
