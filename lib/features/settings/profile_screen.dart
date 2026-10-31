@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/logic/trust.dart';
 import '../../core/theme/kn_colors.dart';
 import '../../core/theme/kn_theme.dart';
 import '../../state/profile_state.dart';
 import '../../state/providers.dart';
+import '../../state/visits_state.dart';
 import '../../ui/widgets/kn_widgets.dart';
 
 const _industries = ['SaaS', 'Insurance', 'Real estate', 'Telecom', 'Solar / Energy', 'Payments', 'Food & beverage', 'Other'];
@@ -55,8 +57,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.kn;
-    final t = Theme.of(context).textTheme;
     final p = ref.watch(profileProvider).value;
     final pack = ref.watch(modePackProvider);
     if (p == null) return const Scaffold(body: LoadingView());
@@ -69,6 +69,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       _init = true;
     }
     final isSales = pack.profileAsksCompany;
+    final visits = ref.watch(allVisitsProvider).value ?? const [];
 
     Widget picker(String key, String label, List<String> opts) => DropdownButtonFormField<String>(
           initialValue: _pick[key],
@@ -83,8 +84,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       body: ListView(
         padding: const EdgeInsets.all(Sp.s4),
         children: [
-          Center(
-            child: CircleAvatar(radius: 40, backgroundColor: c.primaryContainer, child: Text((p.name ?? p.handle ?? 'C').characters.first.toUpperCase(), style: t.headlineLarge?.copyWith(color: c.onPrimaryContainer))),
+          _ImpactCard(
+            initial: (p.name ?? p.handle ?? 'C').characters.first.toUpperCase(),
+            trustScore: p.trustScore,
+            showTrust: pack.hasCommunity,
+            visits: visits.length,
+            routes: visits.map((v) => v.routeId).toSet().length,
           ),
           const SizedBox(height: Sp.s5),
           TextField(controller: _ctrl('name', p.name), decoration: const InputDecoration(labelText: 'Name'), textCapitalization: TextCapitalization.words),
@@ -118,6 +123,86 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           const SizedBox(height: Sp.s6),
         ],
       ),
+    );
+  }
+}
+
+/// Who you are here: your trust level (and what it unlocks) plus what you've logged.
+class _ImpactCard extends StatelessWidget {
+  const _ImpactCard({
+    required this.initial,
+    required this.trustScore,
+    required this.showTrust,
+    required this.visits,
+    required this.routes,
+  });
+
+  final String initial;
+  final int trustScore;
+  final bool showTrust;
+  final int visits;
+  final int routes;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.kn;
+    final t = Theme.of(context).textTheme;
+    final standing = trustStanding(trustScore);
+    Widget stat(String value, String label) => Expanded(
+          child: Column(children: [
+            Text(value, style: t.headlineMedium?.copyWith(color: c.tertiary)),
+            Text(label, style: t.labelMedium?.copyWith(color: c.onSurfaceVariant)),
+          ]),
+        );
+    return KnCard(
+      tier: 3,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          CircleAvatar(
+            radius: 26,
+            backgroundColor: c.primaryContainer,
+            child: Text(initial, style: t.headlineSmall?.copyWith(color: c.onPrimaryContainer)),
+          ),
+          const SizedBox(width: Sp.s3),
+          if (showTrust)
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  Icon(Icons.verified_outlined, size: 18, color: c.tertiary),
+                  const SizedBox(width: Sp.s1),
+                  Text('${standing.label} reporter', style: t.titleMedium),
+                  const Spacer(),
+                  Text('$trustScore', style: t.titleMedium?.copyWith(color: c.tertiary)),
+                ]),
+                const SizedBox(height: Sp.s2),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(Rad.full),
+                  child: LinearProgressIndicator(
+                    value: standing.progress(trustScore),
+                    minHeight: 6,
+                    color: c.tertiary,
+                    backgroundColor: c.surfaceLow,
+                  ),
+                ),
+                const SizedBox(height: Sp.s1),
+                Text(
+                  standing.next == null ? 'Top level' : '${standing.next! - trustScore} to the next level',
+                  style: t.labelSmall?.copyWith(color: c.onSurfaceVariant),
+                ),
+              ]),
+            )
+          else
+            Expanded(child: Text('Your activity', style: t.titleMedium)),
+        ]),
+        if (showTrust) ...[
+          const SizedBox(height: Sp.s3),
+          Text(standing.unlock, style: t.bodySmall?.copyWith(color: c.onSurfaceVariant)),
+        ],
+        const SizedBox(height: Sp.s3),
+        const GhostDivider(),
+        const SizedBox(height: Sp.s3),
+        Row(children: [stat('$visits', 'visits logged'), stat('$routes', 'routes run')]),
+      ]),
     );
   }
 }
