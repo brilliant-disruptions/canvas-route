@@ -52,6 +52,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                           width: 64,
                           height: 64,
                           alignment: Alignment.center,
+                          margin: const EdgeInsets.only(right: double.infinity),
                           decoration: BoxDecoration(color: c.tertiary, borderRadius: BorderRadius.circular(Rad.xl)),
                           child: Icon(pack!.icon, size: 34, color: c.onTertiary),
                         ),
