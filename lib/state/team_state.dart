@@ -23,7 +23,8 @@ final teamActivityProvider = FutureProvider.family<List<RepActivity>, int>((ref,
 });
 
 /// Teammates' recent outcomes at one business (empty when not on a team).
-final teammateVisitsProvider = FutureProvider.family<List<TeammateVisit>, String>((ref, placeId) async {
+// autoDispose: reopening a business sheet fetches fresh outcomes.
+final teammateVisitsProvider = FutureProvider.autoDispose.family<List<TeammateVisit>, String>((ref, placeId) async {
   if (await ref.watch(myTeamProvider.future) == null) return const [];
   return ref.read(teamRepoProvider).visitsAt(placeId);
 });

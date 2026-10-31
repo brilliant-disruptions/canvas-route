@@ -6,6 +6,7 @@ import '../core/theme/kn_theme.dart';
 import '../state/appearance_state.dart';
 import '../state/follow_ups_state.dart';
 import '../state/profile_state.dart';
+import '../state/team_state.dart';
 import '../state/providers.dart';
 import 'router.dart';
 
@@ -28,11 +29,22 @@ class _CanvasRouteAppState extends ConsumerState<CanvasRouteApp> {
       onResume: () async {
         // Retry the guest sign-in if launch happened offline.
         await ref.read(authRepoProvider).ensureSession().catchError((_) {});
+        // Plans, team coverage and "due today" can all change while the app is away.
         ref.invalidate(profileProvider);
+        ref.invalidate(myTeamProvider);
+        ref.invalidate(followUpsDueProvider);
       },
     );
     // Tapping a follow-up reminder opens the list.
-    ref.read(reminderServiceProvider).init(onTap: (path) => ref.read(routerProvider).push(path ?? '/follow-ups'));
+    // A tap may arrive before the first frame (app launched from the notification).
+    ref
+        .read(reminderServiceProvider)
+        .init(
+          onTap: (path) => WidgetsBinding.instance.addPostFrameCallback(
+            (_) => ref.read(routerProvider).push(path ?? '/follow-ups'),
+          ),
+        )
+        .catchError((_) {});
   }
 
   @override

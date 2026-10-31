@@ -23,8 +23,18 @@ class ReminderService {
     iOS: DarwinNotificationDetails(),
   );
 
-  /// [onTap] receives the payload (a route path) when a reminder is tapped.
-  Future<void> init({void Function(String? payload)? onTap}) => _ready ??= () async {
+  /// [onTap] receives the payload (a route path) when a reminder is tapped,
+  /// including the tap that launched the app from closed.
+  Future<void> init({void Function(String? payload)? onTap}) {
+    final ready = _ready ??= _init(onTap);
+    // A failed setup (time-zone lookup, plugin) is retried next time, not cached.
+    return ready.catchError((Object e) {
+      _ready = null;
+      throw e;
+    });
+  }
+
+  Future<void> _init(void Function(String? payload)? onTap) async {
     if (kIsWeb) return;
     tzdata.initializeTimeZones();
     tz.setLocalLocation(tz.getLocation((await FlutterTimezone.getLocalTimezone()).identifier));
@@ -40,13 +50,37 @@ class ReminderService {
       ),
       onDidReceiveNotificationResponse: (r) => onTap?.call(r.payload),
     );
-  }();
+    final launch = await _plugin.getNotificationAppLaunchDetails();
+    if (launch?.didNotificationLaunchApp ?? false) onTap?.call(launch!.notificationResponse?.payload);
+  }
 
-  /// Replaces every pending reminder with [plan]. Asks for permission the first
-  /// time there's at least one to schedule.
-  Future<void> replaceAll(List<PlannedReminder> plan, {String? payload}) async {
-    if (kIsWeb) return;
+  String? _applied;
+  List<PlannedReminder>? _pending;
+  Future<void>? _running;
+
+  /// Replaces every pending reminder with [plan]. Calls are serialised and only
+  /// the latest plan is applied, so a slow reschedule can't resurrect a reminder
+  /// that a newer plan dropped. Asks for permission the first time there's at
+  /// least one to schedule.
+  Future<void> replaceAll(List<PlannedReminder> plan, {String? payload}) {
+    if (kIsWeb) return Future.value();
+    _pending = plan;
+    return _running ??= _drain(payload).whenComplete(() => _running = null);
+  }
+
+  Future<void> _drain(String? payload) async {
     await init();
+    while (_pending != null) {
+      final plan = _pending!;
+      _pending = null;
+      final key = [for (final r in plan) '${r.notificationId}@${r.at.toIso8601String()}:${r.title}:${r.body}'].join('|');
+      if (key == _applied) continue;
+      await _apply(plan, payload);
+      _applied = key;
+    }
+  }
+
+  Future<void> _apply(List<PlannedReminder> plan, String? payload) async {
     await _plugin.cancelAllPendingNotifications();
     if (plan.isEmpty) return;
     if (!_asked) {
