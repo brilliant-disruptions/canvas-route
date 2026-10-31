@@ -67,7 +67,7 @@ const fieldSalesPack = ModePack(
       icon: Icons.fact_check_outlined,
     ),
   ],
-  emptyRoutesCopy: 'No routes yet — head to the map to start building.',
+  emptyRoutesCopy: 'Pick a category on the map and get an optimized route of the nearest businesses.',
   visitVerb: 'Log Visit',
   stopNoun: 'stop',
   spotlightTitle: 'near you',

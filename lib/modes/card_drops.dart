@@ -82,7 +82,7 @@ const cardDropsPack = ModePack(
       icon: Icons.notifications_active_outlined,
     ),
   ],
-  emptyRoutesCopy: 'No card runs yet — add your stores from the map.',
+  emptyRoutesCopy: 'One tap on the map picks the stores most likely to have product and orders them.',
   visitVerb: 'Report Shelf',
   stopNoun: 'store',
   spotlightTitle: 'worth a stop',

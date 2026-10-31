@@ -71,7 +71,7 @@ const yardSalesPack = ModePack(
       icon: Icons.shopping_bag_outlined,
     ),
   ],
-  emptyRoutesCopy: 'No routes yet — pick this weekend\'s sales on the map.',
+  emptyRoutesCopy: 'One tap on the map plans this weekend\'s sales in the order they close.',
   visitVerb: 'Log Stop',
   stopNoun: 'sale',
   spotlightTitle: 'worth the drive',

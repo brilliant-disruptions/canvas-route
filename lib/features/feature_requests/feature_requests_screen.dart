@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/logic/errors.dart';
 import '../../core/theme/kn_colors.dart';
 import '../../core/theme/kn_theme.dart';
 import '../../data/models/feature_request.dart';
@@ -9,6 +10,7 @@ import '../../state/feature_requests_state.dart';
 import '../../state/profile_state.dart';
 import '../../state/providers.dart';
 import '../../ui/widgets/kn_widgets.dart';
+import '../settings/paywall_sheet.dart';
 
 class FeatureRequestsScreen extends ConsumerStatefulWidget {
   const FeatureRequestsScreen({super.key});
@@ -30,13 +32,17 @@ class _State extends ConsumerState<FeatureRequestsScreen> {
           title: const Text('Feature requests'),
           bottom: const TabBar(tabs: [Tab(text: 'All requests'), Tab(text: 'My requests')]),
           actions: [
-            Tooltip(
-              message: paying ? 'New request' : 'Upgrade to submit requests',
-              child: TextButton.icon(
-                onPressed: paying ? () => showKnSheet(context, builder: (_) => const _NewRequestSheet()) : null,
-                icon: const Icon(Icons.add),
-                label: const Text('New'),
-              ),
+            // Free users get the reason and the upgrade, not a silently disabled button.
+            TextButton.icon(
+              onPressed: () => paying
+                  ? showKnSheet(context, builder: (_) => const _NewRequestSheet())
+                  : showPaywall(
+                      context,
+                      ref.read(modePackProvider),
+                      reason: 'Suggesting features is part of ${ref.read(modePackProvider).proLabel}. Anyone can upvote.',
+                    ),
+              icon: const Icon(Icons.add),
+              label: const Text('New'),
             ),
           ],
         ),
@@ -283,7 +289,7 @@ class _NewRequestSheetState extends ConsumerState<_NewRequestSheet> {
               } catch (e) {
                 if (context.mounted) {
                   setState(() => _busy = false);
-                  toast(context, 'Couldn\'t submit: $e');
+                  toast(context, 'Couldn\'t submit. ${friendlyError(e)}');
                 }
               }
             },

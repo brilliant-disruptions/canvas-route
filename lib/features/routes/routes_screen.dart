@@ -52,7 +52,12 @@ class RoutesScreen extends ConsumerWidget {
                 icon: Icons.alt_route,
                 title: 'No ${pack.routeNoun}s yet',
                 body: pack.emptyRoutesCopy,
-                action: OutlinedButton(onPressed: () => context.go('/map'), child: const Text('Open the map')),
+                action: KnButton(
+                  label: 'Plan your first ${pack.routeNoun}',
+                  icon: Icons.bolt,
+                  lime: true,
+                  onPressed: () => context.go('/map'),
+                ),
               )
             : RefreshIndicator(
                 onRefresh: () async => ref.invalidate(routesProvider),
@@ -106,7 +111,7 @@ class _RouteCard extends ConsumerWidget {
         children: [
           SlidableAction(
             onPressed: (_) async {
-              final name = await promptText(context, title: 'Rename route', initial: route.name);
+              final name = await promptText(context, title: 'Rename ${pack.routeNoun}', initial: route.name);
               if (name != null && name.isNotEmpty) n.rename(route.id, name);
             },
             backgroundColor: c.surfaceHighest,
@@ -118,7 +123,7 @@ class _RouteCard extends ConsumerWidget {
               if (await confirm(
                 context,
                 title: 'Delete "${route.name}"?',
-                body: 'Visits logged on this route are deleted too.',
+                body: 'Visits logged on this ${pack.routeNoun} are deleted too.',
                 confirmLabel: 'Delete',
                 destructive: true,
               )) {
