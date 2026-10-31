@@ -227,8 +227,9 @@ class PinSheet extends ConsumerWidget {
                                       ref.read(currentUserIdProvider)!,
                                     );
                                 ref.invalidate(recentReportsProvider(pin.id));
-                                if (context.mounted)
-                                  toast(context, 'Thanks — shared with nearby hunters', icon: Icons.check);
+                                if (context.mounted) {
+                                  toast(context, 'Thanks — shared with nearby ${pack.communityNoun}', icon: Icons.check);
+                                }
                               } catch (e) {
                                 if (context.mounted) toast(context, 'Couldn\'t report: $e');
                               }
