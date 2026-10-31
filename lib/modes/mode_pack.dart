@@ -76,6 +76,7 @@ class ModePack {
     this.customFieldsPro = false,
     this.visitHistoryPro = false,
     this.mileageLog = false,
+    this.webBilling = false,
     this.proLabel = 'Pro',
     this.proPrice = '',
     this.proPitch = '',
@@ -171,6 +172,10 @@ class ModePack {
 
   /// Log each run's miles for expense reports, with the IRS rate applied.
   final bool mileageLog;
+
+  /// Sold on the web (Stripe Checkout) rather than through the app stores:
+  /// business plans, often expensed.
+  final bool webBilling;
   final String proLabel;
 
   /// Display price, e.g. "\$4.99 / mo".

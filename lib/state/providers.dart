@@ -12,6 +12,7 @@ import '../data/repositories/settings_repository.dart';
 import '../data/repositories/share_repository.dart';
 import '../data/repositories/trip_repository.dart';
 import '../data/repositories/visit_repository.dart';
+import '../data/services/billing_service.dart';
 import '../data/services/directions_service.dart';
 import '../data/services/estimate_directions.dart';
 import '../data/services/local_prefs.dart';
@@ -30,6 +31,7 @@ final locationServiceProvider = Provider((_) => LocationService());
 final storageServiceProvider = Provider((_) => StorageService());
 final shareServiceProvider = Provider((_) => ShareService());
 final navLauncherProvider = Provider((_) => NavLauncher());
+final billingServiceProvider = Provider((_) => BillingService());
 
 final authRepoProvider = Provider((_) => AuthRepository());
 final profileRepoProvider = Provider((_) => ProfileRepository());

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/logic/errors.dart';
 import '../../core/theme/kn_colors.dart';
 import '../../core/theme/kn_theme.dart';
 import '../../state/auth_state.dart';
@@ -43,7 +44,28 @@ class AccountScreen extends ConsumerWidget {
           _PlanRow(name: 'Free', price: '\$0', perks: 'Map, routes${pack.freeRouteLimit != null ? ' (${pack.freeRouteLimit} saved)' : ''}, visit logging, reporting'),
           _PlanRow(name: pack.proLabel, price: pack.proPrice, perks: ['Everything in Free', ...pack.proPerks.map((p) => p.label)].join(' · '), highlight: true),
           const SizedBox(height: Sp.s4),
-          if (!paying) KnButton(label: 'Upgrade to ${pack.proLabel}', lime: true, onPressed: () => toast(context, 'Store billing arrives in the next release. Email us for early access.')),
+          if (!paying)
+            KnButton(
+              label: 'Upgrade to ${pack.proLabel}',
+              lime: true,
+              onPressed: () async {
+                if (!pack.webBilling || pack.proProductId == null) {
+                  toast(context, 'In-app purchase arrives in the next release. Email us for early access.');
+                  return;
+                }
+                if (anon) {
+                  context.push('/signin?reason=upgrade');
+                  return;
+                }
+                try {
+                  final url = await ref.read(billingServiceProvider).checkoutUrl(pack.proProductId!);
+                  await ref.read(navLauncherProvider).open(url.toString());
+                  if (context.mounted) toast(context, 'Finish checkout in your browser. Pro turns on when you come back.');
+                } catch (e) {
+                  if (context.mounted) toast(context, 'Couldn\'t start checkout. ${friendlyError(e)}');
+                }
+              },
+            ),
           if (anon) ...[
             const SectionHeader('Sign in'),
             Text('You\'re using CanvasRoute as a guest. Sign in to keep your routes across devices and to share or report.', style: t.bodyMedium?.copyWith(color: c.onSurfaceVariant)),

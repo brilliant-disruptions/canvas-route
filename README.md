@@ -71,6 +71,27 @@ flutter run --dart-define-from-file=.env.json
 flutter analyze && flutter test
 ```
 
+### 5. Billing (Field Sales, Stripe on the web)
+
+Field Sales Pro and Team are sold through Stripe Checkout, not the app stores (business plans,
+often expensed). Consumer passes will use in-app purchase.
+
+1. In Stripe, create monthly prices for **Pro** (per rep) and **Team** (per seat).
+2. Set function secrets:
+   `supabase secrets set STRIPE_SECRET_KEY=sk_... STRIPE_PRICE_PRO=price_... STRIPE_PRICE_TEAM=price_... STRIPE_WEBHOOK_SECRET=whsec_... WEB_ORIGIN=https://your-domain`
+3. Deploy: `supabase functions deploy create-checkout` and
+   `supabase functions deploy stripe-webhook --no-verify-jwt` (Stripe has no Supabase JWT; its
+   signature is checked instead).
+4. In Stripe → Webhooks, point an endpoint at `…/functions/v1/stripe-webhook` for
+   `customer.subscription.created`, `.updated` and `.deleted`.
+
+The webhook writes `plan`, `entitlements`, `billing_date` and `stripe_id` with the service role.
+Users can't write those columns themselves (migration 013). Test the billing rules with
+`node --experimental-strip-types --test supabase/functions/_shared/billing_test.ts`.
+
+**iOS note:** linking out to a web checkout from the iOS app is allowed on the US storefront.
+Elsewhere, hide the button on iOS or offer in-app purchase.
+
 ## Architecture
 
 ```
