@@ -87,7 +87,7 @@ class SettingsScreen extends ConsumerWidget {
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: const Text('Auto-share my visits as reports'),
-              subtitle: const Text('What you see on the shelf helps everyone nearby. Never includes your location.'),
+              subtitle: Text('What you log at each ${pack.stopNoun} helps ${pack.communityNoun} nearby. Never includes your location.'),
               value: profile.autoShareReports,
               onChanged: (v) => ref.read(profileProvider.notifier).patch({'auto_share_reports': v}),
             ),
