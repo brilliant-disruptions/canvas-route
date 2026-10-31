@@ -155,7 +155,7 @@ $$;
 
 -- Nearby pins for the map, by mode, within radius miles of a point.
 create or replace function public.nearby_pins(p_mode text, p_lat double precision, p_lng double precision, p_radius_mi double precision default 10)
-returns setof public.pins language sql stable security_invoker as $$
+returns setof public.pins language sql stable security invoker as $$
   select * from public.pins
   where mode = p_mode and status = 'live'
     and earth_box(ll_to_earth(p_lat, p_lng), p_radius_mi * 1609.34) @> ll_to_earth(lat, lng)
