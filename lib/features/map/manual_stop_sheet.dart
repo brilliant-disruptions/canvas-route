@@ -3,6 +3,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/logic/pin_labels.dart';
+import '../../core/logic/sale_text.dart';
 import '../../core/theme/kn_colors.dart';
 import '../../core/theme/kn_theme.dart';
 import '../../data/services/storage_service.dart';
@@ -44,6 +45,8 @@ Future<ManualStopResult?> showManualStopSheet(
   String? shareLabel,
   List<String> categories = const [],
   String? confirmLabel,
+  Future<String> Function(XFile photo)? readSign,
+  Map<String, List<String>> categoryKeywords = const {},
 }) => showKnSheet<ManualStopResult>(
   context,
   builder: (_) => _ManualStopForm(
@@ -57,6 +60,8 @@ Future<ManualStopResult?> showManualStopSheet(
     shareLabel: shareLabel,
     categories: categories,
     confirmLabel: confirmLabel,
+    readSign: readSign,
+    categoryKeywords: categoryKeywords,
   ),
 );
 
@@ -72,6 +77,8 @@ class _ManualStopForm extends StatefulWidget {
     this.shareLabel,
     this.categories = const [],
     this.confirmLabel,
+    this.readSign,
+    this.categoryKeywords = const {},
   });
   final String? address;
   final bool requiresWindow;
@@ -85,6 +92,10 @@ class _ManualStopForm extends StatefulWidget {
   final String? shareLabel;
   final List<String> categories;
   final String? confirmLabel;
+
+  /// Reads the sign photo's text (on-device OCR) to pre-fill the form; null skips it.
+  final Future<String> Function(XFile photo)? readSign;
+  final Map<String, List<String>> categoryKeywords;
 
   @override
   State<_ManualStopForm> createState() => _ManualStopFormState();
@@ -112,6 +123,28 @@ class _ManualStopFormState extends State<_ManualStopForm> {
     _day = widget.initialOpens ?? DateTime(day.year, day.month, day.day);
     _open = TimeOfDay.fromDateTime(widget.initialOpens ?? spotted?.opens ?? DateTime(0, 1, 1, 7));
     _close = TimeOfDay.fromDateTime(widget.initialCloses ?? spotted?.closes ?? DateTime(0, 1, 1, 12));
+  }
+
+  /// Pre-fills day, hours, name and categories from the sign. Silent on failure:
+  /// the photo is still attached and the form still works.
+  Future<void> _readSign(XFile x) async {
+    final read = widget.readSign;
+    if (read == null) return;
+    try {
+      final text = await read(x);
+      final d = parseSaleText(text, DateTime.now(), categoryKeywords: widget.categoryKeywords);
+      if (!mounted || d.filled == 0) return;
+      setState(() {
+        if (widget.requiresWindow) {
+          if (d.day != null) _day = d.day!;
+          if (d.opens case (final h, final m)) _open = TimeOfDay(hour: h, minute: m);
+          if (d.closes case (final h, final m)) _close = TimeOfDay(hour: h, minute: m);
+        }
+        if (_name.text.trim().isEmpty && d.name != null) _name.text = d.name!;
+        _cats.addAll(d.categories.where(widget.categories.contains));
+      });
+      toast(context, 'Filled in from the sign. Check it before you share.', icon: Icons.auto_fix_high);
+    } catch (_) {}
   }
 
   DateTime _at(TimeOfDay t) => DateTime(_day.year, _day.month, _day.day, t.hour, t.minute);
@@ -207,7 +240,9 @@ class _ManualStopFormState extends State<_ManualStopForm> {
                           imageQuality: StorageService.photoQuality,
                           maxWidth: StorageService.photoMaxWidth,
                         );
-                        if (x != null) setState(() => _sign = x);
+                        if (x == null) return;
+                        setState(() => _sign = x);
+                        await _readSign(x);
                       },
                       icon: const Icon(Icons.photo_camera_outlined),
                       label: Text(_sign == null ? 'Snap the sign' : 'Retake'),

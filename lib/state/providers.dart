@@ -23,6 +23,7 @@ import '../data/services/nav_launcher.dart';
 import '../data/services/places_service.dart';
 import '../data/services/reminder_service.dart';
 import '../data/services/share_service.dart';
+import '../data/services/sign_reader.dart';
 import '../data/services/storage_service.dart';
 
 /// Overridden in main() with the loaded instance.
@@ -36,6 +37,7 @@ final shareServiceProvider = Provider((_) => ShareService());
 final navLauncherProvider = Provider((_) => NavLauncher());
 final billingServiceProvider = Provider((_) => BillingService());
 final reminderServiceProvider = Provider((_) => ReminderService());
+final signReaderProvider = Provider((_) => SignReader());
 
 final authRepoProvider = Provider((_) => AuthRepository());
 final profileRepoProvider = Provider((_) => ProfileRepository());

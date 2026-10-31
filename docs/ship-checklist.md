@@ -65,7 +65,11 @@ are built but off.
 - [ ] Location prompt, camera, photo library.
 - [ ] Sign in with Apple, Google and email. Then delete the account and confirm you land back at onboarding.
 - [ ] Host a sale with photos. Print the sign and scan its QR.
+- [ ] On the post-a-sale screen, **Snap your sign** on a real hand-written sign: name, address, day, hours and categories should fill in. Do the same with **Spot a sale**.
+  - This uses on-device Google ML Kit, so iOS now needs 15.5 or later (`ios/Podfile` and the Xcode targets are set).
+  - ML Kit's iOS libraries have no Apple-silicon simulator build, so test on a real iPhone (or a Rosetta simulator).
 - [ ] Spot a sale and approve it as admin.
+- [ ] Turn on **Friday heads-up** (Preferences) and confirm the Friday 5:30 notification opens the map. Stand at an open sale and check that "Still going?" appears.
 - [ ] Field Sales builds only: set a follow-up for tomorrow and check the 8:30 reminder arrives. Tap it with the app fully closed; it should open Follow-ups.
 - [ ] Android release build compiles. It has core library desugaring and notification receivers, which this repo's CI never compiled.
 

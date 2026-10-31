@@ -149,18 +149,34 @@ SaleDraft parseSaleText(String text, DateTime now, {Map<String, List<String>> ca
   final t = text.replaceAll('\r', '');
   final lower = t.toLowerCase();
 
-  final addr = _address.firstMatch(t)?[0]?.trim().replaceAll(RegExp(r'[.,;]+$'), '');
+  var addr = _address.firstMatch(t)?[0]?.trim().replaceAll(RegExp(r'[.,;]+$'), '');
+  // A shouted sign address reads better as "5927 Goliad Ave, Dallas, TX".
+  if (addr != null && addr == addr.toUpperCase()) {
+    addr = addr
+        .split(' ')
+        .map((w) => w.length <= 2 || RegExp(r'^\d').hasMatch(w) ? w : '${w[0]}${w.substring(1).toLowerCase()}')
+        .join(' ');
+  }
 
   // Hours first, and blank them out so "7-1" isn't read as July 1st.
   final hours = _parseHours(t);
   final forDate = hours == null ? t : t.replaceAll(_range, ' ');
-  final day = _parseDay(forDate, now);
+  var day = _parseDay(forDate, now);
+  // "Sat" read on a Saturday afternoon means next Saturday once today's sale is over.
+  if (day != null && day.year == now.year && day.month == now.month && day.day == now.day) {
+    final (ch, cm) = hours?.$2 ?? (13, 0);
+    if (now.hour * 60 + now.minute >= ch * 60 + cm) day = DateTime(day.year, day.month, day.day + 7);
+  }
 
   // A short first line that mentions a sale is the title; else the kind of sale.
   final firstLine = t.split('\n').map((l) => l.trim()).firstWhere((l) => l.isNotEmpty, orElse: () => '');
   String? name;
   if (firstLine.length <= 60 && RegExp(r'\bsale\b', caseSensitive: false).hasMatch(firstLine)) {
     name = firstLine.replaceAll(RegExp(r'[!*#]+'), '').trim();
+    // Signs shout: "GARAGE SALE" reads better as "Garage Sale".
+    if (name == name.toUpperCase() && RegExp('[A-Z]').hasMatch(name)) {
+      name = name.toLowerCase().split(' ').map((w) => w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}').join(' ');
+    }
   } else {
     for (final (re, label) in _kinds) {
       if (re.hasMatch(t)) {

@@ -29,7 +29,8 @@ void main() {
   });
 
   test('dates: weekdays, month names, numeric, today and tomorrow', () {
-    expect(parse('Yard sale this Saturday').day, DateTime(2026, 10, 31));
+    expect(parse('Yard sale this Saturday 7-5').day, DateTime(2026, 10, 31), reason: 'still on until 5pm');
+    expect(parse('Yard sale this Saturday').day, DateTime(2026, 11, 7), reason: 'a usual sale is over by 3pm');
     expect(parse('next Sat').day, DateTime(2026, 11, 7));
     expect(parse('Fri & Sat').day, DateTime(2026, 11, 6), reason: 'first day named');
     expect(parse('November 14th').day, DateTime(2026, 11, 14));
@@ -60,5 +61,16 @@ void main() {
   test('text with nothing useful fills nothing', () {
     final d = parse('Hello neighbors!');
     expect(d.filled, 0);
+  });
+
+  test('a sign as OCR reads it: all caps, one block per line', () {
+    final d = parse('GARAGE SALE\nSAT 7AM-2PM\n5927 GOLIAD AVE\nFURNITURE · TOOLS · BABY STUFF');
+    expect(d.name, 'Garage Sale');
+    expect(d.address, '5927 Goliad Ave');
+    expect(parse('123 N MAIN ST, PLANO, TX 75024').address, '123 N Main St, Plano, TX 75024');
+    // It's Saturday 3pm in these tests, so today's 7-2 sale is over: next Saturday.
+    expect(d.day, DateTime(2026, 11, 7));
+    expect((d.opens, d.closes), ((7, 0), (14, 0)));
+    expect(d.categories, containsAll(['Furniture', 'Tools', 'Kids']));
   });
 }

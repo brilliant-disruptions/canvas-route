@@ -12,6 +12,7 @@ import '../data/services/estimate_directions.dart';
 import '../data/services/location_service.dart';
 import '../data/services/places_service.dart';
 import '../data/services/share_service.dart';
+import '../data/services/sign_reader.dart';
 import '../data/services/storage_service.dart';
 import 'demo_db.dart';
 
@@ -246,3 +247,16 @@ class _ShareDialogState extends State<_ShareDialog> {
   }
 }
 
+
+/// The demo "reads" a typical hand-lettered sign, so the snap-your-sign flow can
+/// be shown in a browser (real reading needs ML Kit on a phone).
+class DemoSignReader extends SignReader {
+  @override
+  bool get available => true;
+
+  @override
+  Future<String> read(XFile photo) async {
+    await Future<void>.delayed(const Duration(milliseconds: 700));
+    return 'GARAGE SALE\nSAT 7AM-2PM\n5927 GOLIAD AVE\nFURNITURE · TOOLS · BABY STUFF';
+  }
+}

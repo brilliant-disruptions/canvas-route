@@ -42,6 +42,7 @@ class _HostSaleScreenState extends ConsumerState<HostSaleScreen> {
   String? _earlyBirds;
   final _photos = <XFile>[];
   bool _busy = false;
+  bool _reading = false;
 
   @override
   void initState() {
@@ -65,6 +66,35 @@ class _HostSaleScreenState extends ConsumerState<HostSaleScreen> {
       multiline: true,
     );
     if (text == null || text.trim().isEmpty || !mounted) return;
+    _fillFrom(text, keepAsNotes: true);
+  }
+
+  /// Reads the host's sign with the camera and fills the form from it.
+  Future<void> _snapSign() async {
+    final x = await ImagePicker().pickImage(
+      source: ImageSource.camera,
+      imageQuality: StorageService.photoQuality,
+      maxWidth: StorageService.photoMaxWidth,
+    );
+    if (x == null || !mounted) return;
+    setState(() => _reading = true);
+    try {
+      final text = await ref.read(signReaderProvider).read(x);
+      if (!mounted) return;
+      if (text.trim().isEmpty) {
+        toast(context, 'Couldn\'t read the sign. Try closer, in good light.');
+        return;
+      }
+      _fillFrom(text, keepAsNotes: false);
+    } catch (e) {
+      if (mounted) toast(context, 'Couldn\'t read the sign. ${friendlyError(e)}');
+    } finally {
+      if (mounted) setState(() => _reading = false);
+    }
+  }
+
+  /// Fills whatever [text] reveals; only found fields change.
+  void _fillFrom(String text, {required bool keepAsNotes}) {
     final pack = ref.read(modePackProvider);
     final d = parseSaleText(text, DateTime.now(), categoryKeywords: pack.categoryKeywords);
     if (d.filled == 0) {
@@ -79,7 +109,9 @@ class _HostSaleScreenState extends ConsumerState<HostSaleScreen> {
       if (d.closes case (final h, final m)) _close = TimeOfDay(hour: h, minute: m);
       _cats.addAll(d.categories.where(pack.pinCategories.contains));
       if (d.earlyBirds != null) _earlyBirds = d.earlyBirds;
-      if (_notes.text.trim().isEmpty) _notes.text = text.trim().length > 500 ? '${text.trim().substring(0, 500)}…' : text.trim();
+      if (keepAsNotes && _notes.text.trim().isEmpty) {
+        _notes.text = text.trim().length > 500 ? '${text.trim().substring(0, 500)}…' : text.trim();
+      }
     });
     HapticFeedback.mediumImpact();
     final missing = [if (d.address == null) 'address', if (d.day == null) 'day', if (d.opens == null) 'hours'];
@@ -156,24 +188,36 @@ class _HostSaleScreenState extends ConsumerState<HostSaleScreen> {
           if (pack.categoryKeywords.isNotEmpty) ...[
             KnCard(
               tier: 2,
-              onTap: _pastePost,
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.auto_fix_high, color: c.tertiary),
-                  const SizedBox(width: Sp.s3),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Already posted it somewhere?', style: t.titleSmall),
-                        Text(
-                          'Paste your Facebook, Nextdoor or Craigslist post and we\'ll fill this in.',
-                          style: t.bodySmall?.copyWith(color: c.onSurfaceVariant),
-                        ),
-                      ],
-                    ),
+                  Row(
+                    children: [
+                      Icon(Icons.auto_fix_high, color: c.tertiary),
+                      const SizedBox(width: Sp.s3),
+                      Expanded(child: Text('Fill this in for me', style: t.titleSmall)),
+                    ],
                   ),
-                  Icon(Icons.content_paste_go, color: c.tertiary),
+                  const SizedBox(height: Sp.s1),
+                  Text(
+                    'Paste the post you already wrote, or snap the sign you made. You check everything before it goes live.',
+                    style: t.bodySmall?.copyWith(color: c.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: Sp.s2),
+                  Wrap(
+                    spacing: Sp.s2,
+                    children: [
+                      ActionChip(avatar: const Icon(Icons.content_paste_go, size: 18), label: const Text('Paste your post'), onPressed: _pastePost),
+                      if (ref.watch(signReaderProvider).available)
+                        ActionChip(
+                          avatar: _reading
+                              ? const SizedBox.square(dimension: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                              : const Icon(Icons.photo_camera_outlined, size: 18),
+                          label: const Text('Snap your sign'),
+                          onPressed: _reading ? null : _snapSign,
+                        ),
+                    ],
+                  ),
                 ],
               ),
             ),

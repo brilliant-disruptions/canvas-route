@@ -153,6 +153,8 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
       requiresWindow: pack.requiresTimeWindow,
       shareLabel: pack.spotLabel,
       categories: pack.pinCategories,
+      readSign: ref.read(signReaderProvider).available ? ref.read(signReaderProvider).read : null,
+      categoryKeywords: pack.categoryKeywords,
     );
     if (r == null || !mounted) return;
     void addPrivately() => ref

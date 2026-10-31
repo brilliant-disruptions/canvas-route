@@ -46,6 +46,7 @@ Future<void> main() async {
       tripRepoProvider.overrideWithValue(DemoTripRepository(db)),
       teamRepoProvider.overrideWithValue(DemoTeamRepository(db)),
       demandRepoProvider.overrideWithValue(DemoDemandRepository(db)),
+      signReaderProvider.overrideWithValue(DemoSignReader()),
       placesServiceProvider.overrideWithValue(DemoPlacesService()),
       directionsServiceProvider.overrideWithValue(DemoDirectionsService()),
       locationServiceProvider.overrideWithValue(DemoLocationService()),
