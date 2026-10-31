@@ -8,7 +8,6 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 
 import '../../app/shell.dart';
-import '../../core/logic/geo.dart';
 import '../../core/logic/pin_labels.dart';
 import '../../core/logic/restock.dart';
 import '../../core/logic/spotlight.dart';
@@ -343,7 +342,8 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
     }
 
     final spots = _spotEntries(pack: pack, map: map, pins: visiblePins, latest: latest, summaries: summaries);
-    final showDeck = map.viewMode == MapViewMode.map && spots.isNotEmpty;
+    final listView = map.viewMode == MapViewMode.list;
+    final showDeck = spots.isNotEmpty;
     final showQuickStart =
         map.viewMode == MapViewMode.map &&
         spots.isEmpty &&
@@ -458,8 +458,10 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
             if (mounted) setState(() => _center = mid);
           },
           onLongPress: pack.hasSource(StopSourceId.manual) ? _onLongPress : null,
-          padding: EdgeInsets.only(top: 140, bottom: showDeck || showQuickStart ? 200 : 24),
+          padding: EdgeInsets.only(top: 140, bottom: (showDeck || showQuickStart) && !listView ? 200 : 24),
         ),
+        // List view sits on the page, not over the map's pins.
+        if (listView) Positioned.fill(child: ColoredBox(color: c.surface)),
         SafeArea(
           child: Column(
             children: [
@@ -589,13 +591,15 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
                     icon: Icons.error_outline,
                   ),
                 ),
-              if (map.viewMode == MapViewMode.list)
+              if (listView)
                 Expanded(
-                  child: _ResultsList(
-                    results: map.results,
-                    pins: visiblePins,
-                    pinToBusiness: _pinToBusiness,
-                    center: _centerOrDefault,
+                  child: SpotList(
+                    entries: spots,
+                    isDraft: map.isDraft,
+                    onToggle: ref.read(mapProvider.notifier).toggleDraft,
+                    onOpen: (b) => _openSpot(b, visiblePins),
+                    statusLabel: (s) => _statusLabel(pack, s),
+                    bottomPadding: showDeck ? 96 : Sp.s4,
                   ),
                 ),
             ],
@@ -609,20 +613,21 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Padding(
-                padding: const EdgeInsets.only(right: Sp.s4),
-                child: FloatingActionButton.small(
-                  tooltip: 'My location',
-                  heroTag: 'loc',
-                  backgroundColor: c.surfaceHighest,
-                  foregroundColor: c.onSurface,
-                  onPressed: () async {
-                    final loc = await ref.read(locationServiceProvider).current();
-                    if (loc != null) _map?.animateCamera(CameraUpdate.newLatLngZoom(LatLng(loc.lat, loc.lng), 13));
-                  },
-                  child: const Icon(Icons.my_location),
+              if (!listView)
+                Padding(
+                  padding: const EdgeInsets.only(right: Sp.s4),
+                  child: FloatingActionButton.small(
+                    tooltip: 'My location',
+                    heroTag: 'loc',
+                    backgroundColor: c.surfaceHighest,
+                    foregroundColor: c.onSurface,
+                    onPressed: () async {
+                      final loc = await ref.read(locationServiceProvider).current();
+                      if (loc != null) _map?.animateCamera(CameraUpdate.newLatLngZoom(LatLng(loc.lat, loc.lng), 13));
+                    },
+                    child: const Icon(Icons.my_location),
+                  ),
                 ),
-              ),
               const SizedBox(height: Sp.s3),
               if (showDeck)
                 SpotlightDeck(
@@ -635,8 +640,9 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
                   onPlan: () => _plan(pack, spots),
                   onOpenDraft: () => showDraftTray(context),
                   statusLabel: (s) => _statusLabel(pack, s),
-                  showTip: !ref.read(localPrefsProvider).hasSeenPlanTip,
+                  showTip: !listView && !ref.read(localPrefsProvider).hasSeenPlanTip,
                   onDismissTip: _dismissPlanTip,
+                  showCards: !listView,
                 )
               else if (showQuickStart)
                 QuickStartDeck(
@@ -828,66 +834,6 @@ class _ModeChips extends ConsumerWidget {
         itemBuilder: (_, i) => chips[i],
       ),
     );
-  }
-}
-
-class _ResultsList extends ConsumerWidget {
-  const _ResultsList({required this.results, required this.pins, required this.pinToBusiness, required this.center});
-  final List<Business> results;
-  final List<Pin> pins;
-  final Business Function(Pin) pinToBusiness;
-  final LatLng center;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final c = context.kn;
-    final map = ref.watch(mapProvider);
-    final items = [...results, ...pins.map(pinToBusiness)];
-    if (items.isEmpty) {
-      return const EmptyState(
-        icon: Icons.search,
-        title: 'No results yet',
-        body: 'Search above or long-press the map to drop a stop.',
-      );
-    }
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(Sp.s4, Sp.s2, Sp.s4, Sp.s4),
-      child: Material(
-        color: c.glass,
-        clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(Rad.xl),
-          side: BorderSide(color: c.ghostBorder),
-        ),
-        child: ListView.separated(
-          padding: const EdgeInsets.symmetric(vertical: Sp.s2),
-          itemCount: items.length,
-          separatorBuilder: (_, _) => const GhostDivider(),
-          itemBuilder: (_, i) {
-            final b = items[i];
-            final dist = haversineMeters(center.latitude, center.longitude, b.lat, b.lng);
-            return CheckboxListTile(
-              value: map.isDraft(b),
-              onChanged: (_) => ref.read(mapProvider.notifier).toggleDraft(b),
-              controlAffinity: ListTileControlAffinity.leading,
-              activeColor: c.primary,
-              title: Text(b.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-              subtitle: Text('${formatDistance(dist)} · ${b.address}', maxLines: 1, overflow: TextOverflow.ellipsis),
-              secondary: IconButton(
-                tooltip: 'Details',
-                icon: const Icon(Icons.info_outline),
-                onPressed: () => b.pinId != null ? _openPin(context, ref, b.pinId!) : showBusinessSheet(context, b),
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  Future<void> _openPin(BuildContext context, WidgetRef ref, String pinId) async {
-    final pin = pins.where((p) => p.id == pinId).firstOrNull ?? await ref.read(pinRepoProvider).byId(pinId);
-    if (pin != null && context.mounted) showPinSheet(context, pin);
   }
 }
 

@@ -26,6 +26,7 @@ class SpotlightDeck extends StatelessWidget {
     required this.statusLabel,
     this.showTip = false,
     this.onDismissTip,
+    this.showCards = true,
   });
 
   final ModePack pack;
@@ -43,6 +44,9 @@ class SpotlightDeck extends StatelessWidget {
   /// First-run coach mark above the plan button.
   final bool showTip;
   final VoidCallback? onDismissTip;
+
+  /// False in list view: the list shows the spots; the deck keeps its plan bar.
+  final bool showCards;
 
   @override
   Widget build(BuildContext context) {
@@ -67,7 +71,8 @@ class SpotlightDeck extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.fromLTRB(Sp.s4, Sp.s2, Sp.s2, Sp.s2),
             decoration: BoxDecoration(
-              color: c.glass,
+              // Over the list, glass would let rows bleed through.
+              color: showCards ? c.glass : c.surfaceHighest,
               borderRadius: BorderRadius.circular(Rad.xl),
               border: Border.all(color: c.ghostBorder),
             ),
@@ -114,27 +119,29 @@ class SpotlightDeck extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: Sp.s2),
-        SizedBox(
-          height: 118,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: Sp.s4),
-            itemCount: n,
-            separatorBuilder: (_, _) => const SizedBox(width: Sp.s2),
-            itemBuilder: (_, i) {
-              final e = entries[i];
-              return _SpotCard(
-                entry: e,
-                rank: i + 1,
-                headline: spotHeadline(e.spot, now: now, statusLabel: statusLabel),
-                added: isDraft(e.business),
-                onToggle: () => onToggle(e.business),
-                onOpen: () => onOpen(e.business),
-              );
-            },
+        if (showCards) ...[
+          const SizedBox(height: Sp.s2),
+          SizedBox(
+            height: 118,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: Sp.s4),
+              itemCount: n,
+              separatorBuilder: (_, _) => const SizedBox(width: Sp.s2),
+              itemBuilder: (_, i) {
+                final e = entries[i];
+                return _SpotCard(
+                  entry: e,
+                  rank: i + 1,
+                  headline: spotHeadline(e.spot, now: now, statusLabel: statusLabel),
+                  added: isDraft(e.business),
+                  onToggle: () => onToggle(e.business),
+                  onOpen: () => onOpen(e.business),
+                );
+              },
+            ),
           ),
-        ),
+        ],
       ],
     );
   }
@@ -207,6 +214,115 @@ class _Notch extends CustomPainter {
   bool shouldRepaint(_Notch old) => old.color != color;
 }
 
+Color spotToneColor(KnColors c, SpotTone tone) => switch (tone) {
+  SpotTone.hot => c.tertiary,
+  SpotTone.good => c.primary,
+  SpotTone.neutral => c.onSurfaceVariant,
+  SpotTone.warn => c.error,
+};
+
+/// The deck as a ranked vertical list, for the map's list view.
+class SpotList extends StatelessWidget {
+  const SpotList({
+    super.key,
+    required this.entries,
+    required this.isDraft,
+    required this.onToggle,
+    required this.onOpen,
+    required this.statusLabel,
+    this.bottomPadding = 0,
+  });
+
+  final List<SpotEntry> entries;
+  final bool Function(Business) isDraft;
+  final ValueChanged<Business> onToggle;
+  final ValueChanged<Business> onOpen;
+  final String Function(String status) statusLabel;
+
+  /// Room for the plan bar that floats over the list's end.
+  final double bottomPadding;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.kn;
+    final t = Theme.of(context).textTheme;
+    final now = DateTime.now();
+    if (entries.isEmpty) {
+      return const EmptyState(
+        icon: Icons.search,
+        title: 'Nothing here yet',
+        body: 'Search above or long-press the map to drop a stop.',
+      );
+    }
+    return ListView.separated(
+      padding: EdgeInsets.fromLTRB(Sp.s4, Sp.s2, Sp.s4, bottomPadding),
+      itemCount: entries.length,
+      separatorBuilder: (_, _) => const SizedBox(height: Sp.s2),
+      itemBuilder: (_, i) {
+        final e = entries[i];
+        final tone = toneFor(e.spot.reason);
+        final color = spotToneColor(c, tone);
+        final added = isDraft(e.business);
+        final sub = [
+          formatDistance(e.spot.distanceMeters),
+          if (e.detail != null && e.detail!.isNotEmpty) e.detail!,
+        ].join(' · ');
+        return KnCard(
+          tier: 2,
+          onTap: () => onOpen(e.business),
+          padding: const EdgeInsets.fromLTRB(Sp.s4, Sp.s3, Sp.s2, Sp.s3),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (e.spot.reason != SpotReason.nearby)
+                      Row(
+                        children: [
+                          tone == SpotTone.hot ? _PulseDot(color: color) : _Dot(color: color),
+                          const SizedBox(width: Sp.s2),
+                          Expanded(
+                            child: Text(
+                              spotHeadline(e.spot, now: now, statusLabel: statusLabel).toUpperCase(),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: t.labelSmall?.copyWith(
+                                color: color,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.8,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    Text(e.business.name, style: t.titleMedium, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    Text(
+                      sub,
+                      style: t.bodySmall?.copyWith(color: c.onSurfaceVariant),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: added ? 'Remove from route' : 'Add to route',
+                onPressed: () => onToggle(e.business),
+                style: IconButton.styleFrom(
+                  backgroundColor: added ? c.tertiary : c.surfaceHighest,
+                  foregroundColor: added ? c.onTertiary : c.onSurface,
+                ),
+                icon: Icon(added ? Icons.check : Icons.add),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _SpotCard extends StatelessWidget {
   const _SpotCard({
     required this.entry,
@@ -229,12 +345,7 @@ class _SpotCard extends StatelessWidget {
     final c = context.kn;
     final t = Theme.of(context).textTheme;
     final tone = toneFor(entry.spot.reason);
-    final toneColor = switch (tone) {
-      SpotTone.hot => c.tertiary,
-      SpotTone.good => c.primary,
-      SpotTone.neutral => c.onSurfaceVariant,
-      SpotTone.warn => c.error,
-    };
+    final toneColor = spotToneColor(c, tone);
     final sub = [
       if (entry.spot.reason != SpotReason.nearby) formatDistance(entry.spot.distanceMeters),
       if (entry.detail != null && entry.detail!.isNotEmpty) entry.detail!,
