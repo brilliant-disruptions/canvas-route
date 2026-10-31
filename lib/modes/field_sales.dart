@@ -72,6 +72,10 @@ const fieldSalesPack = ModePack(
     'Interested': Icons.star_outline,
   },
   communityNoun: 'reps',
+  winOutcomes: ['Interested'],
+  winNoun: 'lead',
+  routeNoun: 'route',
+  routesTitle: 'Saved routes',
   proProductId: 'canvasroute_pro_monthly',
   proLabel: 'Pro',
 );

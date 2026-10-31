@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../core/theme/kn_colors.dart';
 import '../core/theme/kn_theme.dart';
-import '../modes/mode_pack.dart';
 import '../state/auth_state.dart';
 import '../state/profile_state.dart';
 
@@ -29,7 +28,7 @@ class AppShell extends ConsumerWidget {
           NavigationDestination(
             icon: const Icon(Icons.alt_route_outlined),
             selectedIcon: const Icon(Icons.alt_route),
-            label: pack.id.name == 'cardDrops' ? 'Runs' : 'Routes',
+            label: pack.routesTab,
           ),
         ],
       ),
@@ -119,8 +118,4 @@ class ProfileButton extends StatelessWidget {
         icon: const Icon(Icons.menu),
         onPressed: () => Scaffold.of(context).openEndDrawer(),
       );
-}
-
-extension PackLabels on ModePack {
-  String get routesTitle => id.name == 'cardDrops' ? 'Card runs' : 'Saved routes';
 }

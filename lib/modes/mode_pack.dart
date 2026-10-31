@@ -58,6 +58,10 @@ class ModePack {
     required this.planMaxStops,
     required this.outcomeIcons,
     required this.communityNoun,
+    required this.winOutcomes,
+    required this.winNoun,
+    required this.routeNoun,
+    required this.routesTitle,
     this.placesQueryPreset,
     this.pinCategories = const [],
     this.freeRouteLimit,
@@ -111,6 +115,20 @@ class ModePack {
 
   /// Who sees shared reports: "Shared with nearby collectors".
   final String communityNoun;
+
+  /// Outcomes the run recap counts as a win, e.g. "In stock".
+  final List<String> winOutcomes;
+
+  /// Singular noun for a win on the recap: "3 finds", "2 leads".
+  final String winNoun;
+
+  /// "route" / "run": the routes tab is its plural.
+  final String routeNoun;
+
+  /// Routes screen title, e.g. "Card runs".
+  final String routesTitle;
+
+  String get routesTab => '${routeNoun[0].toUpperCase()}${routeNoun.substring(1)}s';
 
   IconData outcomeIcon(String outcome) => outcomeIcons[outcome] ?? Icons.check_circle_outline;
   final List<String> pinCategories;

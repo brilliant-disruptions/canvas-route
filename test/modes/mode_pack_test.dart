@@ -48,6 +48,12 @@ void main() {
     }
   });
 
+  test('recap wins are default outcomes', () {
+    for (final pack in modePacks.values) {
+      expect(pack.defaultOutcomes, containsAll(pack.winOutcomes), reason: pack.label);
+    }
+  });
+
   test('visit field definitions round-trip through JSON', () {
     const f = VisitFieldDefinition(key: 'c_bins', label: 'Bins', type: FieldType.number, isCustom: true);
     final back = VisitFieldDefinition.fromJson(f.toJson());

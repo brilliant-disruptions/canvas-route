@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:share_plus/share_plus.dart';
 
@@ -9,6 +10,16 @@ class ShareService {
     await SharePlus.instance.share(ShareParams(
       files: [file],
       fileNameOverrides: [fileName],
+      subject: subject,
+    ));
+  }
+
+  Future<void> shareImage(Uint8List png, String fileName, {String? text, String? subject}) async {
+    final file = XFile.fromData(png, mimeType: 'image/png', name: fileName);
+    await SharePlus.instance.share(ShareParams(
+      files: [file],
+      fileNameOverrides: [fileName],
+      text: text,
       subject: subject,
     ));
   }

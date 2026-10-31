@@ -1,11 +1,16 @@
+import 'dart:ui' show ImageByteFormat;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/logic/csv_export.dart';
+import '../../core/logic/recap.dart';
 import '../../core/theme/kn_colors.dart';
 import '../../core/theme/kn_theme.dart';
+import '../../data/models/route_model.dart';
 import '../../data/models/visit.dart';
 import '../../state/auth_state.dart';
 import '../../state/profile_state.dart';
@@ -13,94 +18,161 @@ import '../../state/providers.dart';
 import '../../state/routes_state.dart';
 import '../../state/visits_state.dart';
 import '../../ui/widgets/kn_widgets.dart';
+import 'recap_card.dart';
 
-class SummaryScreen extends ConsumerWidget {
+/// The finish line: a shareable recap card first, bookkeeping second.
+class SummaryScreen extends ConsumerStatefulWidget {
   const SummaryScreen({super.key, required this.routeId});
   final String routeId;
+  @override
+  ConsumerState<SummaryScreen> createState() => _SummaryScreenState();
+}
+
+class _SummaryScreenState extends ConsumerState<SummaryScreen> {
+  final _cardKey = GlobalKey();
+  bool _sharing = false;
+
+  Future<void> _shareRecap(RouteModel route, RunRecap recap) async {
+    final pack = ref.read(modePackProvider);
+    setState(() => _sharing = true);
+    try {
+      final boundary = _cardKey.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+      final image = await boundary.toImage(pixelRatio: 3);
+      final png = (await image.toByteData(format: ImageByteFormat.png))!.buffer.asUint8List();
+      image.dispose();
+      await ref
+          .read(shareServiceProvider)
+          .shareImage(
+            png,
+            csvFileName(route.name, 'recap').replaceAll('.csv', '.png'),
+            text: '${countNoun(recap.wins, pack.winNoun)} on my ${pack.label} run. Planned with CanvasRoute.',
+            subject: route.name,
+          );
+    } finally {
+      if (mounted) setState(() => _sharing = false);
+    }
+  }
+
+  Future<void> _exportCsv(RouteModel route, List<Visit> list) async {
+    final pack = ref.read(modePackProvider);
+    final fields = ref.read(effectiveExportFieldsProvider);
+    final profile = ref.read(profileProvider).value;
+    final byStop = {for (final v in list) v.stopId: v};
+    final rows = route.stops.map((s) {
+      final v = byStop[s.id];
+      return CsvRow({
+        'stopName': s.name,
+        'address': s.address,
+        'visitedAt': v == null ? '' : DateFormat.yMd().add_jm().format(v.updatedAt),
+        for (final f in fields)
+          if (f != 'stopName' && f != 'address' && f != 'visitedAt') f: _str(v?.valueFor(f)),
+      });
+    }).toList();
+    final csv = buildCsv(
+      meta: [
+        if (profile?.name != null) 'Rep: ${profile!.name}',
+        if (profile?.company != null) 'Company: ${profile!.company}',
+        'Route: ${route.name}',
+      ],
+      fields: fields,
+      headers: pack.exportHeaders,
+      rows: rows,
+    );
+    await ref
+        .read(shareServiceProvider)
+        .shareCsv(csv, csvFileName(route.name, 'visits'), subject: 'Export: ${route.name}');
+  }
+
+  Future<void> _shareLink(RouteModel route) async {
+    if (ref.read(isAnonymousProvider)) {
+      context.push('/signin?reason=share');
+      return;
+    }
+    final link = await ref.read(shareRepoProvider).createLink(route.id);
+    await ref.read(shareServiceProvider).shareText('${route.name} — $link', subject: route.name);
+  }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final c = context.kn;
-    final t = Theme.of(context).textTheme;
     final pack = ref.watch(modePackProvider);
-    final route = ref.watch(routeByIdProvider(routeId));
-    final visits = ref.watch(visitsForRouteProvider(routeId));
-    final outcomes = ref.watch(effectiveOutcomesProvider);
-    final fields = ref.watch(effectiveExportFieldsProvider);
-    final profile = ref.watch(profileProvider).value;
-    final anon = ref.watch(isAnonymousProvider);
+    final route = ref.watch(routeByIdProvider(widget.routeId));
+    final visits = ref.watch(visitsForRouteProvider(widget.routeId));
     if (route == null) return const Scaffold(body: LoadingView());
 
-    Future<void> export(List<Visit> list) async {
-      final byStop = {for (final v in list) v.stopId: v};
-      final rows = route.stops.map((s) {
-        final v = byStop[s.id];
-        return CsvRow({
-          'stopName': s.name,
-          'address': s.address,
-          'visitedAt': v == null ? '' : DateFormat.yMd().add_jm().format(v.updatedAt),
-          for (final f in fields)
-            if (f != 'stopName' && f != 'address' && f != 'visitedAt') f: _str(v?.valueFor(f)),
-        });
-      }).toList();
-      final csv = buildCsv(
-        meta: [if (profile?.name != null) 'Rep: ${profile!.name}', if (profile?.company != null) 'Company: ${profile!.company}', 'Route: ${route.name}'],
-        fields: fields,
-        headers: pack.exportHeaders,
-        rows: rows,
-      );
-      await ref.read(shareServiceProvider).shareCsv(csv, csvFileName(route.name, 'visits'), subject: 'Export: ${route.name}');
-    }
-
     return KnScaffold(
-      title: 'Summary',
+      title: route.allVisited ? 'Run complete' : 'Summary',
       body: AsyncView(
         value: visits,
         data: (list) {
-          final counts = <String, int>{for (final o in outcomes) o: 0};
-          for (final v in list) {
-            if (v.outcome != null) counts[v.outcome!] = (counts[v.outcome!] ?? 0) + 1;
-          }
+          final byStop = {for (final v in list) v.stopId: v};
+          final recap = buildRecap([
+            for (final s in route.stops)
+              RecapStop(
+                name: s.name,
+                lat: s.lat,
+                lng: s.lng,
+                outcome: byStop[s.id]?.outcome,
+                at: byStop[s.id]?.updatedAt,
+              ),
+          ], winOutcomes: pack.winOutcomes.toSet());
+          final money = NumberFormat.simpleCurrency();
           final totals = {
             for (final key in pack.summaryTotals)
-              key: list.fold<double>(0, (s, v) => s + ((v.customFields[key] as num?)?.toDouble() ?? 0)),
+              pack.defaultVisitFields.where((f) => f.key == key).firstOrNull?.label ?? key: money.format(
+                list.fold<double>(0, (s, v) => s + ((v.customFields[key] as num?)?.toDouble() ?? 0)),
+              ),
           };
+
           return ListView(
-            padding: const EdgeInsets.all(Sp.s4),
+            padding: const EdgeInsets.fromLTRB(Sp.s4, Sp.s2, Sp.s4, Sp.s6),
             children: [
-              Text(route.name, style: t.headlineLarge),
-              Text('${route.visitedCount} of ${route.stopCount} ${pack.stopNoun}s visited', style: t.bodyMedium?.copyWith(color: c.onSurfaceVariant)),
-              const SectionHeader('Outcomes'),
-              Wrap(spacing: Sp.s2, runSpacing: Sp.s2, children: [
-                for (final e in counts.entries)
-                  KnCard(tier: 2, padding: const EdgeInsets.symmetric(horizontal: Sp.s4, vertical: Sp.s3), child: Column(children: [
-                    Text('${e.value}', style: t.headlineMedium?.copyWith(color: c.tertiary)),
-                    Text(e.key, style: t.labelMedium),
-                  ])),
-              ]),
-              if (totals.isNotEmpty) ...[
-                const SectionHeader('Totals'),
-                for (final e in totals.entries)
-                  ListTile(contentPadding: EdgeInsets.zero, title: Text(pack.exportHeaders[e.key] ?? e.key), trailing: Text('\$${e.value.toStringAsFixed(2)}', style: t.titleLarge)),
-                ListTile(contentPadding: EdgeInsets.zero, title: const Text('Items logged'), trailing: Text('${list.fold<int>(0, (s, v) => s + ((v.customFields['items'] as String?)?.split('\n').where((l) => l.trim().isNotEmpty).length ?? 0))}', style: t.titleLarge)),
-              ],
-              const SizedBox(height: Sp.s6),
-              KnButton(label: 'Export CSV', icon: Icons.ios_share, onPressed: list.isEmpty ? null : () => export(list)),
-              const SizedBox(height: Sp.s2),
-              OutlinedButton.icon(
-                onPressed: () async {
-                  if (anon) {
-                    context.push('/signin?reason=share');
-                    return;
-                  }
-                  final link = await ref.read(shareRepoProvider).createLink(route.id);
-                  await ref.read(shareServiceProvider).shareText('${route.name} — $link', subject: route.name);
-                },
-                icon: const Icon(Icons.link),
-                label: const Text('Share route link'),
+              Center(
+                child: FittedBox(
+                  child: RepaintBoundary(
+                    key: _cardKey,
+                    child: RecapCard(pack: pack, routeName: route.name, recap: recap, totals: totals),
+                  ),
+                ),
+              ),
+              const SizedBox(height: Sp.s5),
+              KnButton(
+                label: 'Share recap',
+                icon: Icons.ios_share,
+                lime: true,
+                loading: _sharing,
+                onPressed: recap.visited == 0 ? null : () => _shareRecap(route, recap),
               ),
               const SizedBox(height: Sp.s2),
-              TextButton(onPressed: () => context.go('/routes'), child: const Text('Back to routes')),
+              OutlinedButton.icon(
+                onPressed: () => context.go('/map'),
+                icon: const Icon(Icons.bolt),
+                label: Text('${pack.planLabel} again'),
+              ),
+              const SizedBox(height: Sp.s3),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton.icon(
+                      onPressed: list.isEmpty ? null : () => _exportCsv(route, list),
+                      icon: const Icon(Icons.table_view_outlined),
+                      label: const Text('Export CSV'),
+                    ),
+                  ),
+                  Expanded(
+                    child: TextButton.icon(
+                      onPressed: () => _shareLink(route),
+                      icon: const Icon(Icons.link),
+                      label: const Text('Route link'),
+                    ),
+                  ),
+                ],
+              ),
+              TextButton(
+                onPressed: () => context.go('/routes'),
+                style: TextButton.styleFrom(foregroundColor: c.onSurfaceVariant),
+                child: Text('Back to ${pack.routesTitle.toLowerCase()}'),
+              ),
             ],
           );
         },

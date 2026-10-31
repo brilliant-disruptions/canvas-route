@@ -49,7 +49,7 @@ class RoutesScreen extends ConsumerWidget {
         data: (list) => list.isEmpty
             ? EmptyState(
                 icon: Icons.alt_route,
-                title: 'No ${pack.stopNoun == 'store' ? 'runs' : 'routes'} yet',
+                title: 'No ${pack.routeNoun}s yet',
                 body: pack.emptyRoutesCopy,
                 action: OutlinedButton(onPressed: () => context.go('/map'), child: const Text('Open the map')),
               )
