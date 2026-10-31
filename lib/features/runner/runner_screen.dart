@@ -30,7 +30,6 @@ class _RunnerScreenState extends ConsumerState<RunnerScreen> with PinIconsMixin 
   GoogleMapController? _map;
   String? _currentStopId;
   List<LatLng> _polyline = const [];
-  bool _prompted = false;
   String? _logging;
 
   @override
@@ -42,21 +41,9 @@ class _RunnerScreenState extends ConsumerState<RunnerScreen> with PinIconsMixin 
   Future<void> _start() async {
     final route = ref.read(routeByIdProvider(widget.routeId));
     if (route == null) return;
-    if (route.status == RouteStatus.inProgress && route.visitedCount > 0 && !_prompted) {
-      _prompted = true;
-      final resume = await showDialog<bool>(
-        context: context,
-        barrierDismissible: false,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Welcome back'),
-          content: Text('Resume from stop ${route.visitedCount + 1} or start over?'),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Start from the beginning')),
-            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text('Resume from stop ${route.visitedCount + 1}')),
-          ],
-        ),
-      );
-      if (resume == false) await ref.read(routesProvider.notifier).restart(route.id);
+    // Resuming is the default; starting over lives in the top bar menu.
+    if (route.status == RouteStatus.inProgress && route.visitedCount > 0 && !route.allVisited) {
+      toast(context, 'Picking up at stop ${route.visitedCount + 1}', icon: Icons.play_arrow_rounded);
     }
     if (route.status != RouteStatus.inProgress) {
       await ref.read(routesProvider.notifier).setStatus(route.id, RouteStatus.inProgress);
@@ -172,6 +159,21 @@ class _RunnerScreenState extends ConsumerState<RunnerScreen> with PinIconsMixin 
                 _Glass(child: IconButton(tooltip: 'Exit route', icon: const Icon(Icons.close), onPressed: () => context.pop())),
                 const Spacer(),
                 ProgressPill('${route.visitedCount} of ${route.stopCount} visited', icon: Icons.flag_outlined),
+                const SizedBox(width: Sp.s2),
+                _Glass(
+                  child: PopupMenuButton<String>(
+                    tooltip: 'More',
+                    icon: const Icon(Icons.more_horiz),
+                    onSelected: (v) async {
+                      if (v != 'restart') return;
+                      if (await confirm(context, title: 'Start over?', body: 'Every stop is marked unvisited and the visits logged on this ${pack.routeNoun} are deleted.', confirmLabel: 'Start over', destructive: true)) {
+                        await ref.read(routesProvider.notifier).restart(route.id);
+                        setState(() => _currentStopId = null);
+                      }
+                    },
+                    itemBuilder: (_) => const [PopupMenuItem(value: 'restart', child: Text('Start over'))],
+                  ),
+                ),
               ]),
             ),
           ),

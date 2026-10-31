@@ -166,7 +166,8 @@ class _BuilderScreenState extends ConsumerState<BuilderScreen> with PinIconsMixi
     return now;
   }
 
-  Future<void> _save() async {
+  /// Saves the draft; [start] goes straight into the runner, no dialog in between.
+  Future<void> _save({required bool start}) async {
     final map = ref.read(mapProvider);
     if (map.draftStops.isEmpty) return;
     // Gate at the moment of value: the run is built and its ETAs are on screen.
@@ -184,25 +185,16 @@ class _BuilderScreenState extends ConsumerState<BuilderScreen> with PinIconsMixi
       final route = map.editingRouteId != null
           ? await n.replaceStops(map.editingRouteId!, name, map.draftStops, isOptimized: _order == _Order.optimize)
           : await n.save(name, map.draftStops, isOptimized: _order == _Order.optimize);
-      ref.read(mapProvider.notifier).clearDrafts();
       if (!mounted) return;
-      final start = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: Text('Saved "${route.name}"'),
-          content: map.draftStops.length == 1 ? const Text('Routes work best with 2 or more stops.') : null,
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Back to routes')),
-            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Start route')),
-          ],
-        ),
-      );
-      if (!mounted) return;
-      if (start == true) {
+      // Leave first, then clear, so the list doesn't flash empty on the way out.
+      final mapNotifier = ref.read(mapProvider.notifier);
+      if (start) {
         context.pushReplacement('/route/${route.id}');
       } else {
         context.go('/routes');
+        toast(context, 'Saved "${route.name}"', icon: Icons.check_circle_outline);
       }
+      mapNotifier.clearDrafts();
     } catch (e) {
       setState(() {
         _busy = false;
@@ -223,7 +215,18 @@ class _BuilderScreenState extends ConsumerState<BuilderScreen> with PinIconsMixi
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(map.editingRouteId != null ? 'Edit route' : 'Route builder'),
+        title: InkWell(
+          borderRadius: BorderRadius.circular(Rad.md),
+          onTap: () async {
+            final v = await promptText(context, title: 'Name this ${pack.routeNoun}', initial: _name.text, hint: _autoName());
+            if (v != null) setState(() => _name.text = v.trim());
+          },
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Flexible(child: Text(_name.text.isEmpty ? _autoName() : _name.text, maxLines: 1, overflow: TextOverflow.ellipsis)),
+            const SizedBox(width: Sp.s2),
+            Icon(Icons.edit_outlined, size: 18, color: c.onSurfaceVariant, semanticLabel: 'Rename'),
+          ]),
+        ),
         actions: [
           if (pack.usesTimeWindows)
             TextButton.icon(onPressed: _busy ? null : () async {
@@ -276,8 +279,6 @@ class _BuilderScreenState extends ConsumerState<BuilderScreen> with PinIconsMixi
           Padding(
             padding: const EdgeInsets.fromLTRB(Sp.s4, Sp.s3, Sp.s4, 0),
             child: Column(children: [
-              TextField(controller: _name, decoration: InputDecoration(labelText: 'Route name', hintText: _autoName()), textCapitalization: TextCapitalization.sentences),
-              const SizedBox(height: Sp.s3),
               SegmentedButton<_Order>(
                 segments: const [
                   ButtonSegment(value: _Order.preserve, label: Text('Preserve my order'), icon: Icon(Icons.format_list_numbered)),
@@ -341,7 +342,23 @@ class _BuilderScreenState extends ConsumerState<BuilderScreen> with PinIconsMixi
                 Text('${drafts.length} ${pack.stopNoun}${drafts.length == 1 ? '' : 's'}${_arrivals.any((a) => a.flag == ArrivalFlag.late) ? ' · ${_arrivals.where((a) => a.flag == ArrivalFlag.late).length} too late' : ''}', style: t.bodySmall?.copyWith(color: c.onSurfaceVariant)),
               ]),
             ),
-            SizedBox(width: 160, child: KnButton(label: 'Save route', lime: true, compact: true, loading: _busy, onPressed: drafts.isEmpty ? null : _save)),
+            if (map.editingRouteId != null)
+              SizedBox(width: 160, child: KnButton(label: 'Save changes', lime: true, compact: true, loading: _busy, onPressed: drafts.isEmpty ? null : () => _save(start: false)))
+            else ...[
+              TextButton(onPressed: drafts.isEmpty || _busy ? null : () => _save(start: false), child: const Text('Save')),
+              const SizedBox(width: Sp.s1),
+              SizedBox(
+                width: 140,
+                child: KnButton(
+                  label: 'Start ${pack.routeNoun}',
+                  icon: Icons.navigation_outlined,
+                  lime: true,
+                  compact: true,
+                  loading: _busy,
+                  onPressed: drafts.isEmpty ? null : () => _save(start: true),
+                ),
+              ),
+            ],
           ]),
         ),
       ),
