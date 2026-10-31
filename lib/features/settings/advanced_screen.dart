@@ -7,6 +7,7 @@ import '../../data/models/settings.dart';
 import '../../data/models/visit_field.dart';
 import '../../state/profile_state.dart';
 import '../../ui/widgets/kn_widgets.dart';
+import 'paywall_sheet.dart';
 
 /// Outcomes, visit fields and export columns for the active mode. Edits are
 /// stored as per-mode overrides; "Reset" drops back to the pack defaults.
@@ -43,6 +44,8 @@ class AdvancedScreen extends ConsumerWidget {
             tooltip: 'Add outcome',
             icon: const Icon(Icons.add),
             onPressed: () async {
+              if (pack.customFieldsPro && !await requirePro(context, ref, 'Custom outcomes are part of ${pack.proLabel}.')) return;
+              if (!context.mounted) return;
               final v = await promptText(context, title: 'New outcome', confirmLabel: 'Add');
               if (v != null && v.isNotEmpty && !outcomes.contains(v)) n.updateOverride(pack.id, (o) => o.copyWith(outcomes: [...outcomes, v]));
             },
@@ -71,6 +74,8 @@ class AdvancedScreen extends ConsumerWidget {
             tooltip: 'Add field',
             icon: const Icon(Icons.add),
             onPressed: () async {
+              if (pack.customFieldsPro && !await requirePro(context, ref, 'Custom fields are part of ${pack.proLabel}.')) return;
+              if (!context.mounted) return;
               final r = await showKnSheet<VisitFieldDefinition>(context, builder: (_) => const _NewFieldSheet());
               if (r != null) n.updateOverride(pack.id, (x) => x.copyWith(visitFields: [...fields, r]));
             },

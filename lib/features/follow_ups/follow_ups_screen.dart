@@ -12,6 +12,7 @@ import '../../state/map_state.dart';
 import '../../state/profile_state.dart';
 import '../../state/providers.dart';
 import '../../ui/widgets/kn_widgets.dart';
+import '../settings/paywall_sheet.dart';
 
 /// Every visit that asked for a callback, grouped by when it's due. Today's and
 /// overdue ones route in one tap.
@@ -27,7 +28,9 @@ class FollowUpsScreen extends ConsumerWidget {
         .where((f) => followUpBucket(f.due, now).index <= FollowUpBucket.today.index)
         .toList();
 
-    void routeDue() {
+    Future<void> routeDue() async {
+      if (!await requirePro(context, ref, 'Routing your callbacks is part of ${pack.proLabel}.')) return;
+      if (!context.mounted) return;
       final map = ref.read(mapProvider.notifier);
       for (final f in due) {
         map.addDraft(f.stop.toBusiness());
@@ -98,7 +101,11 @@ class _FollowUpCard extends ConsumerWidget {
     final actions = ref.read(followUpActionsProvider);
     final phone = v.phone;
 
+    // Seeing what's due is free; working the list is the paid tier.
+    Future<bool> pro() => requirePro(context, ref, '${pack.followUpsLabel ?? 'Follow-ups'} are part of ${pack.proLabel}.');
+
     Future<void> move(DateTime? to, String message) async {
+      if (!await pro()) return;
       try {
         await actions.reschedule(f, to);
         if (context.mounted) toast(context, message, icon: Icons.check);
@@ -153,7 +160,8 @@ class _FollowUpCard extends ConsumerWidget {
                   label: const Text('Call'),
                 ),
               TextButton.icon(
-                onPressed: () {
+                onPressed: () async {
+                  if (!await pro() || !context.mounted) return;
                   ref.read(mapProvider.notifier).addDraft(f.stop.toBusiness());
                   toast(context, 'Added to your next ${pack.routeNoun}', icon: Icons.add_location_alt_outlined);
                 },

@@ -86,7 +86,10 @@ void main() {
     expect(pack.atRouteLimit(0, paying: false), isFalse);
     expect(pack.atRouteLimit(pack.freeRouteLimit!, paying: false), isTrue);
     expect(pack.atRouteLimit(99, paying: true), isFalse);
-    expect(packFor(AppMode.fieldSales).atRouteLimit(99, paying: false), isFalse);
+    // Field Sales: free reps keep 3 saved routes; Pro is unlimited.
+    expect(packFor(AppMode.fieldSales).atRouteLimit(2, paying: false), isFalse);
+    expect(packFor(AppMode.fieldSales).atRouteLimit(3, paying: false), isTrue);
+    expect(packFor(AppMode.fieldSales).atRouteLimit(99, paying: true), isFalse);
   });
 
   test('every search suggestion has a quick-start icon', () {

@@ -73,6 +73,7 @@ class ModePack {
     this.freeRouteLimit,
     this.proProductId,
     this.includedInPlan = false,
+    this.customFieldsPro = false,
     this.proLabel = 'Pro',
     this.proPrice = '',
     this.proPitch = '',
@@ -158,6 +159,9 @@ class ModePack {
 
   /// A Pro/Team plan unlocks this vertical without its own product (Field Sales).
   final bool includedInPlan;
+
+  /// Adding outcomes or custom visit fields needs the paid tier.
+  final bool customFieldsPro;
   final String proLabel;
 
   /// Display price, e.g. "\$4.99 / mo".

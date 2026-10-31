@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme/kn_colors.dart';
 import '../../core/theme/kn_theme.dart';
 import '../../modes/mode_pack.dart';
+import '../../state/profile_state.dart';
 import '../../ui/widgets/kn_widgets.dart';
 
 /// Upgrade sheet, shown at the moment a free limit blocks something the user
@@ -70,6 +72,14 @@ Future<void> showPaywall(BuildContext context, ModePack pack, {required String r
     );
 
 /// "Free saves 1 run. This would be your 2nd."
+/// True when the user has the active vertical's paid tier; otherwise shows the
+/// paywall with [reason] and returns false. Use at the tap, not to hide the button.
+Future<bool> requirePro(BuildContext context, WidgetRef ref, String reason) async {
+  if (ref.read(isPayingProvider)) return true;
+  await showPaywall(context, ref.read(modePackProvider), reason: reason);
+  return false;
+}
+
 String freeLimitReason(ModePack pack) {
   final n = pack.freeRouteLimit ?? 0;
   final noun = pack.routeNoun;
