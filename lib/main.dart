@@ -17,7 +17,11 @@ Future<void> main() async {
   }
   await Supabase.initialize(url: Env.supabaseUrl, publishableKey: Env.supabaseAnonKey);
   final prefs = await LocalPrefs.load();
-  await AuthRepository().ensureSession();
+  // First launch with no signal mustn't strand the user on a blank screen: start
+  // without a session and sign in when the app next comes to the foreground.
+  try {
+    await AuthRepository().ensureSession();
+  } catch (_) {}
   runApp(ProviderScope(
     overrides: [localPrefsProvider.overrideWithValue(prefs)],
     child: const CanvasRouteApp(),

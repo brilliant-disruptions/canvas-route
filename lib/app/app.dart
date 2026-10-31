@@ -24,7 +24,13 @@ class _CanvasRouteAppState extends ConsumerState<CanvasRouteApp> {
   @override
   void initState() {
     super.initState();
-    _lifecycle = AppLifecycleListener(onResume: () => ref.invalidate(profileProvider));
+    _lifecycle = AppLifecycleListener(
+      onResume: () async {
+        // Retry the guest sign-in if launch happened offline.
+        await ref.read(authRepoProvider).ensureSession().catchError((_) {});
+        ref.invalidate(profileProvider);
+      },
+    );
     // Tapping a follow-up reminder opens the list.
     ref.read(reminderServiceProvider).init(onTap: (path) => ref.read(routerProvider).push(path ?? '/follow-ups'));
   }
