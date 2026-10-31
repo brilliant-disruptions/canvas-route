@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/logic/visit_history.dart';
 import '../data/models/route_model.dart';
 import '../data/models/stop.dart';
 import '../data/models/visit.dart';
@@ -52,3 +53,18 @@ class FollowUpActions {
 }
 
 final followUpActionsProvider = Provider((ref) => FollowUpActions(ref));
+
+/// Past visits per place in the active mode, keyed like [Business.identity].
+final visitHistoryProvider = Provider<Map<String, VisitHistory>>((ref) {
+  final routes = ref.watch(routesProvider).value ?? const <RouteModel>[];
+  final visits = ref.watch(allVisitsProvider).value ?? const <Visit>[];
+  final keyByStop = {
+    for (final r in routes)
+      for (final s in r.stops) s.id: s.toBusiness().identity,
+  };
+  return buildVisitHistory([
+    for (final v in visits)
+      if (keyByStop[v.stopId] != null && v.outcome != null)
+        VisitMark(key: keyByStop[v.stopId]!, at: v.createdAt, outcome: v.outcome, notes: v.notes),
+  ]);
+});

@@ -87,6 +87,7 @@ const fieldSalesPack = ModePack(
   proProductId: 'canvasroute_pro_monthly',
   includedInPlan: true,
   customFieldsPro: true,
+  visitHistoryPro: true,
   freeRouteLimit: 3,
   proLabel: 'Pro',
   profileAsksCompany: true,

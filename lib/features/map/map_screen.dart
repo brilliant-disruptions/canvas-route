@@ -24,6 +24,7 @@ import '../../data/services/listing_link.dart';
 import '../../modes/mode_pack.dart';
 import '../../state/auth_state.dart';
 import '../../state/community_state.dart';
+import '../../state/follow_ups_state.dart';
 import '../../state/location_state.dart';
 import '../../state/map_state.dart';
 import '../../state/profile_state.dart';
@@ -422,6 +423,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
 
     final markers = <Marker>{};
     // Route order shows on the map: picked stops become numbered dots.
+    final visited = ref.watch(visitHistoryProvider);
     void add(String id, Business b, PinSpec spec, VoidCallback onTap, {int z = 0, double alpha = 1}) {
       final i = map.draftIndex(b);
       final s = i < 0 ? spec : PinSpec.number(i + 1, fill: c.primary, ink: c.onPrimary);
@@ -445,7 +447,14 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
       add(
         'r:${b.identity}',
         b,
-        PinSpec.pill(shortPlaceName(b.name), fill: c.surfaceHighest, ink: c.onSurface, border: c.primary),
+        // A leading dot marks places you've already been.
+        PinSpec.pill(
+          shortPlaceName(b.name),
+          fill: c.surfaceHighest,
+          ink: c.onSurface,
+          border: c.primary,
+          dot: visited.containsKey(b.identity) ? c.tertiary : null,
+        ),
         () => showBusinessSheet(context, b),
       );
     }

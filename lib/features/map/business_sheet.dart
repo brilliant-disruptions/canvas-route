@@ -2,16 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/logic/geo.dart';
+import '../../core/logic/visit_history.dart';
 import '../../core/theme/kn_colors.dart';
 import '../../core/theme/kn_theme.dart';
 import '../../data/models/business.dart';
 import '../../data/models/stop.dart';
+import '../../state/follow_ups_state.dart';
 import '../../state/location_state.dart';
 import '../../state/map_state.dart';
 import '../../state/profile_state.dart';
 import '../../state/providers.dart';
 import '../../ui/widgets/kn_widgets.dart';
 import '../community/report_sheet.dart';
+import '../settings/paywall_sheet.dart';
 
 Future<void> showBusinessSheet(BuildContext context, Business b) =>
     showKnSheet(context, builder: (_) => BusinessSheet(business: b));
@@ -32,6 +35,8 @@ class BusinessSheet extends ConsumerWidget {
     final nav = ref.read(navLauncherProvider);
     final added = map.isDraft(business);
     final dist = haversineMeters(center.lat, center.lng, business.lat, business.lng);
+    final history = ref.watch(visitHistoryProvider)[business.identity];
+    final seeHistory = !pack.visitHistoryPro || ref.watch(isPayingProvider);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(Sp.s5, 0, Sp.s5, Sp.s5),
@@ -49,6 +54,38 @@ class BusinessSheet extends ConsumerWidget {
             if (business.source == StopSource.manual) KnBadge('Manual stop', color: c.tertiaryContainer, onColor: c.onTertiaryContainer),
             if (business.listingUrl != null) KnBadge('Listing', icon: Icons.link),
           ]),
+          if (history != null) ...[
+            const SizedBox(height: Sp.s3),
+            KnCard(
+              tier: 2,
+              accent: c.tertiary,
+              onTap: seeHistory
+                  ? null
+                  : () => showPaywall(context, pack, reason: 'See what happened last time at every ${pack.stopNoun} with ${pack.proLabel}.'),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(pack.outcomeIcons[history.lastOutcome] ?? Icons.history, color: c.tertiary),
+                  const SizedBox(width: Sp.s3),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(visitHistoryLine(history, DateTime.now()), style: t.titleSmall),
+                        if (seeHistory) ...[
+                          if (history.lastOutcome != null)
+                            Text('Last time: ${history.lastOutcome}', style: t.bodySmall?.copyWith(color: c.onSurfaceVariant)),
+                          if (history.lastNotes != null && history.lastNotes!.isNotEmpty)
+                            Text(history.lastNotes!, style: t.bodyMedium, maxLines: 3, overflow: TextOverflow.ellipsis),
+                        ] else
+                          Text('See last outcome and notes with ${pack.proLabel}', style: t.bodySmall?.copyWith(color: c.tertiary)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           if (business.placeId != null)
             FutureBuilder(
               future: ref.read(placesServiceProvider).details(business.placeId!),

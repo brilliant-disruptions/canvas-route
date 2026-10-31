@@ -74,6 +74,7 @@ class ModePack {
     this.proProductId,
     this.includedInPlan = false,
     this.customFieldsPro = false,
+    this.visitHistoryPro = false,
     this.proLabel = 'Pro',
     this.proPrice = '',
     this.proPitch = '',
@@ -162,6 +163,10 @@ class ModePack {
 
   /// Adding outcomes or custom visit fields needs the paid tier.
   final bool customFieldsPro;
+
+  /// The last outcome and notes at a place you've visited need the paid tier;
+  /// "Visited 3×" itself is always shown.
+  final bool visitHistoryPro;
   final String proLabel;
 
   /// Display price, e.g. "\$4.99 / mo".
