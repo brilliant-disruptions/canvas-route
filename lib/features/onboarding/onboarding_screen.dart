@@ -48,13 +48,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 padding: const EdgeInsets.fromLTRB(Sp.s6, Sp.s8, Sp.s6, Sp.s6),
                 children: single
                     ? [
-                        Container(
-                          width: 64,
-                          height: 64,
-                          alignment: Alignment.center,
-                          margin: const EdgeInsets.only(right: double.infinity),
-                          decoration: BoxDecoration(color: c.tertiary, borderRadius: BorderRadius.circular(Rad.xl)),
-                          child: Icon(pack!.icon, size: 34, color: c.onTertiary),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Container(
+                            width: 64,
+                            height: 64,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(color: c.tertiary, borderRadius: BorderRadius.circular(Rad.xl)),
+                            child: Icon(pack!.icon, size: 34, color: c.onTertiary),
+                          ),
                         ),
                         const SizedBox(height: Sp.s6),
                         Text(pack.tagline, style: t.displayMedium),
