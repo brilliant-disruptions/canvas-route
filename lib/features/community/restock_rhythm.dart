@@ -37,7 +37,7 @@ class RestockRhythm extends StatelessWidget {
               const SizedBox(width: Sp.s2),
               Expanded(child: Text('Restock rhythm', style: t.titleMedium)),
               Text(
-                '${summary.totalHits} sightings · 90 days',
+                '${summary.totalHits} sighting${summary.totalHits == 1 ? '' : 's'} · 90 days',
                 style: t.labelSmall?.copyWith(color: c.onSurfaceVariant),
               ),
             ],

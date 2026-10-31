@@ -45,6 +45,10 @@ void main() {
       expect(w!.start, DateTime(2026, 11, 7, 6));
       expect(untilLabel(w.start, sat9), 'in 7 days');
     });
+    test('a one-off sighting does not outrank an established window', () {
+      final w = nextLikelyWindow([(dow: 2, hour: 8, hits: 12), (dow: 6, hour: 9, hits: 1)], sat9);
+      expect(w!.start, DateTime(2026, 11, 3, 8)); // next Tuesday, not this morning's single report
+    });
     test('labels', () {
       expect(untilLabel(sat9.add(const Duration(minutes: 45)), sat9), 'in 45 min');
       expect(untilLabel(sat9.add(const Duration(hours: 5)), sat9), 'in 5h');

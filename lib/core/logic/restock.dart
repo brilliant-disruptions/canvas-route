@@ -56,11 +56,14 @@ String relativeAge(DateTime t, {DateTime? now}) {
   return '${(d.inDays / 7).floor()}w ago';
 }
 
-/// The soonest upcoming (or current) occurrence of any best window, looking a
-/// week ahead. Windows are two hours from their start hour.
+/// The soonest upcoming (or current) occurrence of a best window, looking a
+/// week ahead. Windows are two hours from their start hour. One-off sightings
+/// don't count: a window needs 2+ hits and a third of the strongest window's.
 ({DateTime start, DateTime end})? nextLikelyWindow(List<({int dow, int hour, int hits})> best, DateTime now) {
+  if (best.isEmpty) return null;
+  final top = best.map((w) => w.hits).reduce((a, b) => a > b ? a : b);
   ({DateTime start, DateTime end})? soonest;
-  for (final w in best) {
+  for (final w in best.where((w) => w.hits >= 2 && w.hits * 3 >= top)) {
     final today = DateTime(now.year, now.month, now.day);
     for (var d = 0; d <= 7; d++) {
       final day = today.add(Duration(days: d));

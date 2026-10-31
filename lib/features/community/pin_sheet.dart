@@ -75,7 +75,7 @@ class PinSheet extends ConsumerWidget {
             for (final cat in pin.categories) KnBadge(cat, color: c.surfaceHighest, onColor: c.onSurface),
             if (summary != null) _TierBadge(summary.tier),
           ]),
-          if (summary != null && summary.dayHits.any((h) => h > 0)) ...[
+          if (summary != null && summary.tier != RestockTier.unknown && summary.dayHits.any((h) => h > 0)) ...[
             const SizedBox(height: Sp.s3),
             RestockRhythm(summary: summary),
           ] else if (summary != null && summary.bestWindowLabel != null) ...[
