@@ -84,6 +84,7 @@ class ModePack {
     this.pinsPlacesStops = false,
     this.saveVisitLabel = 'Save visit',
     this.spotLabel,
+    this.startLabel,
     this.pinCategoryWildcard,
     this.summaryCountField,
     this.photoHint,
@@ -186,6 +187,10 @@ class ModePack {
 
   /// When set, a stop dropped on the map can be shared as a community pin
   /// (with a photo of the sign), e.g. "Share it with nearby hunters".
+  /// Onboarding button when this build ships only this mode ("Show me sales near me").
+  /// Null reads "Start with <label>".
+  final String? startLabel;
+
   final String? spotLabel;
 
   /// The category that matches any hunt filter, e.g. "Everything".

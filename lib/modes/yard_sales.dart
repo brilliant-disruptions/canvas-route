@@ -104,5 +104,6 @@ const yardSalesPack = ModePack(
   supportsHosting: true,
   hostSignHeadline: 'YARD SALE',
   spotLabel: 'Share it with nearby hunters',
+  startLabel: 'Show me sales near me',
   pinCategoryWildcard: 'Everything',
 );

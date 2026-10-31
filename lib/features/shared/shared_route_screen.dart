@@ -35,7 +35,8 @@ class _SharedRouteScreenState extends ConsumerState<SharedRouteScreen> with PinI
   /// Copies the route into this user's routes in its mode. Arriving here counts
   /// as onboarding: the link already chose the mode.
   Future<void> _fork(SharedRoute r, {required bool start}) async {
-    final mode = AppMode.fromId(r.mode);
+    // A route from a vertical this build doesn't ship lands in the default one.
+    final mode = launchable(AppMode.fromId(r.mode));
     final pack = packFor(mode);
     setState(() => _busy = true);
     try {

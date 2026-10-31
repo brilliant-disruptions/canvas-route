@@ -11,6 +11,11 @@ remember what happened at each one. One Flutter app, three modes:
 
 Full product spec: [`SPEC.md`](SPEC.md).
 
+**v1 ships Yard Sales only.** `LAUNCH_MODES` (a `--dart-define`, default `yard_sales`) lists the
+modes a build offers, in picker order. With one mode, onboarding skips the picker and the drawer
+hides mode switching; a profile saved on another mode opens on the first listed one. Build with
+`LAUNCH_MODES=yard_sales,card_drops,field_sales` to turn every vertical back on.
+
 ## Stack
 
 Flutter 3.47 · Riverpod 3 · go_router · google_maps_flutter · Supabase (Postgres, Auth, Storage,

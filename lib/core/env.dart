@@ -18,6 +18,10 @@ abstract final class Env {
     defaultValue: 'https://canvasroute.app',
   );
 
+  /// Modes this build ships, comma-separated ids in picker order; the first is the default.
+  /// v1 launches Yard Sales alone. Pass `yard_sales,card_drops,field_sales` for every vertical.
+  static const launchModes = String.fromEnvironment('LAUNCH_MODES', defaultValue: 'yard_sales');
+
   static bool get hasGoogleKey => googleMapsApiKey.isNotEmpty;
   static bool get hasSupabase => supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty;
 }

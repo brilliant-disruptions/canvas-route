@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../core/theme/kn_colors.dart';
 import '../core/theme/kn_theme.dart';
-import '../data/models/app_mode.dart';
 import '../modes/mode_pack.dart';
 import '../modes/registry.dart';
 import '../state/auth_state.dart';
@@ -107,27 +106,28 @@ class ProfileDrawer extends ConsumerWidget {
               ),
             ),
             // Modes inline: switching is one tap, and the other verticals stay visible.
-            Padding(
-              padding: const EdgeInsets.fromLTRB(Sp.s4, 0, Sp.s4, Sp.s3),
-              child: Row(
-                children: [
-                  for (final m in AppMode.values) ...[
-                    if (m != AppMode.values.first) const SizedBox(width: Sp.s2),
-                    Expanded(
-                      child: _ModeTile(
-                        pack: packFor(m),
-                        active: m == active,
-                        onTap: () async {
-                          Navigator.of(context).pop();
-                          if (m != active) await ref.read(profileProvider.notifier).setMode(m);
-                          if (context.mounted) context.go('/map');
-                        },
+            if (launchModes.length > 1)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(Sp.s4, 0, Sp.s4, Sp.s3),
+                child: Row(
+                  children: [
+                    for (final m in launchModes) ...[
+                      if (m != launchModes.first) const SizedBox(width: Sp.s2),
+                      Expanded(
+                        child: _ModeTile(
+                          pack: packFor(m),
+                          active: m == active,
+                          onTap: () async {
+                            Navigator.of(context).pop();
+                            if (m != active) await ref.read(profileProvider.notifier).setMode(m);
+                            if (context.mounted) context.go('/map');
+                          },
+                        ),
                       ),
-                    ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
             if (!paying && pack.proProductId != null)
               Padding(
                 padding: const EdgeInsets.fromLTRB(Sp.s4, 0, Sp.s4, Sp.s3),

@@ -45,7 +45,7 @@ final profileProvider = AsyncNotifierProvider<ProfileNotifier, Profile?>(Profile
 
 final activeModeProvider = Provider<AppMode>((ref) {
   final p = ref.watch(profileProvider).value;
-  return p?.activeMode ?? ref.watch(localPrefsProvider).cachedMode;
+  return launchable(p?.activeMode ?? ref.watch(localPrefsProvider).cachedMode);
 });
 
 final modePackProvider = Provider<ModePack>((ref) => packFor(ref.watch(activeModeProvider)));

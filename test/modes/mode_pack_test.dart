@@ -5,6 +5,24 @@ import 'package:canvas_route/modes/registry.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  group('launch modes', () {
+    test('v1 ships Yard Sales alone', () {
+      expect(launchModes, [AppMode.yardSales]);
+      expect(launchable(AppMode.fieldSales), AppMode.yardSales);
+      expect(launchable(AppMode.yardSales), AppMode.yardSales);
+    });
+
+    test('parses ids in order, dropping blanks, unknowns and repeats', () {
+      expect(parseLaunchModes(' card_drops, yard_sales,,nope,card_drops'), [AppMode.cardDrops, AppMode.yardSales]);
+      expect(parseLaunchModes('field_sales,yard_sales,card_drops'), AppMode.values);
+    });
+
+    test('an unusable list falls back to Yard Sales', () {
+      expect(parseLaunchModes(''), [AppMode.yardSales]);
+      expect(parseLaunchModes('bogus'), [AppMode.yardSales]);
+    });
+  });
+
   test('every mode has a pack', () {
     for (final m in AppMode.values) {
       expect(packFor(m).id, m);
