@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/logic/pin_labels.dart';
 import '../../core/theme/kn_colors.dart';
 import '../../core/theme/kn_theme.dart';
 import '../../ui/widgets/kn_widgets.dart';
@@ -95,6 +96,7 @@ class _ManualStopFormState extends State<_ManualStopForm> {
   late TimeOfDay _open;
   late TimeOfDay _close;
   late bool _share = widget.shareLabel != null;
+  String? _error;
   XFile? _sign;
   final _cats = <String>{};
 
@@ -102,14 +104,13 @@ class _ManualStopFormState extends State<_ManualStopForm> {
   void initState() {
     super.initState();
     final now = DateTime.now();
-    final sat = now.add(Duration(days: (DateTime.saturday - now.weekday) % 7));
-    _day = widget.initialOpens ?? DateTime(sat.year, sat.month, sat.day);
-    _open = widget.initialOpens == null
-        ? const TimeOfDay(hour: 7, minute: 0)
-        : TimeOfDay.fromDateTime(widget.initialOpens!);
-    _close = widget.initialCloses == null
-        ? const TimeOfDay(hour: 12, minute: 0)
-        : TimeOfDay.fromDateTime(widget.initialCloses!);
+    // Spotting means the sale is in front of you, so default to now; planning
+    // defaults to the coming Saturday morning.
+    final spotted = widget.shareLabel != null ? spottedWindow(now) : null;
+    final day = spotted?.opens ?? nextSaleDay(now, closesHour: 12);
+    _day = widget.initialOpens ?? DateTime(day.year, day.month, day.day);
+    _open = TimeOfDay.fromDateTime(widget.initialOpens ?? spotted?.opens ?? DateTime(0, 1, 1, 7));
+    _close = TimeOfDay.fromDateTime(widget.initialCloses ?? spotted?.closes ?? DateTime(0, 1, 1, 12));
   }
 
   DateTime _at(TimeOfDay t) => DateTime(_day.year, _day.month, _day.day, t.hour, t.minute);
@@ -231,6 +232,10 @@ class _ManualStopFormState extends State<_ManualStopForm> {
             ],
           ],
           const SizedBox(height: Sp.s5),
+          if (_error != null) ...[
+            const SizedBox(height: Sp.s3),
+            Text(_error!, style: t.bodySmall?.copyWith(color: c.error)),
+          ],
           KnButton(
             label: widget.confirmLabel ?? (_share ? 'Share and add to route' : 'Add to route'),
             lime: true,
@@ -240,6 +245,14 @@ class _ManualStopFormState extends State<_ManualStopForm> {
                 : () {
                     final name = _name.text.trim();
                     if (name.isEmpty) return;
+                    // A shared sale is public, so its window has to make sense.
+                    if (_share && widget.requiresWindow) {
+                      final error = saleWindowError(_at(_open), _at(_close), DateTime.now());
+                      if (error != null) {
+                        setState(() => _error = error);
+                        return;
+                      }
+                    }
                     Navigator.pop(
                       context,
                       ManualStopResult(

@@ -59,4 +59,25 @@ void main() {
       expect(salePhaseTakesReports(SalePhase.ended), isFalse);
     });
   });
+
+  group('posting windows', () {
+    test('next sale day rolls past a finished Saturday', () {
+      expect(nextSaleDay(DateTime(2026, 10, 29, 20)), DateTime(2026, 10, 31)); // Thursday
+      expect(nextSaleDay(DateTime(2026, 10, 31, 9)), DateTime(2026, 10, 31)); // Saturday morning
+      expect(nextSaleDay(DateTime(2026, 10, 31, 15)), DateTime(2026, 11, 7)); // Saturday afternoon
+    });
+
+    test('windows must end after they start, and in the future', () {
+      final now = DateTime(2026, 10, 31, 15);
+      expect(saleWindowError(DateTime(2026, 11, 7, 7), DateTime(2026, 11, 7, 13), now), isNull);
+      expect(saleWindowError(DateTime(2026, 11, 7, 13), DateTime(2026, 11, 7, 7), now), contains('after opening'));
+      expect(saleWindowError(DateTime(2026, 10, 31, 7), DateTime(2026, 10, 31, 13), now), contains('already passed'));
+    });
+
+    test('a spotted sale starts this hour and runs four hours, not past 11pm', () {
+      final w = spottedWindow(DateTime(2026, 10, 31, 15, 40));
+      expect((w.opens, w.closes), (DateTime(2026, 10, 31, 15), DateTime(2026, 10, 31, 19)));
+      expect(spottedWindow(DateTime(2026, 10, 31, 21, 5)).closes, DateTime(2026, 10, 31, 23));
+    });
+  });
 }

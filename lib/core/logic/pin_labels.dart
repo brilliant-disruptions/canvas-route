@@ -81,3 +81,27 @@ String saleStatus(DateTime opens, DateTime? closes, DateTime now) {
       return 'Ended';
   }
 }
+
+/// The Saturday a new sale defaults to: this one, unless its usual window
+/// (closing at [closesHour]) is already over, then next week's.
+DateTime nextSaleDay(DateTime now, {int closesHour = 13}) {
+  final today = DateTime(now.year, now.month, now.day);
+  final add = (DateTime.saturday - today.weekday) % 7;
+  return today.add(Duration(days: add == 0 && now.hour >= closesHour ? 7 : add));
+}
+
+/// Why a sale window can't be posted, or null if it can.
+String? saleWindowError(DateTime opens, DateTime closes, DateTime now) {
+  if (!closes.isAfter(opens)) return 'Closing time has to be after opening time.';
+  if (!closes.isAfter(now)) return 'That time has already passed. Pick a later day or hours.';
+  return null;
+}
+
+/// A sale someone is looking at right now: from this hour, for four hours
+/// (not past 11pm).
+({DateTime opens, DateTime closes}) spottedWindow(DateTime now) {
+  final opens = DateTime(now.year, now.month, now.day, now.hour);
+  final end = DateTime(now.year, now.month, now.day, 23);
+  final closes = opens.add(const Duration(hours: 4));
+  return (opens: opens, closes: closes.isAfter(end) ? end : closes);
+}
