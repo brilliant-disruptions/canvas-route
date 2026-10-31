@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/theme/kn_theme.dart';
 import '../state/appearance_state.dart';
+import '../state/follow_ups_state.dart';
 import '../state/profile_state.dart';
+import '../state/providers.dart';
 import 'router.dart';
 
 class CanvasRouteApp extends ConsumerStatefulWidget {
@@ -23,6 +25,8 @@ class _CanvasRouteAppState extends ConsumerState<CanvasRouteApp> {
   void initState() {
     super.initState();
     _lifecycle = AppLifecycleListener(onResume: () => ref.invalidate(profileProvider));
+    // Tapping a follow-up reminder opens the list.
+    ref.read(reminderServiceProvider).init(onTap: (path) => ref.read(routerProvider).push(path ?? '/follow-ups'));
   }
 
   @override
@@ -34,6 +38,10 @@ class _CanvasRouteAppState extends ConsumerState<CanvasRouteApp> {
   @override
   Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
+    // Keep the device's reminders in step with the follow-up list.
+    ref.listen(followUpReminderPlanProvider, (_, plan) {
+      if (plan != null) ref.read(reminderServiceProvider).replaceAll(plan, payload: '/follow-ups').catchError((_) {});
+    });
     return MaterialApp.router(
       title: 'CanvasRoute',
       debugShowCheckedModeBanner: false,

@@ -19,6 +19,7 @@ import '../data/services/local_prefs.dart';
 import '../data/services/location_service.dart';
 import '../data/services/nav_launcher.dart';
 import '../data/services/places_service.dart';
+import '../data/services/reminder_service.dart';
 import '../data/services/share_service.dart';
 import '../data/services/storage_service.dart';
 
@@ -32,6 +33,7 @@ final storageServiceProvider = Provider((_) => StorageService());
 final shareServiceProvider = Provider((_) => ShareService());
 final navLauncherProvider = Provider((_) => NavLauncher());
 final billingServiceProvider = Provider((_) => BillingService());
+final reminderServiceProvider = Provider((_) => ReminderService());
 
 final authRepoProvider = Provider((_) => AuthRepository());
 final profileRepoProvider = Provider((_) => ProfileRepository());

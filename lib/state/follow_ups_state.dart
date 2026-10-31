@@ -1,9 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/logic/reminders.dart';
 import '../core/logic/visit_history.dart';
 import '../data/models/route_model.dart';
 import '../data/models/stop.dart';
 import '../data/models/visit.dart';
+import 'profile_state.dart';
 import 'providers.dart';
 import 'routes_state.dart';
 import 'visits_state.dart';
@@ -67,4 +69,20 @@ final visitHistoryProvider = Provider<Map<String, VisitHistory>>((ref) {
       if (keyByStop[v.stopId] != null && v.outcome != null)
         VisitMark(key: keyByStop[v.stopId]!, at: v.createdAt, outcome: v.outcome, notes: v.notes),
   ]);
+});
+
+/// Morning reminders for upcoming follow-ups, or none in modes without them.
+final followUpReminderPlanProvider = Provider<List<PlannedReminder>?>((ref) {
+  if (ref.watch(modePackProvider).followUpsLabel == null) return const [];
+  final list = ref.watch(followUpsProvider).value;
+  if (list == null) return null; // still loading: leave what's scheduled alone
+  return planFollowUpReminders([
+    for (final f in list)
+      (
+        id: f.visit.id,
+        title: 'Follow up: ${f.stop.name}',
+        body: [?f.visit.contactName, ?f.visit.outcome, ?f.visit.notes].join(' · '),
+        due: f.due,
+      ),
+  ], DateTime.now());
 });
