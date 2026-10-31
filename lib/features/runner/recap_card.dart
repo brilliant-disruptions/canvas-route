@@ -6,6 +6,7 @@ import '../../core/logic/recap.dart';
 import '../../core/theme/kn_colors.dart';
 import '../../core/theme/kn_theme.dart';
 import '../../modes/mode_pack.dart';
+import '../../ui/widgets/route_sketch.dart';
 
 /// The shareable end-of-run card. Fixed 4:5 at [size] logical pixels and
 /// always in the dark brand palette, so a shared image looks the same
@@ -97,19 +98,18 @@ class RecapCard extends StatelessWidget {
                 ),
                 const SizedBox(height: Sp.s4),
                 Expanded(
-                  child: CustomPaint(
-                    size: Size.infinite,
-                    painter: _RouteSketch(
-                      points: [for (final s in recap.stops) (lat: s.lat, lng: s.lng)],
-                      state: [
-                        for (final s in recap.stops)
-                          s.outcome == null ? 0 : (pack.winOutcomes.contains(s.outcome) ? 2 : 1),
-                      ],
-                      line: c.primary,
-                      win: c.tertiary,
-                      visited: c.onSurface,
-                      pending: c.outline,
-                    ),
+                  child: RouteSketch(
+                    points: [for (final s in recap.stops) (lat: s.lat, lng: s.lng)],
+                    stops: [
+                      for (final s in recap.stops)
+                        s.outcome == null
+                            ? SketchStop.pending
+                            : (pack.winOutcomes.contains(s.outcome) ? SketchStop.win : SketchStop.visited),
+                    ],
+                    line: c.primary,
+                    win: c.tertiary,
+                    visited: c.onSurface,
+                    pending: c.outline,
                   ),
                 ),
                 const SizedBox(height: Sp.s4),
@@ -161,59 +161,4 @@ class RecapCard extends StatelessWidget {
       ),
     );
   }
-}
-
-/// The run drawn as a line through its stops; wins glow.
-class _RouteSketch extends CustomPainter {
-  _RouteSketch({
-    required this.points,
-    required this.state,
-    required this.line,
-    required this.win,
-    required this.visited,
-    required this.pending,
-  });
-  final List<({double lat, double lng})> points;
-
-  /// Per stop: 0 not visited, 1 visited, 2 win.
-  final List<int> state;
-  final Color line;
-  final Color win;
-  final Color visited;
-  final Color pending;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final pts = fitPoints(points, size.width, size.height, pad: 14).map((p) => Offset(p.x, p.y)).toList();
-    if (pts.isEmpty) return;
-    if (pts.length > 1) {
-      final path = Path()..addPolygon(pts, false);
-      canvas.drawPath(
-        path,
-        Paint()
-          ..color = line.withValues(alpha: 0.85)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 3
-          ..strokeJoin = StrokeJoin.round
-          ..strokeCap = StrokeCap.round,
-      );
-    }
-    for (var i = 0; i < pts.length; i++) {
-      final s = state[i];
-      if (s == 2) canvas.drawCircle(pts[i], 13, Paint()..color = win.withValues(alpha: 0.25));
-      canvas.drawCircle(
-        pts[i],
-        7,
-        Paint()
-          ..color = switch (s) {
-            2 => win,
-            1 => visited,
-            _ => pending,
-          },
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(_RouteSketch old) => old.points != points || old.state != state;
 }
