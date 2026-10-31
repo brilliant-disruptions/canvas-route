@@ -147,7 +147,8 @@ class _BuilderScreenState extends ConsumerState<BuilderScreen> with PinIconsMixi
       final start = _plannedStart(ordered);
       setState(() {
         _preview = result;
-        _arrivals = ref.read(modePackProvider).usesTimeWindows ? simulateArrivals(ordered: planner, legSeconds: legs, startAt: start) : const [];
+        // Every mode gets ETAs; only time-window modes have windows to flag against.
+        _arrivals = simulateArrivals(ordered: planner, legSeconds: legs, startAt: start);
         _busy = false;
       });
     } catch (e) {
@@ -339,7 +340,17 @@ class _BuilderScreenState extends ConsumerState<BuilderScreen> with PinIconsMixi
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
                 Text(_preview == null ? (_busy ? 'Calculating…' : '—') : '${formatDuration(_preview!.totalDurationSeconds)} · ${formatDistance(_preview!.totalDistanceMeters.toDouble())}', style: t.headlineSmall),
-                Text('${drafts.length} ${pack.stopNoun}${drafts.length == 1 ? '' : 's'}${_arrivals.any((a) => a.flag == ArrivalFlag.late) ? ' · ${_arrivals.where((a) => a.flag == ArrivalFlag.late).length} too late' : ''}', style: t.bodySmall?.copyWith(color: c.onSurfaceVariant)),
+                Text(
+                  [
+                    '${drafts.length} ${pack.stopNoun}${drafts.length == 1 ? '' : 's'}',
+                    // Last arrival plus the planner's dwell time at that stop.
+                    if (_arrivals.length == drafts.length && drafts.isNotEmpty)
+                      'done ~${DateFormat.jm().format(_arrivals.last.eta.add(const Duration(minutes: 15)))}',
+                    if (_arrivals.any((a) => a.flag == ArrivalFlag.late))
+                      '${_arrivals.where((a) => a.flag == ArrivalFlag.late).length} too late',
+                  ].join(' · '),
+                  style: t.bodySmall?.copyWith(color: c.onSurfaceVariant),
+                ),
               ]),
             ),
             if (map.editingRouteId != null)
