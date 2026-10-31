@@ -34,7 +34,7 @@ are built but off.
 - [ ] Set daily quotas and a budget alert (numbers in `docs/launch-costs.md`).
 
 ### Web origin (`WEB_ORIGIN`)
-- [ ] Host `build/web` (Cloudflare Pages or Firebase Hosting). It serves:
+- [ ] Host `build/web` on Cloudflare Pages with the link-preview functions (`cloudflare/README.md`). Firebase Hosting works too, but without per-sale previews. It serves:
   - the share pages `/s/…` and `/r/…`. These are real paths, so the host must serve `index.html` for unknown paths. `web/_redirects` handles Netlify and Cloudflare Pages; Firebase needs a `rewrites` rule. **Test a sign's QR on a phone once it's deployed.**
   - `/privacy.html` and `/terms.html`, which the app links to
 - [ ] **Have a lawyer review `web/privacy.html` and `web/terms.html`.** They describe what the app actually does, but they're drafts.

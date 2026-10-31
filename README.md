@@ -175,6 +175,9 @@ toolchain.
 The web build uses real paths (`/s/<token>`, `/r/<token>`), so the host must serve `index.html`
 for unknown paths. `web/_redirects` covers Netlify and Cloudflare Pages; Firebase needs a rewrite.
 
+Each shared sale or route gets its own link preview (title, time, photo) from the Cloudflare Pages
+Functions in `cloudflare/`. Deploy steps are in `cloudflare/README.md`.
+
 The demo build seeds two share tokens (`/r/demo-run`, `/s/demo-sale`) and simulates one
 community sighting about 20 seconds after launch, so the invite, sign and live-drop flows can be
 shown without a backend.
