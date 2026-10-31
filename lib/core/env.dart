@@ -22,6 +22,10 @@ abstract final class Env {
   /// v1 launches Yard Sales alone. Pass `yard_sales,card_drops,field_sales` for every vertical.
   static const launchModes = String.fromEnvironment('LAUNCH_MODES', defaultValue: 'yard_sales');
 
+  /// Hosted with the web build (web/privacy.html, web/terms.html).
+  static String get privacyUrl => '$webOrigin/privacy.html';
+  static String get termsUrl => '$webOrigin/terms.html';
+
   static bool get hasGoogleKey => googleMapsApiKey.isNotEmpty;
   static bool get hasSupabase => supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty;
 }

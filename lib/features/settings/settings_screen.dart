@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/env.dart';
 import '../../core/theme/kn_colors.dart';
 import '../../core/theme/kn_theme.dart';
 import '../../data/models/settings.dart';
@@ -100,6 +101,21 @@ class SettingsScreen extends ConsumerWidget {
                 onTap: () => context.push('/alerts'),
               ),
           ],
+          const SectionHeader('About'),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.privacy_tip_outlined),
+            title: const Text('Privacy policy'),
+            trailing: const Icon(Icons.open_in_new, size: 18),
+            onTap: () => ref.read(navLauncherProvider).open(Env.privacyUrl),
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.description_outlined),
+            title: const Text('Terms of service'),
+            trailing: const Icon(Icons.open_in_new, size: 18),
+            onTap: () => ref.read(navLauncherProvider).open(Env.termsUrl),
+          ),
           const SizedBox(height: Sp.s8),
           if (!anon)
             TextButton(
