@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -64,6 +65,7 @@ class _RunnerScreenState extends ConsumerState<RunnerScreen> with PinIconsMixin 
 
   /// One tap from the runner: log the outcome, share it, move to the next stop.
   Future<void> _quickLog(ModePack pack, RouteModel route, Stop stop, String outcome) async {
+    HapticFeedback.mediumImpact();
     setState(() => _logging = outcome);
     try {
       final r = await ref.read(visitLoggerProvider).log(route: route, stop: stop, draft: VisitDraft(values: {'outcome': outcome}));

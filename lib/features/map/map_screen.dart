@@ -215,7 +215,13 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
   }
 
   /// One tap: an empty draft gets the top-ranked stops; then straight to the builder.
+  void _toggle(Business b) {
+    HapticFeedback.selectionClick();
+    ref.read(mapProvider.notifier).toggleDraft(b);
+  }
+
   void _plan(ModePack pack, List<SpotEntry> entries) {
+    HapticFeedback.mediumImpact();
     _dismissPlanTip();
     final n = ref.read(mapProvider.notifier);
     if (ref.read(mapProvider).draftStops.isNotEmpty) {
@@ -596,7 +602,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
                   child: SpotList(
                     entries: spots,
                     isDraft: map.isDraft,
-                    onToggle: ref.read(mapProvider.notifier).toggleDraft,
+                    onToggle: _toggle,
                     onOpen: (b) => _openSpot(b, visiblePins),
                     statusLabel: (s) => _statusLabel(pack, s),
                     bottomPadding: showDeck ? 96 : Sp.s4,
@@ -635,7 +641,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
                   entries: spots,
                   draftCount: map.draftStops.length,
                   isDraft: map.isDraft,
-                  onToggle: ref.read(mapProvider.notifier).toggleDraft,
+                  onToggle: _toggle,
                   onOpen: (b) => _openSpot(b, visiblePins),
                   onPlan: () => _plan(pack, spots),
                   onOpenDraft: () => showDraftTray(context),

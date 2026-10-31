@@ -2,6 +2,7 @@ import 'dart:ui' show ImageByteFormat;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -17,6 +18,7 @@ import '../../state/profile_state.dart';
 import '../../state/providers.dart';
 import '../../state/routes_state.dart';
 import '../../state/visits_state.dart';
+import '../../ui/widgets/celebration.dart';
 import '../../ui/widgets/kn_widgets.dart';
 import 'recap_card.dart';
 
@@ -31,6 +33,7 @@ class SummaryScreen extends ConsumerStatefulWidget {
 class _SummaryScreenState extends ConsumerState<SummaryScreen> {
   final _cardKey = GlobalKey();
   bool _sharing = false;
+  bool _buzzed = false;
 
   Future<void> _shareRecap(RouteModel route, RunRecap recap) async {
     final pack = ref.read(modePackProvider);
@@ -128,55 +131,79 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
               ),
           };
 
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(Sp.s4, Sp.s2, Sp.s4, Sp.s6),
+          // Celebrate a run finished just now, not every reopen of an old summary.
+          final lastVisit = list
+              .map((v) => v.updatedAt)
+              .fold<DateTime?>(null, (a, b) => a == null || b.isAfter(a) ? b : a);
+          final justFinished =
+              route.allVisited &&
+              lastVisit != null &&
+              DateTime.now().difference(lastVisit) < const Duration(minutes: 10);
+          if (justFinished && !_buzzed) {
+            _buzzed = true;
+            WidgetsBinding.instance.addPostFrameCallback((_) => HapticFeedback.heavyImpact());
+          }
+
+          return Stack(
             children: [
-              Center(
-                child: FittedBox(
-                  child: RepaintBoundary(
-                    key: _cardKey,
-                    child: RecapCard(pack: pack, routeName: route.name, recap: recap, totals: totals),
-                  ),
-                ),
-              ),
-              const SizedBox(height: Sp.s5),
-              KnButton(
-                label: 'Share recap',
-                icon: Icons.ios_share,
-                lime: true,
-                loading: _sharing,
-                onPressed: recap.visited == 0 ? null : () => _shareRecap(route, recap),
-              ),
-              const SizedBox(height: Sp.s2),
-              OutlinedButton.icon(
-                onPressed: () => context.go('/map'),
-                icon: const Icon(Icons.bolt),
-                label: Text('${pack.planLabel} again'),
-              ),
-              const SizedBox(height: Sp.s3),
-              Row(
+              ListView(
+                padding: const EdgeInsets.fromLTRB(Sp.s4, Sp.s2, Sp.s4, Sp.s6),
                 children: [
-                  Expanded(
-                    child: TextButton.icon(
-                      onPressed: list.isEmpty ? null : () => _exportCsv(route, list),
-                      icon: const Icon(Icons.table_view_outlined),
-                      label: const Text('Export CSV'),
+                  Center(
+                    child: TweenAnimationBuilder<double>(
+                      tween: Tween(begin: justFinished ? 0.9 : 1, end: 1),
+                      duration: const Duration(milliseconds: 600),
+                      curve: Curves.easeOutBack,
+                      builder: (_, s, child) => Transform.scale(scale: s, child: child),
+                      child: FittedBox(
+                        child: RepaintBoundary(
+                          key: _cardKey,
+                          child: RecapCard(pack: pack, routeName: route.name, recap: recap, totals: totals),
+                        ),
+                      ),
                     ),
                   ),
-                  Expanded(
-                    child: TextButton.icon(
-                      onPressed: () => _shareLink(route),
-                      icon: const Icon(Icons.link),
-                      label: const Text('Route link'),
-                    ),
+                  const SizedBox(height: Sp.s5),
+                  KnButton(
+                    label: 'Share recap',
+                    icon: Icons.ios_share,
+                    lime: true,
+                    loading: _sharing,
+                    onPressed: recap.visited == 0 ? null : () => _shareRecap(route, recap),
+                  ),
+                  const SizedBox(height: Sp.s2),
+                  OutlinedButton.icon(
+                    onPressed: () => context.go('/map'),
+                    icon: const Icon(Icons.bolt),
+                    label: Text('${pack.planLabel} again'),
+                  ),
+                  const SizedBox(height: Sp.s3),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextButton.icon(
+                          onPressed: list.isEmpty ? null : () => _exportCsv(route, list),
+                          icon: const Icon(Icons.table_view_outlined),
+                          label: const Text('Export CSV'),
+                        ),
+                      ),
+                      Expanded(
+                        child: TextButton.icon(
+                          onPressed: () => _shareLink(route),
+                          icon: const Icon(Icons.link),
+                          label: const Text('Route link'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  TextButton(
+                    onPressed: () => context.go('/routes'),
+                    style: TextButton.styleFrom(foregroundColor: c.onSurfaceVariant),
+                    child: Text('Back to ${pack.routesTitle.toLowerCase()}'),
                   ),
                 ],
               ),
-              TextButton(
-                onPressed: () => context.go('/routes'),
-                style: TextButton.styleFrom(foregroundColor: c.onSurfaceVariant),
-                child: Text('Back to ${pack.routesTitle.toLowerCase()}'),
-              ),
+              if (justFinished) Positioned.fill(child: Celebration(colors: [c.tertiary, c.primary, c.onSurface])),
             ],
           );
         },
