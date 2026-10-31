@@ -57,7 +57,9 @@ class _State extends ConsumerState<FeatureRequestsScreen> {
                     ]),
                   ),
                 ),
+                const SizedBox(width: Sp.s1),
                 PopupMenuButton<String>(
+                  tooltip: 'Sort',
                   icon: const Icon(Icons.sort),
                   onSelected: (v) => setState(() => _sort = v),
                   itemBuilder: (_) => const [
@@ -154,21 +156,47 @@ class RequestCard extends ConsumerWidget {
             if (request.summary != null) ...[const SizedBox(height: Sp.s2), Text(request.summary!, style: t.bodySmall?.copyWith(color: c.onSurfaceVariant))],
           ]),
         ),
+        // A pill you can see you've pressed: lime with the count when voted.
         Column(children: [
-          IconButton(
-            tooltip: voted ? 'Remove upvote' : 'Upvote',
-            icon: Icon(voted ? Icons.thumb_up : Icons.thumb_up_outlined, color: voted ? c.tertiary : null),
-            onPressed: uid == null
-                ? null
-                : () async {
-                    final repo = ref.read(featureRequestRepoProvider);
-                    voted ? await repo.unvote(uid, request.id) : await repo.upvote(uid, request.id);
-                    ref.invalidate(myUpvotesProvider);
-                    onChanged();
-                  },
+          Semantics(
+            button: true,
+            selected: voted,
+            label: voted ? 'Remove upvote, ${request.upvoteCount} votes' : 'Upvote, ${request.upvoteCount} votes',
+            child: Material(
+              color: voted ? c.tertiary : c.surfaceHigh,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(Rad.lg),
+                side: BorderSide(color: voted ? c.tertiary : c.ghostBorder),
+              ),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(Rad.lg),
+                onTap: uid == null
+                    ? null
+                    : () async {
+                        final repo = ref.read(featureRequestRepoProvider);
+                        voted ? await repo.unvote(uid, request.id) : await repo.upvote(uid, request.id);
+                        ref.invalidate(myUpvotesProvider);
+                        onChanged();
+                      },
+                child: SizedBox(
+                  width: 56,
+                  height: 60,
+                  child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Icon(Icons.arrow_upward_rounded, size: 20, color: voted ? c.onTertiary : c.onSurface),
+                    Text(
+                      '${request.upvoteCount}',
+                      style: t.titleMedium?.copyWith(color: voted ? c.onTertiary : c.onSurface),
+                    ),
+                  ]),
+                ),
+              ),
+            ),
           ),
-          Text('+${request.upvoteCount} users', style: t.labelSmall),
-          Text('+${request.orgCount} orgs', style: t.labelSmall?.copyWith(color: c.onSurfaceVariant)),
+          const SizedBox(height: Sp.s1),
+          Text(
+            '${request.orgCount} org${request.orgCount == 1 ? '' : 's'}',
+            style: t.labelSmall?.copyWith(color: c.onSurfaceVariant),
+          ),
         ]),
       ]),
     );
