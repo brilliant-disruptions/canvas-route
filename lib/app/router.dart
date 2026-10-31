@@ -52,7 +52,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/routes', builder: (_, _) => const RoutesScreen()),
         ],
       ),
-      GoRoute(path: '/route/builder', builder: (_, _) => const BuilderScreen()),
+      GoRoute(path: '/route/builder', builder: (_, s) => BuilderScreen(autoPlan: s.uri.queryParameters['plan'] == '1')),
       GoRoute(
         path: '/route/:id',
         pageBuilder: (_, s) => MaterialPage(fullscreenDialog: true, child: RunnerScreen(routeId: s.pathParameters['id']!)),

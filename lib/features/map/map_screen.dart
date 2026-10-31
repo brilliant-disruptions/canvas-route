@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import '../../app/shell.dart';
 import '../../core/logic/geo.dart';
 import '../../core/logic/restock.dart';
+import '../../core/logic/spotlight.dart';
 import '../../core/theme/kn_colors.dart';
 import '../../core/theme/kn_theme.dart';
 import '../../data/models/app_mode.dart';
@@ -29,6 +30,7 @@ import '../community/pin_sheet.dart';
 import 'business_sheet.dart';
 import 'draft_tray.dart';
 import 'manual_stop_sheet.dart';
+import 'spotlight_deck.dart';
 
 class MapScreen extends ConsumerStatefulWidget {
   const MapScreen({super.key});
@@ -154,6 +156,76 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
     _map?.animateCamera(CameraUpdate.newLatLng(LatLng(geo.lat, geo.lng)));
   }
 
+  /// Ranks search results and visible pins for the bottom deck.
+  List<SpotEntry> _spotEntries({
+    required ModePack pack,
+    required MapState map,
+    required List<Pin> pins,
+    required Map<String, Report> latest,
+    required Map<String, StoreSummary> summaries,
+  }) {
+    final now = DateTime.now();
+    final from = ref.read(currentLocationProvider).value;
+    final origin = from == null ? _centerOrDefault : LatLng(from.lat, from.lng);
+    final byId = <String, (Business, String?)>{};
+    final candidates = <SpotCandidate>[];
+    for (final b in map.results) {
+      if (byId.containsKey(b.identity)) continue;
+      byId[b.identity] = (b, b.address.split(',').first);
+      candidates.add(SpotCandidate(id: b.identity, lat: b.lat, lng: b.lng, opensAt: b.opensAt, closesAt: b.closesAt));
+    }
+    for (final p in pins) {
+      final b = _pinToBusiness(p);
+      if (byId.containsKey(b.identity)) continue;
+      final filter = map.productFilter?.toLowerCase();
+      final r = latest[p.id];
+      final rep = r != null && (filter == null || r.productLabel.toLowerCase().contains(filter)) ? r : null;
+      final sum = summaries[p.id];
+      final window = sum == null ? null : windowOnDay(sum.bestWindows, now);
+      byId[b.identity] = (b, rep?.productLabel.isNotEmpty == true ? rep!.productLabel : p.categories.join(', '));
+      candidates.add(SpotCandidate(
+        id: b.identity,
+        lat: p.lat,
+        lng: p.lng,
+        opensAt: p.opensAt,
+        closesAt: p.closesAt,
+        reportStatus: rep?.status,
+        reportPositive: rep != null && pack.reportStatuses.any((s) => s.value == rep.status && s.positive),
+        reportedAt: rep?.createdAt,
+        tier: sum?.tier ?? RestockTier.unknown,
+        restockToday: window,
+      ));
+    }
+    return [
+      for (final s in rankSpots(candidates, fromLat: origin.latitude, fromLng: origin.longitude, now: now))
+        (spot: s, business: byId[s.candidate.id]!.$1, detail: byId[s.candidate.id]!.$2),
+    ];
+  }
+
+  /// One tap: an empty draft gets the top-ranked stops; then straight to the builder.
+  void _plan(ModePack pack, List<SpotEntry> entries) {
+    final n = ref.read(mapProvider.notifier);
+    if (ref.read(mapProvider).draftStops.isNotEmpty) {
+      context.push('/route/builder');
+      return;
+    }
+    final picked = pickPlan([for (final e in entries) e.spot], pack.planMaxStops).map((s) => s.candidate.id).toSet();
+    for (final e in entries) {
+      if (picked.contains(e.spot.candidate.id)) n.addDraft(e.business);
+    }
+    context.push('/route/builder?plan=1');
+  }
+
+  Future<void> _openSpot(Business b, List<Pin> pins) async {
+    _map?.animateCamera(CameraUpdate.newLatLng(LatLng(b.lat, b.lng)));
+    if (b.pinId == null) return showBusinessSheet(context, b);
+    final pin = pins.where((p) => p.id == b.pinId).firstOrNull;
+    if (pin != null) await showPinSheet(context, pin);
+  }
+
+  String _statusLabel(ModePack pack, String status) =>
+      pack.reportStatuses.where((s) => s.value == status).firstOrNull?.label ?? status;
+
   @override
   Widget build(BuildContext context) {
     final c = context.kn;
@@ -196,6 +268,9 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
     final summaries = pack.productCatalog && joined.isNotEmpty
         ? (ref.watch(storeSummariesProvider(joined)).value ?? const <String, StoreSummary>{})
         : const <String, StoreSummary>{};
+
+    final spots = _spotEntries(pack: pack, map: map, pins: visiblePins, latest: latest, summaries: summaries);
+    final showDeck = map.viewMode == MapViewMode.map && spots.isNotEmpty;
 
     final markers = <Marker>{};
     for (final b in map.results) {
@@ -273,7 +348,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
             if (mounted) setState(() => _center = mid);
           },
           onLongPress: pack.hasSource(StopSourceId.manual) ? _onLongPress : null,
-          padding: const EdgeInsets.only(top: 140, bottom: 24),
+          padding: EdgeInsets.only(top: 140, bottom: showDeck ? 200 : 24),
         ),
         SafeArea(
           child: Column(
@@ -390,38 +465,59 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
           ),
         ),
         Positioned(
-          right: Sp.s4,
+          left: 0,
+          right: 0,
           bottom: Sp.s4,
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              FloatingActionButton.small(
-                tooltip: 'My location',
-                heroTag: 'loc',
-                backgroundColor: c.surfaceHighest,
-                foregroundColor: c.onSurface,
-                onPressed: () async {
-                  final loc = await ref.read(locationServiceProvider).current();
-                  if (loc != null) _map?.animateCamera(CameraUpdate.newLatLngZoom(LatLng(loc.lat, loc.lng), 13));
-                },
-                child: const Icon(Icons.my_location),
-              ),
-              const SizedBox(height: Sp.s3),
-              Badge(
-                isLabelVisible: map.draftStops.isNotEmpty,
-                label: Text('${map.draftStops.length}'),
-                backgroundColor: c.primary,
-                textColor: c.onPrimary,
-                offset: const Offset(-4, 4),
-                child: FloatingActionButton.extended(
-                  heroTag: 'draft',
-                  onPressed: () => map.draftStops.isEmpty
-                      ? toast(context, 'Tap a ${pack.stopNoun} to add it')
-                      : showDraftTray(context),
-                  icon: const Icon(Icons.playlist_add_check),
-                  label: Text(map.editingRouteId != null ? 'Editing' : 'Draft'),
+              Padding(
+                padding: const EdgeInsets.only(right: Sp.s4),
+                child: FloatingActionButton.small(
+                  tooltip: 'My location',
+                  heroTag: 'loc',
+                  backgroundColor: c.surfaceHighest,
+                  foregroundColor: c.onSurface,
+                  onPressed: () async {
+                    final loc = await ref.read(locationServiceProvider).current();
+                    if (loc != null) _map?.animateCamera(CameraUpdate.newLatLngZoom(LatLng(loc.lat, loc.lng), 13));
+                  },
+                  child: const Icon(Icons.my_location),
                 ),
               ),
+              const SizedBox(height: Sp.s3),
+              if (showDeck)
+                SpotlightDeck(
+                  pack: pack,
+                  entries: spots,
+                  draftCount: map.draftStops.length,
+                  isDraft: map.isDraft,
+                  onToggle: ref.read(mapProvider.notifier).toggleDraft,
+                  onOpen: (b) => _openSpot(b, visiblePins),
+                  onPlan: () => _plan(pack, spots),
+                  onOpenDraft: () => showDraftTray(context),
+                  statusLabel: (s) => _statusLabel(pack, s),
+                )
+              else
+                Padding(
+                  padding: const EdgeInsets.only(right: Sp.s4),
+                  child: Badge(
+                    isLabelVisible: map.draftStops.isNotEmpty,
+                    label: Text('${map.draftStops.length}'),
+                    backgroundColor: c.primary,
+                    textColor: c.onPrimary,
+                    offset: const Offset(-4, 4),
+                    child: FloatingActionButton.extended(
+                      heroTag: 'draft',
+                      onPressed: () => map.draftStops.isEmpty
+                          ? toast(context, 'Tap a ${pack.stopNoun} to add it')
+                          : showDraftTray(context),
+                      icon: const Icon(Icons.playlist_add_check),
+                      label: Text(map.editingRouteId != null ? 'Editing' : 'Draft'),
+                    ),
+                  ),
+                ),
             ],
           ),
         ),

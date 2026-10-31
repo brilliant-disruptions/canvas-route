@@ -62,6 +62,9 @@ const fieldSalesPack = ModePack(
   emptyRoutesCopy: 'No routes yet — head to the map to start building.',
   visitVerb: 'Log Visit',
   stopNoun: 'stop',
+  spotlightTitle: 'near you',
+  planLabel: 'Route these',
+  planMaxStops: 8,
   proProductId: 'canvasroute_pro_monthly',
   proLabel: 'Pro',
 );

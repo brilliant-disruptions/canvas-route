@@ -53,6 +53,9 @@ class ModePack {
     required this.emptyRoutesCopy,
     required this.visitVerb,
     required this.stopNoun,
+    required this.spotlightTitle,
+    required this.planLabel,
+    required this.planMaxStops,
     this.placesQueryPreset,
     this.pinCategories = const [],
     this.freeRouteLimit,
@@ -91,6 +94,15 @@ class ModePack {
   final String emptyRoutesCopy;
   final String visitVerb; // "Log Visit" / "Log Stop" / "Report Shelf"
   final String stopNoun; // "stop" / "sale" / "store"
+
+  /// Map deck header after the count, e.g. "4 stores worth a stop today".
+  final String spotlightTitle;
+
+  /// One-tap planner button on the map deck, e.g. "Plan my run".
+  final String planLabel;
+
+  /// How many top-ranked stops the one-tap planner takes.
+  final int planMaxStops;
   final List<String> pinCategories;
   final int? freeRouteLimit;
   final String? proProductId;
