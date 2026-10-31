@@ -9,6 +9,7 @@ import '../../core/theme/kn_colors.dart';
 import '../../core/theme/kn_theme.dart';
 import '../../data/models/route_model.dart';
 import '../../state/auth_state.dart';
+import '../../state/follow_ups_state.dart';
 import '../../state/map_state.dart';
 import '../../state/profile_state.dart';
 import '../../state/providers.dart';
@@ -25,6 +26,7 @@ class RoutesScreen extends ConsumerWidget {
     final pack = ref.watch(modePackProvider);
     final routes = ref.watch(routesProvider);
     final paying = ref.watch(isPayingProvider);
+    final dueFollowUps = pack.followUpsLabel == null ? 0 : ref.watch(followUpsDueProvider);
 
     Future<void> newRoute() async {
       final count = routes.value?.length ?? 0;
@@ -64,11 +66,15 @@ class RoutesScreen extends ConsumerWidget {
                 child: Builder(
                   builder: (context) {
                     final sorted = [...list]..sort(_byNextAction);
+                    // Callbacks due come before routes: they're today's work.
+                    final lead = dueFollowUps > 0 ? 1 : 0;
                     return ListView.separated(
                       padding: const EdgeInsets.all(Sp.s4),
-                      itemCount: sorted.length,
+                      itemCount: sorted.length + lead,
                       separatorBuilder: (_, _) => const SizedBox(height: Sp.s3),
-                      itemBuilder: (_, i) => _RouteCard(route: sorted[i]),
+                      itemBuilder: (_, i) => i < lead
+                          ? _FollowUpsDue(count: dueFollowUps, label: pack.followUpsLabel!)
+                          : _RouteCard(route: sorted[i - lead]),
                     );
                   },
                 ),
@@ -252,5 +258,38 @@ class _RouteCard extends ConsumerWidget {
     }
     final copy = await ref.read(routesProvider.notifier).duplicate(route.id);
     if (context.mounted) context.push('/route/${copy.id}');
+  }
+}
+
+class _FollowUpsDue extends StatelessWidget {
+  const _FollowUpsDue({required this.count, required this.label});
+  final int count;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.kn;
+    final t = Theme.of(context).textTheme;
+    return KnCard(
+      tier: 3,
+      accent: c.tertiary,
+      onTap: () => context.push('/follow-ups'),
+      child: Row(
+        children: [
+          Icon(Icons.event_repeat_outlined, color: c.tertiary),
+          const SizedBox(width: Sp.s3),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('$count ${count == 1 ? 'callback' : 'callbacks'} due', style: t.titleMedium),
+                Text('$label from past visits', style: t.bodySmall?.copyWith(color: c.onSurfaceVariant)),
+              ],
+            ),
+          ),
+          Icon(Icons.chevron_right, color: c.onSurfaceVariant),
+        ],
+      ),
+    );
   }
 }

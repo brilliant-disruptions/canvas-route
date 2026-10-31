@@ -1,3 +1,4 @@
+import '../models/json_utils.dart';
 import '../models/visit.dart';
 import '../supabase_client.dart';
 
@@ -17,6 +18,12 @@ class VisitRepository {
     final row = await sb.from('visits').upsert(insert, onConflict: 'stop_id').select().single();
     return Visit.fromRow(row);
   }
+
+  /// Sets or clears (null) when to follow up on a visit.
+  Future<void> setFollowUp(String visitId, DateTime? date) => sb
+      .from('visits')
+      .update({'follow_up_date': date == null ? null : dateOnly(date)})
+      .eq('id', visitId);
 
   Future<void> delete(String visitId) => sb.from('visits').delete().eq('id', visitId);
 }

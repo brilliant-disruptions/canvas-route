@@ -88,6 +88,7 @@ const fieldSalesPack = ModePack(
   includedInPlan: true,
   proLabel: 'Pro',
   profileAsksCompany: true,
+  followUpsLabel: 'Follow-ups',
   proPrice: '\$19 / rep / mo',
   proPitch: 'Route your whole territory',
   proPerks: [

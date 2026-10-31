@@ -7,6 +7,7 @@ import '../data/models/app_mode.dart';
 import '../data/models/business.dart';
 import '../data/models/draft_stop.dart';
 import '../data/models/feature_request.dart';
+import '../data/models/json_utils.dart';
 import '../data/models/pin.dart';
 import '../data/models/product.dart';
 import '../data/models/profile.dart';
@@ -255,6 +256,10 @@ class DemoVisitRepository implements VisitRepository {
     db.visits[row['id'] as String] = row;
     return Visit.fromRow(row);
   });
+
+  @override
+  Future<void> setFollowUp(String visitId, DateTime? date) =>
+      _later(() => db.visits[visitId]?['follow_up_date'] = date == null ? null : dateOnly(date));
 
   @override
   Future<void> delete(String visitId) async => db.visits.remove(visitId);

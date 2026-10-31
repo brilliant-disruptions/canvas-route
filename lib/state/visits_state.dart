@@ -43,6 +43,7 @@ class VisitLogger {
         );
     await ref.read(routesProvider.notifier).markVisited(route.id, stop.id);
     ref.invalidate(visitsForRouteProvider(route.id));
+    ref.invalidate(allVisitsProvider); // follow-ups and history read across routes
 
     final shared = await _autoFileReport(route, stop, visit);
     return (visit: visit, shared: shared);

@@ -86,6 +86,7 @@ class ModePack {
     this.saveVisitLabel = 'Save visit',
     this.spotLabel,
     this.startLabel,
+    this.followUpsLabel,
     this.pinCategoryWildcard,
     this.summaryCountField,
     this.photoHint,
@@ -194,6 +195,10 @@ class ModePack {
   /// Onboarding button when this build ships only this mode ("Show me sales near me").
   /// Null reads "Start with <label>".
   final String? startLabel;
+
+  /// When set, visits with a follow-up date are gathered on a screen with this
+  /// title ("Follow-ups"), reachable from the drawer and the routes list.
+  final String? followUpsLabel;
 
   final String? spotLabel;
 

@@ -7,6 +7,7 @@ import '../core/theme/kn_theme.dart';
 import '../modes/mode_pack.dart';
 import '../modes/registry.dart';
 import '../state/auth_state.dart';
+import '../state/follow_ups_state.dart';
 import '../state/profile_state.dart';
 import '../ui/widgets/kn_widgets.dart';
 
@@ -52,6 +53,7 @@ class ProfileDrawer extends ConsumerWidget {
     final anon = ref.watch(isAnonymousProvider);
     final paying = ref.watch(isPayingProvider);
     final active = ref.watch(activeModeProvider);
+    final dueFollowUps = pack.followUpsLabel == null ? 0 : ref.watch(followUpsDueProvider);
 
     void go(String path) {
       Navigator.of(context).pop();
@@ -169,6 +171,15 @@ class ProfileDrawer extends ConsumerWidget {
               onTap: () => go('/settings/account'),
             ),
             ListTile(leading: const Icon(Icons.tune), title: const Text('Preferences'), onTap: () => go('/settings')),
+            if (pack.followUpsLabel != null)
+              ListTile(
+                leading: const Icon(Icons.event_repeat_outlined),
+                title: Text(pack.followUpsLabel!),
+                trailing: dueFollowUps == 0
+                    ? null
+                    : KnBadge('$dueFollowUps due', color: c.tertiary, onColor: c.onTertiary),
+                onTap: () => go('/follow-ups'),
+              ),
             if (pack.alerts.isNotEmpty && pack.hasCommunity)
               ListTile(
                 leading: const Icon(Icons.notifications_outlined),

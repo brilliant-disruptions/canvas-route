@@ -7,6 +7,7 @@ import '../data/models/stop.dart';
 import 'auth_state.dart';
 import 'profile_state.dart';
 import 'providers.dart';
+import 'visits_state.dart';
 
 class RoutesNotifier extends AsyncNotifier<List<RouteModel>> {
   @override
@@ -91,6 +92,7 @@ class RoutesNotifier extends AsyncNotifier<List<RouteModel>> {
 
   Future<void> restart(String routeId) async {
     await ref.read(routeRepoProvider).resetVisits(routeId);
+    ref.invalidate(allVisitsProvider); // the deleted visits' follow-ups go too
     final r = byId(routeId);
     if (r != null) {
       _put(r.copyWith(stops: r.stops.map((s) => s.copyWith(visited: false)).toList(), status: RouteStatus.inProgress));

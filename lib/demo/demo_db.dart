@@ -156,13 +156,22 @@ void _seed(DemoDb db) {
   addRoute('field_sales', 'Lakewood dentists', dental.take(6).toList(),
       visited: 2, status: 'in_progress', lastRun: now.subtract(const Duration(hours: 2)), optimized: true, visitValues: [
     {'outcome': 'Interested', 'contact_name': 'Dr. Priya Shah', 'phone': '(214) 555-0118', 'notes': 'Wants a quote on sterilization pouches. Office manager is Dana.', 'follow_up_date': _date(now.add(const Duration(days: 3)))},
-    {'outcome': 'No Answer', 'notes': 'Closed for lunch until 1:30.'},
+    {'outcome': 'No Answer', 'notes': 'Closed for lunch until 1:30.', 'follow_up_date': _date(now)},
   ]);
   addRoute('field_sales', 'Uptown med spas', demoCatalog['salons']!.take(5).toList());
   addRoute('field_sales', 'Deep Ellum restaurants', demoCatalog['restaurants']!.take(7).toList(),
       visited: 7, status: 'complete', lastRun: now.subtract(const Duration(days: 6)), optimized: true, visitValues: [
-    for (final o in ['Contacted', 'Interested', 'Not Interested', 'Contacted', 'No Answer', 'Interested', 'Contacted'])
-      {'outcome': o, 'notes': o == 'Interested' ? 'Asked for pricing sheet.' : null},
+    for (final (i, o) in ['Contacted', 'Interested', 'Not Interested', 'Contacted', 'No Answer', 'Interested', 'Contacted'].indexed)
+      {
+        'outcome': o,
+        'notes': o == 'Interested' ? 'Asked for pricing sheet.' : null,
+        // One lead from last week's run has slipped: the overdue row in Follow-ups.
+        if (i == 1) ...{
+          'follow_up_date': _date(now.subtract(const Duration(days: 2))),
+          'contact_name': 'Marco (owner)',
+          'phone': '(214) 555-0164',
+        },
+      },
   ]);
 
   // ---- Yard sale pins (this Saturday, plus one next week) ----
