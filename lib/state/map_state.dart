@@ -21,6 +21,7 @@ class MapState {
     this.editingRouteName,
     this.selectedDay,
     this.productFilter,
+    this.huntFilter = const {},
     this.searching = false,
     this.error,
   });
@@ -37,6 +38,9 @@ class MapState {
 
   /// Card Drops product filter chip; null = any.
   final String? productFilter;
+
+  /// Pin categories the user is hunting for; empty = all.
+  final Set<String> huntFilter;
   final bool searching;
   final String? error;
 
@@ -52,6 +56,7 @@ class MapState {
     String? editingRouteName,
     DateTime? selectedDay,
     String? productFilter,
+    Set<String>? huntFilter,
     bool? searching,
     String? error,
     bool clearEditing = false,
@@ -68,6 +73,7 @@ class MapState {
         editingRouteName: clearEditing ? null : editingRouteName ?? this.editingRouteName,
         selectedDay: clearDay ? null : selectedDay ?? this.selectedDay,
         productFilter: clearProduct ? null : productFilter ?? this.productFilter,
+        huntFilter: huntFilter ?? this.huntFilter,
         searching: searching ?? this.searching,
         error: clearError ? null : error ?? this.error,
       );
@@ -110,6 +116,7 @@ class MapNotifier extends Notifier<MapState> {
   void setDay(DateTime? d) => state = d == null ? state.copyWith(clearDay: true) : state.copyWith(selectedDay: d);
   void setProductFilter(String? p) =>
       state = p == null ? state.copyWith(clearProduct: true) : state.copyWith(productFilter: p);
+  void setHunt(Set<String> categories) => state = state.copyWith(huntFilter: categories);
   void showResults(List<Business> results) => state = state.copyWith(results: results);
 
   void addDraft(Business b) {

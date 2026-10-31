@@ -26,4 +26,15 @@ void main() {
     expect(shortPlaceName('Multi-family sale'), 'Multi-family sa…');
     expect(shortPlaceName('Barnes & Noble Booksellers'), 'Barnes & Noble…');
   });
+
+  test('hunt filter: empty wants everything, wildcard always fits', () {
+    expect(matchesHunt(['Tools'], {}), isTrue);
+    expect(matchesHunt(['Tools', 'Kids'], {'Kids'}), isTrue);
+    expect(matchesHunt(['Furniture'], {'Kids'}), isFalse);
+    expect(matchesHunt(['Everything'], {'Kids'}, wildcard: 'Everything'), isTrue);
+    expect(matchesHunt(const [], {'Kids'}), isFalse);
+    expect(huntLabel({}), 'Any');
+    expect(huntLabel({'Tools'}), 'Tools');
+    expect(huntLabel({'Tools', 'Kids', 'Books'}), 'Tools +2');
+  });
 }

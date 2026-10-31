@@ -24,3 +24,15 @@ String signWindow(DateTime opens, DateTime? closes) {
   String time(DateTime t) => '${compactTime(t).toUpperCase()}M';
   return closes == null ? 'FROM ${time(opens)}' : '${time(opens)}–${time(closes)}';
 }
+
+/// Whether a sale tagged [tags] fits what the user is hunting. Nothing wanted
+/// means everything fits; a sale tagged [wildcard] ("Everything") always fits.
+bool matchesHunt(List<String> tags, Set<String> wanted, {String? wildcard}) =>
+    wanted.isEmpty || tags.any((t) => t == wildcard || wanted.contains(t));
+
+/// Chip label for the hunt filter: "Any", "Tools", "Tools +2".
+String huntLabel(Set<String> wanted) => wanted.isEmpty
+    ? 'Any'
+    : wanted.length == 1
+    ? wanted.first
+    : '${wanted.first} +${wanted.length - 1}';

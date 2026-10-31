@@ -390,6 +390,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
     );
     final pins = pack.communityPins ? (ref.watch(nearbyPinsProvider(key)).value ?? const <Pin>[]) : const <Pin>[];
     final visiblePins = pins.where((p) {
+      if (!matchesHunt(p.categories, map.huntFilter, wildcard: pack.pinCategoryWildcard)) return false;
       if (map.selectedDay == null || p.opensAt == null) return true;
       return DateUtils.isSameDay(p.opensAt, map.selectedDay);
     }).toList();
@@ -874,6 +875,15 @@ class _ModeChips extends ConsumerWidget {
         (nextSat, 'Next Sat'),
       ];
       chips = [
+        // First, so it never scrolls off: what the user is hunting for.
+        if (pack.pinCategories.isNotEmpty)
+          InputChip(
+            avatar: Icon(Icons.tune, size: 16, color: map.huntFilter.isEmpty ? null : context.kn.onPrimaryContainer),
+            label: Text('Hunting: ${huntLabel(map.huntFilter)}'),
+            selected: map.huntFilter.isNotEmpty,
+            showCheckmark: false,
+            onPressed: () => _pickHunt(context, pack, map.huntFilter, n.setHunt),
+          ),
         for (final (d, label) in opts)
           ChoiceChip(
             label: Text(label),
@@ -926,3 +936,66 @@ String modeLabel(AppMode m) => switch (m) {
   AppMode.yardSales => 'Yard Sales',
   AppMode.cardDrops => 'Card Drops',
 };
+
+/// Multi-select of the pack's pin categories for the hunt filter.
+Future<void> _pickHunt(
+  BuildContext context,
+  ModePack pack,
+  Set<String> current,
+  ValueChanged<Set<String>> onDone,
+) async {
+  final picked = {...current};
+  await showKnSheet<void>(
+    context,
+    builder: (ctx) => StatefulBuilder(
+      builder: (ctx, setState) {
+        final t = Theme.of(ctx).textTheme;
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(Sp.s5, 0, Sp.s5, Sp.s5),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('What are you hunting?', style: t.headlineSmall),
+              const SizedBox(height: Sp.s1),
+              Text(
+                'Only matching ${pack.stopNoun}s show on the map and in your plan.',
+                style: t.bodySmall?.copyWith(color: ctx.kn.onSurfaceVariant),
+              ),
+              const SizedBox(height: Sp.s4),
+              Wrap(
+                spacing: Sp.s2,
+                runSpacing: Sp.s2,
+                children: [
+                  for (final cat in pack.pinCategories.where((c) => c != pack.pinCategoryWildcard))
+                    FilterChip(
+                      label: Text(cat),
+                      selected: picked.contains(cat),
+                      onSelected: (v) => setState(() => v ? picked.add(cat) : picked.remove(cat)),
+                    ),
+                ],
+              ),
+              const SizedBox(height: Sp.s5),
+              Row(
+                children: [
+                  TextButton(onPressed: () => setState(picked.clear), child: const Text('Clear')),
+                  const Spacer(),
+                  SizedBox(
+                    width: 160,
+                    child: KnButton(
+                      label: 'Show ${pack.stopNoun}s',
+                      lime: true,
+                      compact: true,
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    ),
+  );
+  onDone(picked);
+}

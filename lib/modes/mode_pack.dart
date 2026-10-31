@@ -84,6 +84,7 @@ class ModePack {
     this.pinsPlacesStops = false,
     this.saveVisitLabel = 'Save visit',
     this.spotLabel,
+    this.pinCategoryWildcard,
     this.photoHint,
     this.productCatalog = false,
   });
@@ -185,6 +186,9 @@ class ModePack {
   /// When set, a stop dropped on the map can be shared as a community pin
   /// (with a photo of the sign), e.g. "Share it with nearby hunters".
   final String? spotLabel;
+
+  /// The category that matches any hunt filter, e.g. "Everything".
+  final String? pinCategoryWildcard;
 
   /// Shown under the visit photo picker when photos are shared with the community.
   final String? photoHint;
