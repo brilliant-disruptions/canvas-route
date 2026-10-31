@@ -316,7 +316,7 @@ class _VisitLoggerScreenState extends ConsumerState<VisitLoggerScreen> {
   }
 
   Future<void> _pick(ImageSource src) async {
-    final x = await ImagePicker().pickImage(source: src, imageQuality: 80, maxWidth: 1600);
+    final x = await ImagePicker().pickImage(source: src, imageQuality: StorageService.photoQuality, maxWidth: StorageService.photoMaxWidth);
     if (x != null) setState(() => _photo = x);
   }
 }

@@ -11,6 +11,7 @@ import '../../core/env.dart';
 import '../../core/theme/kn_colors.dart';
 import '../../core/theme/kn_theme.dart';
 import '../../data/models/pin.dart';
+import '../../data/services/storage_service.dart';
 import '../../state/auth_state.dart';
 import '../../state/community_state.dart';
 import '../../state/profile_state.dart';
@@ -200,8 +201,8 @@ class _HostSaleScreenState extends ConsumerState<HostSaleScreen> {
                 onPressed: () async {
                   final x = await ImagePicker().pickImage(
                     source: ImageSource.gallery,
-                    imageQuality: 80,
-                    maxWidth: 1600,
+                    imageQuality: StorageService.photoQuality,
+                    maxWidth: StorageService.photoMaxWidth,
                   );
                   if (x != null) setState(() => _photos.add(x));
                 },

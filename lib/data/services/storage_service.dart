@@ -11,6 +11,11 @@ class StorageService {
   static const pinPhotos = 'pin-photos';
   static const avatars = 'avatars';
 
+  /// Phone photos are 3–5 MB. At 1280 px and quality 70 a sign or haul photo is
+  /// ~150 KB and still sharp on a phone, so the free tier's 1 GB holds ~6,000.
+  static const photoMaxWidth = 1280.0;
+  static const photoQuality = 70;
+
   Future<String> upload(String bucket, XFile file) async {
     final uid = requireUserId();
     final name = file.name.isNotEmpty ? file.name : file.path;
@@ -20,7 +25,9 @@ class StorageService {
     await sb.storage.from(bucket).uploadBinary(
           path,
           await file.readAsBytes(),
-          fileOptions: FileOptions(contentType: file.mimeType ?? 'image/$ext'),
+          // Names are unique and never rewritten, so the CDN may keep them for a year;
+          // cached bandwidth bills at a third of the uncached rate.
+          fileOptions: FileOptions(contentType: file.mimeType ?? 'image/$ext', cacheControl: '31536000'),
         );
     return path;
   }

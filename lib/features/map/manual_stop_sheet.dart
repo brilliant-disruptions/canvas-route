@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../core/logic/pin_labels.dart';
 import '../../core/theme/kn_colors.dart';
 import '../../core/theme/kn_theme.dart';
+import '../../data/services/storage_service.dart';
 import '../../ui/widgets/kn_widgets.dart';
 import '../../ui/widgets/xfile_image.dart';
 
@@ -203,8 +204,8 @@ class _ManualStopFormState extends State<_ManualStopForm> {
                       onPressed: () async {
                         final x = await ImagePicker().pickImage(
                           source: ImageSource.camera,
-                          imageQuality: 80,
-                          maxWidth: 1600,
+                          imageQuality: StorageService.photoQuality,
+                          maxWidth: StorageService.photoMaxWidth,
                         );
                         if (x != null) setState(() => _sign = x);
                       },
