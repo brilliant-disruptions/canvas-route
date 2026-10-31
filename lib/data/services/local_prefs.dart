@@ -21,6 +21,12 @@ class LocalPrefs {
   final SharedPreferences? _p;
   final Map<String, Object>? _mem;
 
+  /// Forgets everything on this device (after an account is deleted).
+  Future<void> clear() async {
+    await _p?.clear();
+    _mem?.clear();
+  }
+
   static Future<LocalPrefs> load() async => LocalPrefs(await SharedPreferences.getInstance());
 
   String? _str(String k) => _p?.getString(k) ?? _mem?[k] as String?;

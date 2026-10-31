@@ -57,6 +57,8 @@ class DemoAuthRepository implements AuthRepository {
   Future<bool> signInWithOAuth(OAuthProvider provider) async => true;
   @override
   Future<void> signOut() async {}
+  @override
+  Future<void> deleteAccount() async {}
 }
 
 class DemoProfileRepository implements ProfileRepository {
@@ -83,7 +85,6 @@ class DemoProfileRepository implements ProfileRepository {
   @override
   Future<Profile> setHome(String userId, double lat, double lng) => update(userId, {'home_lat': lat, 'home_lng': lng});
   @override
-  Future<Profile> deactivate(String userId) => update(userId, {'handle': null, 'name': null});
   @override
   Future<bool> handleAvailable(String handle) async => !db.profiles.values.any((p) => p['handle'] == handle);
 }

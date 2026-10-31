@@ -75,15 +75,28 @@ class AccountScreen extends ConsumerWidget {
           const SizedBox(height: Sp.s10),
           TextButton(
             onPressed: () async {
-              if (await confirm(context, title: 'Deactivate account?', body: 'Your profile is cleared and you are signed out. Routes are deleted after 30 days.', confirmLabel: 'Deactivate', destructive: true)) {
-                await ref.read(profileRepoProvider).deactivate(p.id);
-                await ref.read(authRepoProvider).signOut();
+              final ok = await confirm(
+                context,
+                title: 'Delete your account?',
+                body: 'This permanently deletes your routes, visits, photos, mileage, follow-ups and any sales you host, '
+                    'cancels a web subscription, and removes you from your team. It can\'t be undone. '
+                    'App Store and Google Play subscriptions are cancelled in your phone\'s settings.',
+                confirmLabel: 'Delete forever',
+                destructive: true,
+              );
+              if (!ok || !context.mounted) return;
+              try {
+                await ref.read(authRepoProvider).deleteAccount();
+                await ref.read(localPrefsProvider).clear();
                 await ref.read(authRepoProvider).ensureSession();
-                if (context.mounted) context.go('/map');
+                ref.invalidate(profileProvider);
+                if (context.mounted) context.go('/onboarding');
+              } catch (e) {
+                if (context.mounted) toast(context, friendlyError(e));
               }
             },
             style: TextButton.styleFrom(foregroundColor: c.error),
-            child: const Text('Deactivate account'),
+            child: const Text('Delete account'),
           ),
         ],
       ),
