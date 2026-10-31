@@ -20,10 +20,12 @@ class ProfileRepository {
   Future<Profile> setHome(String userId, double lat, double lng) =>
       update(userId, {'home_lat': lat, 'home_lng': lng});
 
-  Future<Profile> deactivate(String userId) => update(userId, {'plan': 'free', 'handle': null, 'name': null});
+  /// Clears public identity. Plans and purchases are the store's to cancel, not ours to write.
+  Future<Profile> deactivate(String userId) => update(userId, {'handle': null, 'name': null});
 
   Future<bool> handleAvailable(String handle) async {
-    final row = await sb.from('profiles').select('id').eq('handle', handle).maybeSingle();
+    // Other users' rows aren't readable; the public view exposes only id, handle and trust.
+    final row = await sb.from('profiles_public').select('id').eq('handle', handle).maybeSingle();
     return row == null;
   }
 }

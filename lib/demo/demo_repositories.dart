@@ -78,7 +78,7 @@ class DemoProfileRepository implements ProfileRepository {
   @override
   Future<Profile> setHome(String userId, double lat, double lng) => update(userId, {'home_lat': lat, 'home_lng': lng});
   @override
-  Future<Profile> deactivate(String userId) => update(userId, {'plan': 'free', 'handle': null, 'name': null});
+  Future<Profile> deactivate(String userId) => update(userId, {'handle': null, 'name': null});
   @override
   Future<bool> handleAvailable(String handle) async => !db.profiles.values.any((p) => p['handle'] == handle);
 }
