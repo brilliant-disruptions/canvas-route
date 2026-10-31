@@ -16,6 +16,16 @@ if (localPropsFile.exists()) {
     FileInputStream(localPropsFile).use { stream -> localProps.load(stream) }
 }
 
+// Release signing reads android/key.properties (gitignored):
+//   storeFile=/absolute/path/upload-keystore.jks
+//   storePassword=…  keyAlias=upload  keyPassword=…
+// Without it, release builds fall back to the debug key, which Play rejects.
+val keystoreProps = Properties()
+val keystorePropsFile = rootProject.file("key.properties")
+if (keystorePropsFile.exists()) {
+    FileInputStream(keystorePropsFile).use { stream -> keystoreProps.load(stream) }
+}
+
 android {
     namespace = "com.brilliantdisruptions.canvas_route"
     compileSdk = flutter.compileSdkVersion
@@ -29,7 +39,7 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
+        // Permanent once published to Play.
         applicationId = "com.brilliantdisruptions.canvas_route"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
@@ -47,11 +57,25 @@ android {
             ?: System.getenv("GOOGLE_MAPS_API_KEY") ?: ""
     }
 
+    signingConfigs {
+        create("release") {
+            if (keystorePropsFile.exists()) {
+                keyAlias = keystoreProps.getProperty("keyAlias")
+                keyPassword = keystoreProps.getProperty("keyPassword")
+                storeFile = file(keystoreProps.getProperty("storeFile"))
+                storePassword = keystoreProps.getProperty("storePassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (keystorePropsFile.exists()) {
+                signingConfigs.getByName("release")
+            } else {
+                logger.warn("android/key.properties not found: signing release with the DEBUG key (not uploadable to Play)")
+                signingConfigs.getByName("debug")
+            }
         }
     }
 }
