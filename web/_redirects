@@ -1,0 +1,5 @@
+# Single-page app: any path that isn't a real file (privacy.html, assets…) loads the
+# app, which routes it. Shared links and sign QRs are /s/<token> and /r/<token>.
+# Netlify and Cloudflare Pages read this file; Firebase Hosting needs the same as a
+# "rewrites" rule in firebase.json.
+/*    /index.html   200

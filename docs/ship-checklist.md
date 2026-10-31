@@ -35,7 +35,7 @@ are built but off.
 
 ### Web origin (`WEB_ORIGIN`)
 - [ ] Host `build/web` (Cloudflare Pages or Firebase Hosting). It serves:
-  - the share pages `/#/s/…` and `/#/r/…`
+  - the share pages `/s/…` and `/r/…`. These are real paths, so the host must serve `index.html` for unknown paths. `web/_redirects` handles Netlify and Cloudflare Pages; Firebase needs a `rewrites` rule. **Test a sign's QR on a phone once it's deployed.**
   - `/privacy.html` and `/terms.html`, which the app links to
 - [ ] **Have a lawyer review `web/privacy.html` and `web/terms.html`.** They describe what the app actually does, but they're drafts.
 - [ ] Make sure `privacy@canvasroute.app` and `support@canvasroute.app` exist, or change them in both pages.

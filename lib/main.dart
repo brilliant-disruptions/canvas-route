@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app/app.dart';
@@ -11,6 +12,8 @@ import 'state/providers.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Real paths on the web: shared links and sign QRs are <origin>/s/<token>, not /#/s/.
+  usePathUrlStrategy();
   if (!Env.hasSupabase) {
     runApp(const _ConfigErrorApp());
     return;

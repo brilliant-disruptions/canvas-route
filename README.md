@@ -172,7 +172,10 @@ core library desugaring plus the plugin's scheduling receivers; iOS asks for per
 time a reminder is scheduled. **Check both on a device**: this repo's CI has no Android or iOS
 toolchain.
 
-The demo build seeds two share tokens (`/#/r/demo-run`, `/#/s/demo-sale`) and simulates one
+The web build uses real paths (`/s/<token>`, `/r/<token>`), so the host must serve `index.html`
+for unknown paths. `web/_redirects` covers Netlify and Cloudflare Pages; Firebase needs a rewrite.
+
+The demo build seeds two share tokens (`/r/demo-run`, `/s/demo-sale`) and simulates one
 community sighting about 20 seconds after launch, so the invite, sign and live-drop flows can be
 shown without a backend.
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platform_interface.dart';
 
 import 'app/app.dart';
@@ -18,6 +19,8 @@ import 'state/providers.dart';
 ///   flutter build web -t lib/main_demo.dart --no-web-resources-cdn
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Real paths on the web: shared links and sign QRs are <origin>/s/<token>, not /#/s/.
+  usePathUrlStrategy();
   GoogleMapsFlutterPlatform.instance = DemoMapsPlatform(myLocation: LatLng(DemoDb.user.lat, DemoDb.user.lng));
   final prefs = LocalPrefs.memory(); // fresh onboarding on every load
   final db = DemoDb.seeded();
