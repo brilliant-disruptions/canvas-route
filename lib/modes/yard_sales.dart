@@ -45,8 +45,8 @@ const yardSalesPack = ModePack(
   communityReports: true,
   reportStatuses: [
     ReportStatusOption('still_open', 'Still going', Icons.check_circle_outline, positive: true),
-    ReportStatusOption('closing_soon', 'Closing soon', Icons.schedule),
-    ReportStatusOption('packed_up', 'Packed up', Icons.cancel_outlined),
+    ReportStatusOption('closing_soon', 'Closing soon', Icons.schedule, caution: true),
+    ReportStatusOption('packed_up', 'Packed up', Icons.cancel_outlined, ends: true),
   ],
   outcomeToReportStatus: {
     'Bought': 'still_open',

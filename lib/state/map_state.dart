@@ -22,6 +22,7 @@ class MapState {
     this.selectedDay,
     this.productFilter,
     this.huntFilter = const {},
+    this.openNow = false,
     this.searching = false,
     this.error,
   });
@@ -41,6 +42,9 @@ class MapState {
 
   /// Pin categories the user is hunting for; empty = all.
   final Set<String> huntFilter;
+
+  /// Only listings open now (or opening within 30 minutes). Exclusive with [selectedDay].
+  final bool openNow;
   final bool searching;
   final String? error;
 
@@ -57,6 +61,7 @@ class MapState {
     DateTime? selectedDay,
     String? productFilter,
     Set<String>? huntFilter,
+    bool? openNow,
     bool? searching,
     String? error,
     bool clearEditing = false,
@@ -74,6 +79,7 @@ class MapState {
         selectedDay: clearDay ? null : selectedDay ?? this.selectedDay,
         productFilter: clearProduct ? null : productFilter ?? this.productFilter,
         huntFilter: huntFilter ?? this.huntFilter,
+        openNow: openNow ?? this.openNow,
         searching: searching ?? this.searching,
         error: clearError ? null : error ?? this.error,
       );
@@ -113,7 +119,9 @@ class MapNotifier extends Notifier<MapState> {
 
   void clearSearch() => state = state.copyWith(query: '', results: const []);
   void setViewMode(MapViewMode m) => state = state.copyWith(viewMode: m);
-  void setDay(DateTime? d) => state = d == null ? state.copyWith(clearDay: true) : state.copyWith(selectedDay: d);
+  void setDay(DateTime? d) =>
+      state = d == null ? state.copyWith(clearDay: true, openNow: false) : state.copyWith(selectedDay: d, openNow: false);
+  void setOpenNow(bool on) => state = state.copyWith(openNow: on, clearDay: true);
   void setProductFilter(String? p) =>
       state = p == null ? state.copyWith(clearProduct: true) : state.copyWith(productFilter: p);
   void setHunt(Set<String> categories) => state = state.copyWith(huntFilter: categories);

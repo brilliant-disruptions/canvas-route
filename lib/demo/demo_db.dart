@@ -234,6 +234,23 @@ void _seed(DemoDb db) {
   ];
 
   db.pins[ys.last]!['share_token'] = 'demo-sale'; // the demo host's sign QR: /s/demo-sale
+
+  // Saturday-morning reports, only when the demo's sales are today (the app only
+  // takes reports while a sale is open): one confirmed, one closing, one packed up.
+  if (sat.year == now.year && sat.month == now.month && sat.day == now.day) {
+    String byName(String n) => ys.firstWhere((id) => (db.pins[id]!['name'] as String).startsWith(n));
+    for (final (name, status, minsAgo) in [
+      ('Multi-family sale', 'still_open', 12),
+      ('Kids clothes', 'closing_soon', 6),
+      ('Garage cleanout', 'packed_up', 25),
+    ]) {
+      final id = DemoDb.newId();
+      db.reports[id] = {
+        'id': id, 'pin_id': byName(name), 'user_id': 'community-${name.length}', 'status': status,
+        'trust_at_filing': 64, 'created_at': DemoDb.iso(now.subtract(Duration(minutes: minsAgo))),
+      };
+    }
+  }
   db.pinInterest[ys.last] = 14;
 
   final lastSales = [

@@ -267,6 +267,8 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
           closesAt: p.closesAt,
           reportStatus: rep?.status,
           reportPositive: rep != null && pack.reportStatuses.any((s) => s.value == rep.status && s.positive),
+          reportCaution: rep != null && pack.reportStatuses.any((s) => s.value == rep.status && s.caution),
+          reportEnds: rep != null && pack.reportStatuses.any((s) => s.value == rep.status && s.ends),
           reportedAt: rep?.createdAt,
           tier: sum?.tier ?? RestockTier.unknown,
           restockToday: window,
@@ -396,6 +398,12 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
     final pins = nearby?.value ?? const <Pin>[];
     final visiblePins = pins.where((p) {
       if (!matchesHunt(p.categories, map.huntFilter, wildcard: pack.pinCategoryWildcard)) return false;
+      if (map.openNow) {
+        final now = DateTime.now();
+        return p.opensAt != null &&
+            !now.isBefore(p.opensAt!.subtract(const Duration(minutes: 30))) &&
+            (p.closesAt == null || p.closesAt!.isAfter(now));
+      }
       if (map.selectedDay == null || p.opensAt == null) return true;
       return DateUtils.isSameDay(p.opensAt, map.selectedDay);
     }).toList();
@@ -490,14 +498,29 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
       if (p.opensAt != null) {
         final ended = p.closesAt != null && !p.closesAt!.isAfter(now);
         final open = !now.isBefore(p.opensAt!) && !ended;
-        spec = PinSpec.pill(
-          compactWindow(p.opensAt!, p.closesAt),
-          fill: c.surfaceHighest,
-          ink: c.onSurface,
-          border: open ? c.tertiary : c.outline,
-          dot: open ? c.tertiary : null,
-        );
-        if (ended) alpha = 0.45;
+        // Saturday-morning truth beats posted hours: the latest report decides.
+        final rep = latest[p.id];
+        final st = rep == null ? null : pack.reportStatuses.where((s) => s.value == rep.status).firstOrNull;
+        final age = rep == null ? null : now.difference(rep.createdAt);
+        if (st != null && st.ends && age! <= const Duration(hours: 6)) {
+          spec = PinSpec.pill(st.label, fill: c.surfaceHighest, ink: c.onSurfaceVariant, border: c.outline);
+          alpha = 0.45;
+        } else if (st != null && st.positive && open && age! <= const Duration(hours: 1)) {
+          spec = PinSpec.pill('${st.label} · ${compactTime(rep!.createdAt)}', fill: c.tertiary, ink: c.onTertiary, halo: true);
+          z = 5;
+        } else if (st != null && st.caution && !ended && age! <= const Duration(hours: 1)) {
+          spec = PinSpec.pill(st.label, fill: c.warning, ink: Colors.black, border: c.warning);
+          z = 4;
+        } else {
+          spec = PinSpec.pill(
+            compactWindow(p.opensAt!, p.closesAt),
+            fill: c.surfaceHighest,
+            ink: c.onSurface,
+            border: open ? c.tertiary : c.outline,
+            dot: open ? c.tertiary : null,
+          );
+          if (ended) alpha = 0.45;
+        }
       } else {
         final rep = latest[p.id];
         final filter = map.productFilter;
@@ -914,10 +937,18 @@ class _ModeChips extends ConsumerWidget {
             showCheckmark: false,
             onPressed: () => _pickHunt(context, pack, map.huntFilter, n.setHunt),
           ),
+        // Saturday morning's question: what can I get to right now?
+        ChoiceChip(
+          avatar: Icon(Icons.circle, size: 10, color: context.kn.tertiary),
+          label: const Text('Open now'),
+          selected: map.openNow,
+          showCheckmark: false,
+          onSelected: (on) => n.setOpenNow(on),
+        ),
         for (final (d, label) in opts)
           ChoiceChip(
             label: Text(label),
-            selected: d == null ? map.selectedDay == null : DateUtils.isSameDay(map.selectedDay, d),
+            selected: !map.openNow && (d == null ? map.selectedDay == null : DateUtils.isSameDay(map.selectedDay, d)),
             showCheckmark: false,
             onSelected: (_) => n.setDay(d),
           ),

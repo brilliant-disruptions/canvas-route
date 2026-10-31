@@ -554,7 +554,25 @@ class DemoReportRepository implements ReportRepository {
     final etb = db.products.values
         .where((p) => p['display_name'] == 'Prismatic Evolutions — Elite Trainer Box')
         .firstOrNull;
-    if (target == null) return;
+    // And on a sale morning, the first sale on most plans packs up early, so the
+    // runner's "reported packed up · Skip it" heads-up can be seen mid-route.
+    final now = DateTime.now();
+    final moving = db.pins.values.where((p) => (p['name'] as String).startsWith('Moving sale')).firstOrNull;
+    if (moving != null) {
+      final opens = DateTime.parse(moving['opens_at'] as String).toLocal();
+      final closes = DateTime.parse(moving['closes_at'] as String).toLocal();
+      if (now.isAfter(opens) && now.isBefore(closes)) {
+        final rid = DemoDb.newId();
+        db.reports[rid] = {
+          'id': rid, 'pin_id': moving['id'], 'user_id': 'community-3', 'status': 'packed_up',
+          'trust_at_filing': 70, 'created_at': DemoDb.nowIso(),
+        };
+      }
+    }
+    if (target == null) {
+      yield latest();
+      return;
+    }
     final id = DemoDb.newId();
     db.reports[id] = {
       'id': id,

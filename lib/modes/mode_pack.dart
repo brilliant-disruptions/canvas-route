@@ -10,13 +10,19 @@ enum OptimizerKind { distance, timeWindow, restockWindow }
 enum AlertKind { followUp, newPinNearby, stockReportNearby }
 
 class ReportStatusOption {
-  const ReportStatusOption(this.value, this.label, this.icon, {this.positive = false});
+  const ReportStatusOption(this.value, this.label, this.icon, {this.positive = false, this.caution = false, this.ends = false});
   final String value;
   final String label;
   final IconData icon;
 
   /// Positive statuses light the freshness ring (in stock, still open).
   final bool positive;
+
+  /// Still worth a stop, but hurry (closing soon).
+  final bool caution;
+
+  /// The listing is over for the day (packed up): greyed on the map, never planned.
+  final bool ends;
 }
 
 class ProPerk {
