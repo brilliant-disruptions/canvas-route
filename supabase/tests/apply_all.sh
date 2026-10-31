@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Applies every migration, in order, to a fresh Postgres database that mimics a new
 # Supabase project (auth, storage, cron stubs; function bodies are checked, as on
-# Supabase), then checks that every public table has RLS.
+# Supabase), checks that every public table has RLS, and runs security_test.sql.
 #
 #   PGHOST=/var/run/postgresql PGUSER=postgres supabase/tests/apply_all.sh
 #
@@ -29,3 +29,4 @@ done
 no_rls="$(psql_q -d "$db" -At -c "select string_agg(c.relname, ', ') from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' and c.relkind = 'r' and not c.relrowsecurity")"
 if [ -n "$no_rls" ]; then echo "FAIL tables without RLS: $no_rls"; exit 1; fi
 echo "All migrations applied; every public table has RLS."
+psql_q -d "$db" -v ON_ERROR_STOP=1 -f "$here/security_test.sql" | grep -v "^$"

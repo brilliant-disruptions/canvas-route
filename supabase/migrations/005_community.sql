@@ -104,7 +104,7 @@ create index alerts_user_idx on public.alerts (user_id, sent_at desc);
 create table public.route_shares (
   id         uuid primary key default gen_random_uuid(),
   route_id   uuid not null references public.routes(id) on delete cascade,
-  token      text unique not null default encode(gen_random_bytes(9), 'base64url'),
+  token      text unique not null default translate(encode(gen_random_bytes(9), 'base64'), '+/', '-_'),  -- base64url; the 'base64url' encoding needs PG18
   can_fork   boolean not null default true,
   created_at timestamptz not null default now()
 );

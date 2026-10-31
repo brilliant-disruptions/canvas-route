@@ -175,6 +175,19 @@ class _TeamViewState extends ConsumerState<_TeamView> {
                     ),
                   ),
                   IconButton(
+                    tooltip: 'New code (the old one stops working)',
+                    icon: const Icon(Icons.autorenew),
+                    onPressed: () async {
+                      if (!await confirm(context, title: 'Issue a new code?', body: 'The current code stops working. Reps already on the team stay.', confirmLabel: 'New code')) return;
+                      try {
+                        await ref.read(teamRepoProvider).rotateCode();
+                        ref.invalidate(myTeamProvider);
+                      } catch (e) {
+                        if (context.mounted) toast(context, friendlyError(e));
+                      }
+                    },
+                  ),
+                  IconButton(
                     tooltip: 'Share code',
                     icon: const Icon(Icons.ios_share),
                     onPressed: () => ref.read(shareServiceProvider).shareText(

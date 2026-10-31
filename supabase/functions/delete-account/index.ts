@@ -30,11 +30,13 @@ Deno.serve(async (req) => {
   const stripeKey = Deno.env.get('STRIPE_SECRET_KEY');
   if (profile?.stripe_id && stripeKey) {
     const list = await fetch(
-      `https://api.stripe.com/v1/subscriptions?customer=${encodeURIComponent(profile.stripe_id)}&status=active`,
+      `https://api.stripe.com/v1/subscriptions?customer=${encodeURIComponent(profile.stripe_id)}&status=all&limit=100`,
       { headers: { Authorization: `Bearer ${stripeKey}` } },
     );
     if (!list.ok) return json({ error: 'Could not reach billing; try again' }, 502);
-    for (const sub of (await list.json()).data ?? []) {
+    // Trials, past-due and unpaid subscriptions can still charge; cancel all but the finished ones.
+    const open = ((await list.json()).data ?? []).filter((s: any) => !['canceled', 'incomplete_expired'].includes(s.status));
+    for (const sub of open) {
       const del = await fetch(`https://api.stripe.com/v1/subscriptions/${sub.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${stripeKey}` },
@@ -53,8 +55,9 @@ Deno.serve(async (req) => {
     }
   }
 
-  // 3. Sales they host are residential addresses: remove them rather than orphan them.
-  await admin.from('pins').delete().eq('owner_id', user.id);
+  // 3. Sales they host or spotted are residential addresses: remove them rather than
+  //    orphan them. Store pins have no owner and keep everyone else's reports.
+  await admin.from('pins').delete().eq('owner_id', user.id).in('origin', ['host', 'spotted']);
 
   // 4. The auth user. Profiles, routes, stops, visits, trips, reports, teams they own
   //    and memberships all cascade from it.

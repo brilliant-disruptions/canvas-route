@@ -832,5 +832,8 @@ class DemoTeamRepository implements TeamRepository {
   Future<void> leave() => _later(() => _member = false);
 
   @override
+  Future<String> rotateCode() => _later(() => _team.joinCode);
+
+  @override
   Future<void> remove(String userId) => _later(() {});
 }

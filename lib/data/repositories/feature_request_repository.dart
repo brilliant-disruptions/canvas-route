@@ -19,7 +19,8 @@ class FeatureRequestRepository {
   }
 
   Future<List<FeatureRequest>> adminQueue() async {
-    final rows = await sb.from('feature_requests').select().order('created_at', ascending: false);
+    // Interview emails live in an admin-only table (migration 018).
+    final rows = await sb.from('feature_requests').select('*, feature_request_contacts(email)').order('created_at', ascending: false);
     return rows.map(FeatureRequest.fromRow).toList();
   }
 

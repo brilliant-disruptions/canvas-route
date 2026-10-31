@@ -1,7 +1,7 @@
 // Run: node --experimental-strip-types --test supabase/functions/_shared/billing_test.ts
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { applyGrant, grantFromSubscription, verifyStripeSignature } from './billing.ts';
+import { deriveBilling, grantFromSubscription, verifyStripeSignature } from './billing.ts';
 
 async function sign(payload: string, secret: string, t: number): Promise<string> {
   const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
@@ -33,14 +33,27 @@ test('subscription → grant, reading the period end from either place', () => {
   assert.equal(grantFromSubscription({ ...base, metadata: { user_id: 'u1', product: 'canvasroute_season_pass' } }), null);
 });
 
-test('grants add and remove only their own product', () => {
-  const g = { userId: 'u1', product: 'canvasroute_pro_monthly', active: true, customer: 'cus_1', periodEnd: '2026-12-01' };
-  const before = { plan: 'free', entitlements: ['canvasroute_season_pass'] };
-  const on = applyGrant(before, g);
-  assert.deepEqual(on, { plan: 'pro', entitlements: ['canvasroute_season_pass', 'canvasroute_pro_monthly'], billing_date: '2026-12-01' });
-  assert.deepEqual(applyGrant(on, g).entitlements, ['canvasroute_season_pass', 'canvasroute_pro_monthly'], 'idempotent');
-  const off = applyGrant(on, { ...g, active: false });
-  assert.deepEqual(off, { plan: 'free', entitlements: ['canvasroute_season_pass'], billing_date: null });
-  // Cancelling Pro doesn't downgrade someone who has since moved to Team.
-  assert.equal(applyGrant({ plan: 'team', entitlements: [] }, { ...g, active: false }).plan, 'team');
+test('billing derives from every subscription, not the latest event', () => {
+  const sub = (product: string, status: string, end = 1_800_000_000, quantity = 1) =>
+    ({ status, metadata: { user_id: 'u1', product }, items: { data: [{ current_period_end: end, quantity }] } });
+  const none = { plan: 'free', entitlements: ['canvasroute_season_pass'] };
+
+  // A late "active" event after cancellation: Stripe says canceled, so nothing is granted.
+  assert.deepEqual(deriveBilling(none, [sub('canvasroute_pro_monthly', 'canceled')]),
+    { plan: 'free', entitlements: ['canvasroute_season_pass'], billing_date: null, team_seats: null });
+
+  const pro = deriveBilling(none, [sub('canvasroute_pro_monthly', 'active')]);
+  assert.deepEqual(pro, { plan: 'pro', entitlements: ['canvasroute_season_pass', 'canvasroute_pro_monthly'], billing_date: '2027-01-15', team_seats: null });
+
+  // Team outranks Pro, and seats come from the team subscription's quantity.
+  const both = deriveBilling(pro, [sub('canvasroute_pro_monthly', 'active'), sub('canvasroute_team_monthly', 'trialing', 1_800_100_000, 6)]);
+  assert.equal(both.plan, 'team');
+  assert.equal(both.team_seats, 6);
+  assert.equal(both.billing_date, '2027-01-16');
+
+  // Cancelling one of two Pro subscriptions keeps Pro.
+  assert.equal(deriveBilling(pro, [sub('canvasroute_pro_monthly', 'canceled'), sub('canvasroute_pro_monthly', 'active')]).plan, 'pro');
+
+  // Store entitlements survive; Stripe ones go when no subscription is live.
+  assert.deepEqual(deriveBilling(both, []).entitlements, ['canvasroute_season_pass']);
 });

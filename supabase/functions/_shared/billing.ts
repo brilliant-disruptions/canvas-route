@@ -38,14 +38,31 @@ export interface ProfileBilling {
   entitlements: string[];
 }
 
-/** The profile's billing columns after a grant: add or remove the product, set or clear the plan. */
-export function applyGrant(p: ProfileBilling, g: Grant): ProfileBilling & { billing_date: string | null } {
-  const plan = PRODUCTS[g.product].plan;
-  const others = p.entitlements.filter((e) => e !== g.product);
-  if (g.active) {
-    return { plan, entitlements: [...others, g.product], billing_date: g.periodEnd };
-  }
-  return { plan: p.plan === plan ? 'free' : p.plan, entitlements: others, billing_date: null };
+export interface DerivedBilling extends ProfileBilling {
+  billing_date: string | null;
+  team_seats: number | null;
+}
+
+/**
+ * The profile's billing columns from *all* of a customer's Stripe subscriptions,
+ * so late, retried or out-of-order events can't re-grant a cancelled plan.
+ * Entitlements from other stores (App Store / Play) are kept as they are.
+ */
+export function deriveBilling(current: ProfileBilling, subs: any[]): DerivedBilling {
+  const live = subs.filter((s) => ACTIVE.has(s?.status) && (s?.metadata?.product in PRODUCTS));
+  const products = [...new Set(live.map((s) => s.metadata.product as string))];
+  const plans = new Set(products.map((p) => PRODUCTS[p].plan));
+  const ends = live
+    .map((s) => s.current_period_end ?? s.items?.data?.[0]?.current_period_end)
+    .filter((e): e is number => typeof e === 'number');
+  const team = live.filter((s) => PRODUCTS[s.metadata.product].plan === 'team');
+  const seats = team.reduce((n, s) => n + (Number(s.items?.data?.[0]?.quantity) || 0), 0);
+  return {
+    plan: plans.has('team') ? 'team' : plans.has('pro') ? 'pro' : 'free',
+    entitlements: [...current.entitlements.filter((e) => !(e in PRODUCTS)), ...products],
+    billing_date: ends.length ? new Date(Math.max(...ends) * 1000).toISOString().slice(0, 10) : null,
+    team_seats: team.length ? seats : null,
+  };
 }
 
 function hex(buf: ArrayBuffer): string {
