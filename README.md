@@ -43,6 +43,8 @@ Enable **Maps SDK for iOS**, **Maps SDK for Android**, **Places API (New)**, **R
 projects.) Restrict the key to the app bundle IDs / SHA-1 and to those five APIs, and set daily
 quotas plus a budget alert.
 
+Running it for $0 and when to pay: [`docs/launch-costs.md`](docs/launch-costs.md).
+
 Cost notes: style the map with client-side JSON, never a cloud **map ID** (a map ID moves native
 map loads from free to billed). Search requests only Pro-tier Place fields. Time-window modes keep the planned order by default
 (no `optimizeWaypointOrder`), so a day of up to 10 stops bills as Routes Essentials.
