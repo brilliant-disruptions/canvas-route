@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../core/logic/errors.dart';
 import '../../core/logic/geo.dart';
 import '../../core/logic/visit_history.dart';
 import '../../core/theme/kn_colors.dart';
@@ -8,6 +10,7 @@ import '../../core/theme/kn_theme.dart';
 import '../../data/models/business.dart';
 import '../../data/models/stop.dart';
 import '../../data/models/team.dart';
+import '../../state/auth_state.dart';
 import '../../state/follow_ups_state.dart';
 import '../../state/location_state.dart';
 import '../../state/map_state.dart';
@@ -151,10 +154,20 @@ class BusinessSheet extends ConsumerWidget {
                 width: 52,
                 child: OutlinedButton(
                   onPressed: () async {
-                    final pin = await ref.read(pinRepoProvider).ensureStorePin(business);
-                    if (context.mounted) {
+                    // Reporting needs a real account (the server refuses guests).
+                    if (ref.read(isAnonymousProvider)) {
                       Navigator.pop(context);
-                      showReportSheet(context, pin);
+                      context.push('/signin?reason=report');
+                      return;
+                    }
+                    try {
+                      final pin = await ref.read(pinRepoProvider).ensureStorePin(business);
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                        showReportSheet(context, pin);
+                      }
+                    } catch (e) {
+                      if (context.mounted) toast(context, friendlyError(e));
                     }
                   },
                   style: OutlinedButton.styleFrom(padding: EdgeInsets.zero),
