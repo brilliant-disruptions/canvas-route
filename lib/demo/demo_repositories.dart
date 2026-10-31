@@ -60,16 +60,16 @@ class DemoProfileRepository implements ProfileRepository {
 
   @override
   Future<Profile?> fetch(String userId) => _later(() {
-        final r = db.profiles[userId];
-        return r == null ? null : Profile.fromRow(r);
-      });
+    final r = db.profiles[userId];
+    return r == null ? null : Profile.fromRow(r);
+  });
 
   @override
   Future<Profile> update(String userId, Map<String, dynamic> patch) => _later(() {
-        final r = db.profiles[userId]!..addAll(patch);
-        r['updated_at'] = DemoDb.nowIso();
-        return Profile.fromRow(r);
-      });
+    final r = db.profiles[userId]!..addAll(patch);
+    r['updated_at'] = DemoDb.nowIso();
+    return Profile.fromRow(r);
+  });
 
   @override
   Future<Profile> setActiveMode(String userId, AppMode mode) => update(userId, {'active_mode': mode.id});
@@ -93,10 +93,10 @@ class DemoSettingsRepository implements SettingsRepository {
 
   @override
   Future<Settings> save(Settings s) => _later(() {
-        final row = {'user_id': s.userId, ...s.toUpdate()};
-        db.settings[s.userId] = row;
-        return Settings.fromRow(row);
-      });
+    final row = {'user_id': s.userId, ...s.toUpdate()};
+    db.settings[s.userId] = row;
+    return Settings.fromRow(row);
+  });
 }
 
 class DemoRouteRepository implements RouteRepository {
@@ -122,20 +122,31 @@ class DemoRouteRepository implements RouteRepository {
       final b = drafts[i].business;
       final id = DemoDb.newId();
       db.stops[id] = {
-        'id': id, 'route_id': routeId, 'place_id': b.placeId, 'pin_id': b.pinId, 'source': b.source.id, 'name': b.name,
-        'address': b.address, 'lat': b.lat, 'lng': b.lng, 'stop_order': i, 'visited': false,
-        'opens_at': b.opensAt == null ? null : DemoDb.iso(b.opensAt!), 'closes_at': b.closesAt == null ? null : DemoDb.iso(b.closesAt!),
-        'listing_url': b.listingUrl, 'created_at': DemoDb.nowIso(),
+        'id': id,
+        'route_id': routeId,
+        'place_id': b.placeId,
+        'pin_id': b.pinId,
+        'source': b.source.id,
+        'name': b.name,
+        'address': b.address,
+        'lat': b.lat,
+        'lng': b.lng,
+        'stop_order': i,
+        'visited': false,
+        'opens_at': b.opensAt == null ? null : DemoDb.iso(b.opensAt!),
+        'closes_at': b.closesAt == null ? null : DemoDb.iso(b.closesAt!),
+        'listing_url': b.listingUrl,
+        'created_at': DemoDb.nowIso(),
       };
     }
   }
 
   @override
   Future<List<RouteModel>> loadRoutes(String userId, AppMode mode) => _later(() {
-        final rows = db.routes.values.where((r) => r['user_id'] == userId && r['mode'] == mode.id).toList()
-          ..sort((a, b) => (b['created_at'] as String).compareTo(a['created_at'] as String));
-        return rows.map((r) => _model(r['id'] as String)).toList();
-      });
+    final rows = db.routes.values.where((r) => r['user_id'] == userId && r['mode'] == mode.id).toList()
+      ..sort((a, b) => (b['created_at'] as String).compareTo(a['created_at'] as String));
+    return rows.map((r) => _model(r['id'] as String)).toList();
+  });
 
   @override
   Future<RouteModel?> byId(String id) => _later(() => db.routes.containsKey(id) ? _model(id) : null);
@@ -148,19 +159,28 @@ class DemoRouteRepository implements RouteRepository {
     required List<DraftStop> stops,
     bool isOptimized = false,
     String? forkedFrom,
-  }) =>
-      _later(() {
-        final id = DemoDb.newId();
-        db.routes[id] = {
-          'id': id, 'user_id': userId, 'mode': mode.id, 'name': name, 'stop_count': stops.length, 'is_optimized': isOptimized,
-          'status': 'not_started', 'last_run_at': null, 'forked_from': forkedFrom, 'created_at': DemoDb.nowIso(), 'updated_at': DemoDb.nowIso(),
-        };
-        _insertStops(id, stops);
-        return _model(id);
-      });
+  }) => _later(() {
+    final id = DemoDb.newId();
+    db.routes[id] = {
+      'id': id,
+      'user_id': userId,
+      'mode': mode.id,
+      'name': name,
+      'stop_count': stops.length,
+      'is_optimized': isOptimized,
+      'status': 'not_started',
+      'last_run_at': null,
+      'forked_from': forkedFrom,
+      'created_at': DemoDb.nowIso(),
+      'updated_at': DemoDb.nowIso(),
+    };
+    _insertStops(id, stops);
+    return _model(id);
+  });
 
   @override
-  Future<RouteModel> replaceStops(RouteModel route, String name, List<DraftStop> stops, {bool isOptimized = true}) => _later(() {
+  Future<RouteModel> replaceStops(RouteModel route, String name, List<DraftStop> stops, {bool isOptimized = true}) =>
+      _later(() {
         _touch(route.id, {'name': name, 'stop_count': stops.length, 'status': 'updated', 'is_optimized': isOptimized});
         db.stops.removeWhere((_, s) => s['route_id'] == route.id);
         db.visits.removeWhere((_, v) => v['route_id'] == route.id);
@@ -180,18 +200,16 @@ class DemoRouteRepository implements RouteRepository {
 
   @override
   Future<RouteModel> duplicate(RouteModel source, String userId) => create(
-        userId: userId,
-        mode: source.mode,
-        name: '${source.name} (copy)',
-        isOptimized: source.isOptimized,
-        stops: [for (final s in source.stops) DraftStop(id: s.id, business: s.toBusiness())],
-      );
+    userId: userId,
+    mode: source.mode,
+    name: '${source.name} (copy)',
+    isOptimized: source.isOptimized,
+    stops: [for (final s in source.stops) DraftStop(id: s.id, business: s.toBusiness())],
+  );
 
   @override
-  Future<void> setStatus(String routeId, RouteStatus status) async => _touch(routeId, {
-        'status': status.id,
-        if (status == RouteStatus.inProgress) 'last_run_at': DemoDb.nowIso(),
-      });
+  Future<void> setStatus(String routeId, RouteStatus status) async =>
+      _touch(routeId, {'status': status.id, if (status == RouteStatus.inProgress) 'last_run_at': DemoDb.nowIso()});
 
   @override
   Future<void> reorder(List<Stop> ordered) async {
@@ -229,14 +247,14 @@ class DemoVisitRepository implements VisitRepository {
 
   @override
   Future<Visit> upsert(Map<String, dynamic> insert) => _later(() {
-        final existing = db.visits.values.where((v) => v['stop_id'] == insert['stop_id']).firstOrNull;
-        final row = existing ?? {'id': DemoDb.newId(), 'created_at': DemoDb.nowIso()};
-        row
-          ..addAll(insert)
-          ..['updated_at'] = DemoDb.nowIso();
-        db.visits[row['id'] as String] = row;
-        return Visit.fromRow(row);
-      });
+    final existing = db.visits.values.where((v) => v['stop_id'] == insert['stop_id']).firstOrNull;
+    final row = existing ?? {'id': DemoDb.newId(), 'created_at': DemoDb.nowIso()};
+    row
+      ..addAll(insert)
+      ..['updated_at'] = DemoDb.nowIso();
+    db.visits[row['id'] as String] = row;
+    return Visit.fromRow(row);
+  });
 
   @override
   Future<void> delete(String visitId) async => db.visits.remove(visitId);
@@ -247,16 +265,23 @@ class DemoPinRepository implements PinRepository {
   final DemoDb db;
   final StorageService storage;
 
-  List<String> _photos(String pinId) =>
-      db.pinPhotos.where((p) => p['pin_id'] == pinId).map((p) => storage.publicUrl(StorageService.pinPhotos, p['storage_path'] as String)).toList();
+  List<String> _photos(String pinId) => db.pinPhotos
+      .where((p) => p['pin_id'] == pinId)
+      .map((p) => storage.publicUrl(StorageService.pinPhotos, p['storage_path'] as String))
+      .toList();
 
   Pin _pin(Map<String, dynamic> r) => Pin.fromRow(r, photos: _photos(r['id'] as String));
 
   Map<String, dynamic> _insert(Map<String, dynamic> row) {
     final id = DemoDb.newId();
     final r = {
-      'id': id, 'categories': <String>[], 'confirmations': 0, 'share_token': id.substring(0, 12),
-      'created_at': DemoDb.nowIso(), 'updated_at': DemoDb.nowIso(), ...row,
+      'id': id,
+      'categories': <String>[],
+      'confirmations': 0,
+      'share_token': id.substring(0, 12),
+      'created_at': DemoDb.nowIso(),
+      'updated_at': DemoDb.nowIso(),
+      ...row,
     };
     db.pins[id] = r;
     return r;
@@ -264,11 +289,11 @@ class DemoPinRepository implements PinRepository {
 
   @override
   Future<List<Pin>> nearby(AppMode mode, double lat, double lng, {double radiusMi = 15}) => _later(() {
-        final rows = db.pins.values.where((p) => p['mode'] == mode.id && p['status'] == 'live').toList();
-        final now = DateTime.now();
-        rows.removeWhere((p) => p['closes_at'] != null && DateTime.parse(p['closes_at'] as String).isBefore(now));
-        return rows.map(_pin).toList();
-      });
+    final rows = db.pins.values.where((p) => p['mode'] == mode.id && p['status'] == 'live').toList();
+    final now = DateTime.now();
+    rows.removeWhere((p) => p['closes_at'] != null && DateTime.parse(p['closes_at'] as String).isBefore(now));
+    return rows.map(_pin).toList();
+  });
 
   @override
   Future<Pin?> byId(String id) => _later(() => db.pins[id] == null ? null : _pin(db.pins[id]!));
@@ -279,10 +304,10 @@ class DemoPinRepository implements PinRepository {
 
   @override
   Future<List<Pin>> mine(String userId) => _later(() {
-        final rows = db.pins.values.where((p) => p['owner_id'] == userId).toList()
-          ..sort((a, b) => (b['created_at'] as String).compareTo(a['created_at'] as String));
-        return rows.map(_pin).toList();
-      });
+    final rows = db.pins.values.where((p) => p['owner_id'] == userId).toList()
+      ..sort((a, b) => (b['created_at'] as String).compareTo(a['created_at'] as String));
+    return rows.map(_pin).toList();
+  });
 
   @override
   Future<Pin> createHosted({
@@ -299,9 +324,20 @@ class DemoPinRepository implements PinRepository {
     List<XFile> photos = const [],
   }) async {
     final r = _insert({
-      'mode': 'yard_sales', 'kind': 'yard_sale', 'origin': 'host', 'owner_id': ownerId, 'name': name, 'address': address,
-      'lat': lat, 'lng': lng, 'opens_at': DemoDb.iso(opensAt), 'closes_at': DemoDb.iso(closesAt), 'categories': categories,
-      'notes': notes, 'early_birds': earlyBirds, 'status': 'live',
+      'mode': 'yard_sales',
+      'kind': 'yard_sale',
+      'origin': 'host',
+      'owner_id': ownerId,
+      'name': name,
+      'address': address,
+      'lat': lat,
+      'lng': lng,
+      'opens_at': DemoDb.iso(opensAt),
+      'closes_at': DemoDb.iso(closesAt),
+      'categories': categories,
+      'notes': notes,
+      'early_birds': earlyBirds,
+      'status': 'live',
     });
     for (final f in photos) {
       await addPhoto(r['id'] as String, ownerId, f);
@@ -323,9 +359,18 @@ class DemoPinRepository implements PinRepository {
     required XFile signPhoto,
   }) async {
     final r = _insert({
-      'mode': mode.id, 'kind': mode == AppMode.cardDrops ? 'store' : 'yard_sale', 'origin': 'spotted', 'owner_id': userId,
-      'name': name, 'address': address, 'lat': lat, 'lng': lng, 'opens_at': opensAt == null ? null : DemoDb.iso(opensAt),
-      'closes_at': closesAt == null ? null : DemoDb.iso(closesAt), 'listing_url': listingUrl, 'status': 'pending',
+      'mode': mode.id,
+      'kind': mode == AppMode.cardDrops ? 'store' : 'yard_sale',
+      'origin': 'spotted',
+      'owner_id': userId,
+      'name': name,
+      'address': address,
+      'lat': lat,
+      'lng': lng,
+      'opens_at': opensAt == null ? null : DemoDb.iso(opensAt),
+      'closes_at': closesAt == null ? null : DemoDb.iso(closesAt),
+      'listing_url': listingUrl,
+      'status': 'pending',
     });
     await addPhoto(r['id'] as String, userId, signPhoto);
     return _pin(r);
@@ -333,13 +378,24 @@ class DemoPinRepository implements PinRepository {
 
   @override
   Future<Pin> ensureStorePin(Business b) => _later(() {
-        final existing = db.pins.values.where((p) => p['mode'] == 'card_drops' && p['place_id'] != null && p['place_id'] == b.placeId).firstOrNull;
-        if (existing != null) return _pin(existing);
-        return _pin(_insert({
-          'mode': 'card_drops', 'kind': 'store', 'origin': 'places', 'place_id': b.placeId, 'name': b.name,
-          'address': b.address, 'lat': b.lat, 'lng': b.lng, 'status': 'live',
-        }));
-      });
+    final existing = db.pins.values
+        .where((p) => p['mode'] == 'card_drops' && p['place_id'] != null && p['place_id'] == b.placeId)
+        .firstOrNull;
+    if (existing != null) return _pin(existing);
+    return _pin(
+      _insert({
+        'mode': 'card_drops',
+        'kind': 'store',
+        'origin': 'places',
+        'place_id': b.placeId,
+        'name': b.name,
+        'address': b.address,
+        'lat': b.lat,
+        'lng': b.lng,
+        'status': 'live',
+      }),
+    );
+  });
 
   @override
   Future<void> addPhoto(String pinId, String userId, XFile file) async {
@@ -354,8 +410,9 @@ class DemoPinRepository implements PinRepository {
   Future<void> update(String pinId, Map<String, dynamic> patch) async => db.pins[pinId]?.addAll(patch);
 
   @override
-  Future<List<Pin>> pendingForAdmin() =>
-      _later(() => db.pins.values.where((p) => p['status'] == 'pending' || p['status'] == 'removed').map(_pin).toList());
+  Future<List<Pin>> pendingForAdmin() => _later(
+    () => db.pins.values.where((p) => p['status'] == 'pending' || p['status'] == 'removed').map(_pin).toList(),
+  );
 }
 
 class DemoReportRepository implements ReportRepository {
@@ -366,31 +423,39 @@ class DemoReportRepository implements ReportRepository {
 
   Map<String, dynamic> _withProduct(Map<String, dynamic> r) {
     final p = r['product_id'] == null ? null : db.products[r['product_id']];
-    return {...r, 'products': p == null ? null : {'display_name': p['display_name']}};
+    return {
+      ...r,
+      'products': p == null ? null : {'display_name': p['display_name']},
+    };
   }
 
   @override
   Future<Report> create(ReportDraft draft, String userId) => _later(() {
-        final trust = (db.profiles[userId]?['trust_score'] as int?) ?? 50;
-        if (trust < 10) throw StateError('Your trust score is too low to report right now.');
-        final hourAgo = DateTime.now().subtract(const Duration(hours: 1));
-        final recent = db.reports.values.where((r) =>
-            r['user_id'] == userId && r['pin_id'] == draft.pinId && DateTime.parse(r['created_at'] as String).isAfter(hourAgo));
-        if (recent.length >= 3) throw StateError('You can report this place 3 times an hour. Try again later.');
-        final id = DemoDb.newId();
-        final row = {...draft.toInsert(userId), 'id': id, 'trust_at_filing': trust, 'created_at': DemoDb.nowIso()};
-        db.reports[id] = row;
-        final pin = db.pins[draft.pinId];
-        if (pin != null && pin['origin'] == 'spotted' && pin['owner_id'] != userId) {
-          pin['confirmations'] = (pin['confirmations'] as int) + 1;
-          if (pin['status'] == 'pending') pin['status'] = 'live';
-        }
-        db.profiles[userId]?['trust_score'] = (trust + 1).clamp(0, 100);
-        return Report.fromRow(_withProduct(row));
-      });
+    final trust = (db.profiles[userId]?['trust_score'] as int?) ?? 50;
+    if (trust < 10) throw StateError('Your trust score is too low to report right now.');
+    final hourAgo = DateTime.now().subtract(const Duration(hours: 1));
+    final recent = db.reports.values.where(
+      (r) =>
+          r['user_id'] == userId &&
+          r['pin_id'] == draft.pinId &&
+          DateTime.parse(r['created_at'] as String).isAfter(hourAgo),
+    );
+    if (recent.length >= 3) throw StateError('You can report this place 3 times an hour. Try again later.');
+    final id = DemoDb.newId();
+    final row = {...draft.toInsert(userId), 'id': id, 'trust_at_filing': trust, 'created_at': DemoDb.nowIso()};
+    db.reports[id] = row;
+    final pin = db.pins[draft.pinId];
+    if (pin != null && pin['origin'] == 'spotted' && pin['owner_id'] != userId) {
+      pin['confirmations'] = (pin['confirmations'] as int) + 1;
+      if (pin['status'] == 'pending') pin['status'] = 'live';
+    }
+    db.profiles[userId]?['trust_score'] = (trust + 1).clamp(0, 100);
+    return Report.fromRow(_withProduct(row));
+  });
 
-  List<Map<String, dynamic>> _forPin(String pinId) => db.reports.values.where((r) => r['pin_id'] == pinId).toList()
-    ..sort((a, b) => (b['created_at'] as String).compareTo(a['created_at'] as String));
+  List<Map<String, dynamic>> _forPin(String pinId) =>
+      db.reports.values.where((r) => r['pin_id'] == pinId).toList()
+        ..sort((a, b) => (b['created_at'] as String).compareTo(a['created_at'] as String));
 
   @override
   Future<List<Report>> recentForPin(String pinId, {int limit = 10}) =>
@@ -398,21 +463,22 @@ class DemoReportRepository implements ReportRepository {
 
   @override
   Future<Map<String, Report>> latestForPins(List<String> pinIds) => _later(() {
-        final cutoff = DateTime.now().subtract(const Duration(hours: 24));
-        final out = <String, Report>{};
-        for (final id in pinIds) {
-          final latest = _forPin(id).where((r) => DateTime.parse(r['created_at'] as String).isAfter(cutoff)).firstOrNull;
-          if (latest != null) out[id] = Report.fromRow(_withProduct(latest));
-        }
-        return out;
-      });
+    final cutoff = DateTime.now().subtract(const Duration(hours: 24));
+    final out = <String, Report>{};
+    for (final id in pinIds) {
+      final latest = _forPin(id).where((r) => DateTime.parse(r['created_at'] as String).isAfter(cutoff)).firstOrNull;
+      if (latest != null) out[id] = Report.fromRow(_withProduct(latest));
+    }
+    return out;
+  });
 
   /// Mirrors migration 006: trusted positive reports in the last 90 days,
   /// bucketed by local weekday × hour.
   StoreSummary _summary(String pinId) {
     final cutoff = DateTime.now().subtract(const Duration(days: 90));
-    final rows = _forPin(pinId).where((r) =>
-        DateTime.parse(r['created_at'] as String).isAfter(cutoff) && (r['trust_at_filing'] as int? ?? 50) >= 30);
+    final rows = _forPin(pinId).where(
+      (r) => DateTime.parse(r['created_at'] as String).isAfter(cutoff) && (r['trust_at_filing'] as int? ?? 50) >= 30,
+    );
     final buckets = <(int, int), int>{};
     final days = List.filled(7, 0);
     var hits = 0;
@@ -442,43 +508,83 @@ class DemoReportRepository implements ReportRepository {
   Future<StoreSummary> storeSummary(String pinId) => _later(() => _summary(pinId));
 
   @override
-  Future<Map<String, StoreSummary>> summaries(List<String> pinIds) => _later(() => {for (final id in pinIds) id: _summary(id)});
+  Future<Map<String, StoreSummary>> summaries(List<String> pinIds) =>
+      _later(() => {for (final id in pinIds) id: _summary(id)});
 
   @override
   Future<void> delete(String reportId) async => db.reports.remove(reportId);
 
   @override
-  Stream<List<Map<String, dynamic>>> stream() => const Stream.empty();
+  Stream<List<Map<String, dynamic>>> stream() async* {
+    List<Map<String, dynamic>> latest() =>
+        (db.reports.values.toList()..sort((a, b) => (b['created_at'] as String).compareTo(a['created_at'] as String)))
+            .take(50)
+            .toList();
+    yield latest();
+    // Demo only: a community sighting arrives shortly after launch, so the live-drop banner can be seen.
+    await Future<void>.delayed(const Duration(seconds: 20));
+    final target = db.pins.values.where((p) => p['place_id'] == 'pl_target_central').firstOrNull;
+    final etb = db.products.values
+        .where((p) => p['display_name'] == 'Prismatic Evolutions — Elite Trainer Box')
+        .firstOrNull;
+    if (target == null) return;
+    final id = DemoDb.newId();
+    db.reports[id] = {
+      'id': id,
+      'pin_id': target['id'],
+      'user_id': 'community-7',
+      'status': 'in_stock',
+      'product_id': etb?['id'],
+      'qty': 4,
+      'price_cents': 4999,
+      'purchase_limit': 2,
+      'line_present': false,
+      'trust_at_filing': 72,
+      'created_at': DemoDb.nowIso(),
+    };
+    yield latest();
+  }
 }
 
 class DemoProductRepository implements ProductRepository {
   DemoProductRepository(this.db);
   final DemoDb db;
 
-  List<Product> _where(bool Function(Map<String, dynamic>) test) => db.products.values.where(test).map(Product.fromRow).toList();
+  List<Product> _where(bool Function(Map<String, dynamic>) test) =>
+      db.products.values.where(test).map(Product.fromRow).toList();
 
   @override
   Future<List<Product>> canonical() => _later(() {
-        final list = _where((p) => p['is_canonical'] == true);
-        list.sort((a, b) => (b.releaseDate ?? DateTime(2000)).compareTo(a.releaseDate ?? DateTime(2000)));
-        // Show only released sets first, like the catalog a shopper would see.
-        final now = DateTime.now();
-        return [...list.where((p) => p.releaseDate == null || !p.releaseDate!.isAfter(now)), ...list.where((p) => p.releaseDate != null && p.releaseDate!.isAfter(now))];
-      });
+    final list = _where((p) => p['is_canonical'] == true);
+    list.sort((a, b) => (b.releaseDate ?? DateTime(2000)).compareTo(a.releaseDate ?? DateTime(2000)));
+    // Show only released sets first, like the catalog a shopper would see.
+    final now = DateTime.now();
+    return [
+      ...list.where((p) => p.releaseDate == null || !p.releaseDate!.isAfter(now)),
+      ...list.where((p) => p.releaseDate != null && p.releaseDate!.isAfter(now)),
+    ];
+  });
 
   @override
-  Future<List<Product>> search(String q) =>
-      _later(() => _where((p) => (p['display_name'] as String).toLowerCase().contains(q.toLowerCase())).take(30).toList());
+  Future<List<Product>> search(String q) => _later(
+    () => _where((p) => (p['display_name'] as String).toLowerCase().contains(q.toLowerCase())).take(30).toList(),
+  );
 
   @override
   Future<Product> addFreeText(String name, String userId) => _later(() {
-        final id = DemoDb.newId();
-        db.products[id] = {
-          'id': id, 'game': 'other', 'set_name': name, 'sku_type': 'other', 'display_name': name, 'is_canonical': false,
-          'created_by': userId, 'created_at': DemoDb.nowIso(),
-        };
-        return Product.fromRow(db.products[id]!);
-      });
+    final id = DemoDb.newId();
+    db.products[id] = {
+      'id': id,
+      'game': 'other',
+      'set_name': name,
+      'sku_type': 'other',
+      'display_name': name,
+      'is_canonical': false,
+      'created_by': userId,
+      'created_at': DemoDb.nowIso(),
+    };
+    return Product.fromRow(db.products[id]!);
+  });
 
   @override
   Future<Set<String>> follows(String userId) async => {...db.follows};
@@ -500,32 +606,41 @@ class DemoFeatureRequestRepository implements FeatureRequestRepository {
 
   @override
   Future<List<FeatureRequest>> all({String sort = 'upvotes', String? category}) => _later(() {
-        final rows = db.featureRequests.values
-            .where((r) => r['status'] != 'queued' && r['status'] != 'discarded' && (category == null || r['category'] == category))
-            .toList();
-        int byVotes(Map a, Map b) => (b['upvote_count'] as int).compareTo(a['upvote_count'] as int);
-        rows.sort(switch (sort) {
-          'status' => (a, b) => (a['status'] as String).compareTo(b['status'] as String),
-          'date' => (a, b) => (b['created_at'] as String).compareTo(a['created_at'] as String),
-          _ => byVotes,
-        });
-        return _list(rows);
-      });
+    final rows = db.featureRequests.values
+        .where(
+          (r) =>
+              r['status'] != 'queued' && r['status'] != 'discarded' && (category == null || r['category'] == category),
+        )
+        .toList();
+    int byVotes(Map a, Map b) => (b['upvote_count'] as int).compareTo(a['upvote_count'] as int);
+    rows.sort(switch (sort) {
+      'status' => (a, b) => (a['status'] as String).compareTo(b['status'] as String),
+      'date' => (a, b) => (b['created_at'] as String).compareTo(a['created_at'] as String),
+      _ => byVotes,
+    });
+    return _list(rows);
+  });
 
   @override
-  Future<List<FeatureRequest>> mine(String userId) => _later(() => _list(db.featureRequests.values.where((r) => r['user_id'] == userId)));
+  Future<List<FeatureRequest>> mine(String userId) =>
+      _later(() => _list(db.featureRequests.values.where((r) => r['user_id'] == userId)));
 
   @override
   Future<List<FeatureRequest>> adminQueue() => _later(() => _list(db.featureRequests.values));
 
   @override
   Future<FeatureRequest> create(Map<String, dynamic> insert) => _later(() {
-        final id = DemoDb.newId();
-        db.featureRequests[id] = {
-          ...insert, 'id': id, 'status': 'queued', 'upvote_count': 0, 'org_count': 0, 'created_at': DemoDb.nowIso(),
-        };
-        return FeatureRequest.fromRow(db.featureRequests[id]!);
-      });
+    final id = DemoDb.newId();
+    db.featureRequests[id] = {
+      ...insert,
+      'id': id,
+      'status': 'queued',
+      'upvote_count': 0,
+      'org_count': 0,
+      'created_at': DemoDb.nowIso(),
+    };
+    return FeatureRequest.fromRow(db.featureRequests[id]!);
+  });
 
   @override
   Future<Set<String>> myUpvotes(String userId) async =>
@@ -547,19 +662,21 @@ class DemoFeatureRequestRepository implements FeatureRequestRepository {
   }
 
   @override
-  Future<void> setStatus(String id, String status, {String? summary, String? parentId}) async => db.featureRequests[id]?.addAll({
-        'status': status,
-        'summary': ?summary,
-        'parent_id': ?parentId,
-      });
+  Future<void> setStatus(String id, String status, {String? summary, String? parentId}) async =>
+      db.featureRequests[id]?.addAll({'status': status, 'summary': ?summary, 'parent_id': ?parentId});
 
   @override
   Future<List<Map<String, dynamic>>> comments(String requestId) async =>
       db.comments.where((c) => c['request_id'] == requestId).toList();
 
   @override
-  Future<void> comment(String userId, String requestId, String body) async =>
-      db.comments.add({'id': DemoDb.newId(), 'request_id': requestId, 'user_id': userId, 'body': body, 'created_at': DemoDb.nowIso()});
+  Future<void> comment(String userId, String requestId, String body) async => db.comments.add({
+    'id': DemoDb.newId(),
+    'request_id': requestId,
+    'user_id': userId,
+    'body': body,
+    'created_at': DemoDb.nowIso(),
+  });
 }
 
 class DemoAlertRepository implements AlertRepository {
@@ -568,10 +685,10 @@ class DemoAlertRepository implements AlertRepository {
 
   @override
   Future<List<AlertItem>> list(String userId) => _later(() {
-        final rows = db.alerts.values.where((a) => a['user_id'] == userId).toList()
-          ..sort((a, b) => (b['sent_at'] as String).compareTo(a['sent_at'] as String));
-        return rows.map(AlertItem.fromRow).toList();
-      });
+    final rows = db.alerts.values.where((a) => a['user_id'] == userId).toList()
+      ..sort((a, b) => (b['sent_at'] as String).compareTo(a['sent_at'] as String));
+    return rows.map(AlertItem.fromRow).toList();
+  });
 
   @override
   Future<void> markOpened(String id) async => db.alerts[id]?['opened_at'] = DemoDb.nowIso();
@@ -595,17 +712,17 @@ class DemoShareRepository implements ShareRepository {
 
   @override
   Future<SharedRoute?> fetch(String token) => _later(() {
-        final routeId = db.shares[token];
-        final r = routeId == null ? null : db.routes[routeId];
-        if (r == null) return null;
-        final stops = db.stops.values.where((s) => s['route_id'] == routeId).toList()
-          ..sort((a, b) => (a['stop_order'] as int).compareTo(b['stop_order'] as int));
-        return SharedRoute(
-          name: r['name'] as String,
-          mode: r['mode'] as String,
-          stops: stops.map(Stop.fromRow).toList(),
-          canFork: true,
-          ownerHandle: db.profiles[r['user_id']]?['handle'] as String?,
-        );
-      });
+    final routeId = db.shares[token];
+    final r = routeId == null ? null : db.routes[routeId];
+    if (r == null) return null;
+    final stops = db.stops.values.where((s) => s['route_id'] == routeId).toList()
+      ..sort((a, b) => (a['stop_order'] as int).compareTo(b['stop_order'] as int));
+    return SharedRoute(
+      name: r['name'] as String,
+      mode: r['mode'] as String,
+      stops: stops.map(Stop.fromRow).toList(),
+      canFork: true,
+      ownerHandle: db.profiles[r['user_id']]?['handle'] as String?,
+    );
+  });
 }

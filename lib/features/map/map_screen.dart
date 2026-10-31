@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -21,6 +22,7 @@ import '../../data/models/store_summary.dart';
 import '../../data/models/stop.dart';
 import '../../data/services/listing_link.dart';
 import '../../modes/mode_pack.dart';
+import '../../state/auth_state.dart';
 import '../../state/community_state.dart';
 import '../../state/location_state.dart';
 import '../../state/map_state.dart';
@@ -48,6 +50,11 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
   bool _movedToUser = false;
   String? _quickStarting;
 
+  /// Report ids already on screen; null until the stream's first snapshot.
+  Set<String>? _seenReports;
+  ({Pin pin, String status})? _liveDrop;
+  Timer? _liveDropTimer;
+
   @override
   void initState() {
     super.initState();
@@ -58,6 +65,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _liveDropTimer?.cancel();
     _search.dispose();
     super.dispose();
   }
@@ -186,18 +194,20 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
       final sum = summaries[p.id];
       final window = sum == null ? null : windowOnDay(sum.bestWindows, now);
       byId[b.identity] = (b, rep?.productLabel.isNotEmpty == true ? rep!.productLabel : p.categories.join(', '));
-      candidates.add(SpotCandidate(
-        id: b.identity,
-        lat: p.lat,
-        lng: p.lng,
-        opensAt: p.opensAt,
-        closesAt: p.closesAt,
-        reportStatus: rep?.status,
-        reportPositive: rep != null && pack.reportStatuses.any((s) => s.value == rep.status && s.positive),
-        reportedAt: rep?.createdAt,
-        tier: sum?.tier ?? RestockTier.unknown,
-        restockToday: window,
-      ));
+      candidates.add(
+        SpotCandidate(
+          id: b.identity,
+          lat: p.lat,
+          lng: p.lng,
+          opensAt: p.opensAt,
+          closesAt: p.closesAt,
+          reportStatus: rep?.status,
+          reportPositive: rep != null && pack.reportStatuses.any((s) => s.value == rep.status && s.positive),
+          reportedAt: rep?.createdAt,
+          tier: sum?.tier ?? RestockTier.unknown,
+          restockToday: window,
+        ),
+      );
     }
     return [
       for (final s in rankSpots(candidates, fromLat: origin.latitude, fromLng: origin.longitude, now: now))
@@ -227,7 +237,13 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
     try {
       await _runSearch();
       if (!mounted || !plan) return;
-      final entries = _spotEntries(pack: pack, map: ref.read(mapProvider), pins: const [], latest: const {}, summaries: const {});
+      final entries = _spotEntries(
+        pack: pack,
+        map: ref.read(mapProvider),
+        pins: const [],
+        latest: const {},
+        summaries: const {},
+      );
       if (entries.isNotEmpty) _plan(pack, entries);
     } finally {
       if (mounted) setState(() => _quickStarting = null);
@@ -246,6 +262,31 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
     if (prefs.hasSeenPlanTip) return;
     prefs.setHasSeenPlanTip(true);
     if (mounted) setState(() {});
+  }
+
+  /// Realtime: a positive report on a visible pin refreshes the map and drops a banner.
+  void _onReports(List<Map<String, dynamic>> rows, ModePack pack, List<Pin> pins) {
+    final ids = {for (final r in rows) r['id'] as String};
+    final seen = _seenReports;
+    _seenReports = {...?seen, ...ids};
+    if (seen == null) return; // first snapshot is history, not news
+    final me = ref.read(currentUserIdProvider);
+    final fresh = rows.where((r) => !seen.contains(r['id']) && r['user_id'] != me).toList();
+    if (fresh.isEmpty) return;
+    ref.invalidate(latestReportsProvider);
+    ref.invalidate(storeSummariesProvider);
+    for (final r in fresh) {
+      final positive = pack.reportStatuses.any((s) => s.value == r['status'] && s.positive);
+      final pin = pins.where((p) => p.id == r['pin_id']).firstOrNull;
+      if (!positive || pin == null) continue;
+      HapticFeedback.mediumImpact();
+      _liveDropTimer?.cancel();
+      setState(() => _liveDrop = (pin: pin, status: r['status'] as String));
+      _liveDropTimer = Timer(const Duration(seconds: 10), () {
+        if (mounted) setState(() => _liveDrop = null);
+      });
+      return;
+    }
   }
 
   String _statusLabel(ModePack pack, String status) =>
@@ -294,9 +335,17 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
         ? (ref.watch(storeSummariesProvider(joined)).value ?? const <String, StoreSummary>{})
         : const <String, StoreSummary>{};
 
+    if (pack.communityReports) {
+      ref.listen(reportStreamProvider, (_, next) {
+        final rows = next.value;
+        if (rows != null) _onReports(rows, pack, visiblePins);
+      });
+    }
+
     final spots = _spotEntries(pack: pack, map: map, pins: visiblePins, latest: latest, summaries: summaries);
     final showDeck = map.viewMode == MapViewMode.map && spots.isNotEmpty;
-    final showQuickStart = map.viewMode == MapViewMode.map &&
+    final showQuickStart =
+        map.viewMode == MapViewMode.map &&
         spots.isEmpty &&
         map.query.isEmpty &&
         map.draftStops.isEmpty &&
@@ -309,28 +358,38 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
       final i = map.draftIndex(b);
       final s = i < 0 ? spec : PinSpec.number(i + 1, fill: c.primary, ink: c.onPrimary);
       final icon = pinIcon(s);
-      markers.add(Marker(
-        markerId: MarkerId(id),
-        position: LatLng(b.lat, b.lng),
-        icon: icon ?? BitmapDescriptor.defaultMarker,
-        visible: icon != null,
-        anchor: s.anchor,
-        alpha: alpha,
-        zIndexInt: i < 0 ? z : 10,
-        infoWindow: InfoWindow(title: b.name),
-        onTap: onTap,
-      ));
+      markers.add(
+        Marker(
+          markerId: MarkerId(id),
+          position: LatLng(b.lat, b.lng),
+          icon: icon ?? BitmapDescriptor.defaultMarker,
+          visible: icon != null,
+          anchor: s.anchor,
+          alpha: alpha,
+          zIndexInt: i < 0 ? z : 10,
+          infoWindow: InfoWindow(title: b.name),
+          onTap: onTap,
+        ),
+      );
     }
 
     for (final b in map.results) {
-      add('r:${b.identity}', b, PinSpec.pill(shortPlaceName(b.name), fill: c.surfaceHighest, ink: c.onSurface, border: c.primary),
-          () => showBusinessSheet(context, b));
+      add(
+        'r:${b.identity}',
+        b,
+        PinSpec.pill(shortPlaceName(b.name), fill: c.surfaceHighest, ink: c.onSurface, border: c.primary),
+        () => showBusinessSheet(context, b),
+      );
     }
     for (final d in map.draftStops) {
       if (map.results.any((r) => r.identity == d.business.identity)) continue;
       if (visiblePins.any((p) => p.id == d.business.pinId)) continue;
-      add('d:${d.id}', d.business, PinSpec.pill(shortPlaceName(d.business.name), fill: c.surfaceHighest, ink: c.onSurface),
-          () => showBusinessSheet(context, d.business));
+      add(
+        'd:${d.id}',
+        d.business,
+        PinSpec.pill(shortPlaceName(d.business.name), fill: c.surfaceHighest, ink: c.onSurface),
+        () => showBusinessSheet(context, d.business),
+      );
     }
     final now = DateTime.now();
     for (final p in visiblePins) {
@@ -340,25 +399,40 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
       if (p.opensAt != null) {
         final ended = p.closesAt != null && !p.closesAt!.isAfter(now);
         final open = !now.isBefore(p.opensAt!) && !ended;
-        spec = PinSpec.pill(compactWindow(p.opensAt!, p.closesAt),
-            fill: c.surfaceHighest, ink: c.onSurface, border: open ? c.tertiary : c.outline, dot: open ? c.tertiary : null);
+        spec = PinSpec.pill(
+          compactWindow(p.opensAt!, p.closesAt),
+          fill: c.surfaceHighest,
+          ink: c.onSurface,
+          border: open ? c.tertiary : c.outline,
+          dot: open ? c.tertiary : null,
+        );
         if (ended) alpha = 0.45;
       } else {
         final rep = latest[p.id];
         final filter = map.productFilter;
-        final live = rep != null &&
+        final live =
+            rep != null &&
             isFresh(rep.createdAt) &&
             pack.reportStatuses.any((s) => s.value == rep.status && s.positive) &&
             (filter == null || rep.productLabel.toLowerCase().contains(filter.toLowerCase()));
         final tier = summaries[p.id]?.tier ?? RestockTier.unknown;
         spec = live
-            ? PinSpec.pill('${shortPlaceName(p.name, max: 12)} · ${_statusLabel(pack, rep.status)}',
-                fill: c.tertiary, ink: c.onTertiary, halo: true)
-            : PinSpec.pill(shortPlaceName(p.name), fill: c.surfaceHighest, ink: c.onSurface, dot: switch (tier) {
-                RestockTier.unknown => c.outline,
-                RestockTier.emerging => c.warning,
-                RestockTier.established => c.statusDone,
-              });
+            ? PinSpec.pill(
+                '${shortPlaceName(p.name, max: 12)} · ${_statusLabel(pack, rep.status)}',
+                fill: c.tertiary,
+                ink: c.onTertiary,
+                halo: true,
+              )
+            : PinSpec.pill(
+                shortPlaceName(p.name),
+                fill: c.surfaceHighest,
+                ink: c.onSurface,
+                dot: switch (tier) {
+                  RestockTier.unknown => c.outline,
+                  RestockTier.emerging => c.warning,
+                  RestockTier.established => c.statusDone,
+                },
+              );
         if (live) z = 5;
       }
       add('p:${p.id}', _pinToBusiness(p), spec, () => showPinSheet(context, p), z: z, alpha: alpha);
@@ -479,6 +553,28 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
                     ),
                   ),
                 ),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                transitionBuilder: (child, a) => SizeTransition(
+                  sizeFactor: a,
+                  child: FadeTransition(opacity: a, child: child),
+                ),
+                child: _liveDrop == null
+                    ? const SizedBox(width: double.infinity)
+                    : Padding(
+                        key: ValueKey(_liveDrop),
+                        padding: const EdgeInsets.fromLTRB(Sp.s4, Sp.s2, Sp.s4, 0),
+                        child: _LiveDropBanner(
+                          label: '${_statusLabel(pack, _liveDrop!.status)} · ${shortPlaceName(_liveDrop!.pin.name)}',
+                          onTap: () {
+                            final pin = _liveDrop!.pin;
+                            setState(() => _liveDrop = null);
+                            _map?.animateCamera(CameraUpdate.newLatLng(LatLng(pin.lat, pin.lng)));
+                            showPinSheet(context, pin);
+                          },
+                        ),
+                      ),
+              ),
               if (map.error != null)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(Sp.s4, Sp.s2, Sp.s4, 0),
@@ -568,6 +664,54 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
           ),
         ),
       ],
+    );
+  }
+}
+
+class _LiveDropBanner extends StatelessWidget {
+  const _LiveDropBanner({required this.label, required this.onTap});
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.kn;
+    final t = Theme.of(context).textTheme;
+    return Semantics(
+      liveRegion: true,
+      child: Material(
+        color: c.tertiary,
+        borderRadius: BorderRadius.circular(Rad.full),
+        elevation: 4,
+        shadowColor: c.tertiary.withValues(alpha: 0.5),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(Rad.full),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: Sp.s4, vertical: Sp.s3),
+            child: Row(
+              children: [
+                Icon(Icons.bolt, color: c.onTertiary, size: 20),
+                const SizedBox(width: Sp.s2),
+                Text(
+                  'LIVE',
+                  style: t.labelSmall?.copyWith(color: c.onTertiary, fontWeight: FontWeight.w900, letterSpacing: 1.4),
+                ),
+                const SizedBox(width: Sp.s2),
+                Expanded(
+                  child: Text(
+                    '$label · just now',
+                    style: t.titleSmall?.copyWith(color: c.onTertiary),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Icon(Icons.chevron_right, color: c.onTertiary),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
