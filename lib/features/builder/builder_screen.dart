@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/logic/errors.dart';
 import '../../core/logic/geo.dart';
 import '../../core/logic/polyline.dart';
 import '../../core/logic/restock.dart';
@@ -154,7 +155,7 @@ class _BuilderScreenState extends ConsumerState<BuilderScreen> with PinIconsMixi
     } catch (e) {
       setState(() {
         _busy = false;
-        _error = e.toString();
+        _error = friendlyError(e);
       });
     }
   }
@@ -199,7 +200,7 @@ class _BuilderScreenState extends ConsumerState<BuilderScreen> with PinIconsMixi
     } catch (e) {
       setState(() {
         _busy = false;
-        _error = e.toString();
+        _error = friendlyError(e);
       });
     }
   }

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import '../../core/logic/errors.dart';
 import '../../core/logic/polyline.dart';
 import '../../core/theme/kn_colors.dart';
 import '../../core/theme/kn_theme.dart';
@@ -95,7 +96,7 @@ class _RunnerScreenState extends ConsumerState<RunnerScreen> with PinIconsMixin 
     } catch (e) {
       if (mounted) {
         setState(() => _logging = null);
-        toast(context, 'Couldn\'t save: $e');
+        toast(context, 'Couldn\'t save. ${friendlyError(e)}');
       }
     }
   }

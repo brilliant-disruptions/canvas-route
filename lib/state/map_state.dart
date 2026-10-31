@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../core/logic/errors.dart';
 import '../data/models/business.dart';
 import '../data/models/draft_stop.dart';
 import '../data/models/route_model.dart';
@@ -100,7 +101,7 @@ class MapNotifier extends Notifier<MapState> {
       final merged = <String, Business>{for (final b in results) b.identity: b};
       state = state.copyWith(results: merged.values.toList(), searching: false);
     } catch (e) {
-      state = state.copyWith(searching: false, error: e.toString());
+      state = state.copyWith(searching: false, error: 'Search failed. ${friendlyError(e)}');
     }
   }
 

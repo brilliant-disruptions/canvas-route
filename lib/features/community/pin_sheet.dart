@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/logic/errors.dart';
 import '../../core/env.dart';
 import '../../core/logic/restock.dart';
 import '../../core/theme/kn_colors.dart';
@@ -231,7 +232,7 @@ class PinSheet extends ConsumerWidget {
                                   toast(context, 'Thanks — shared with nearby ${pack.communityNoun}', icon: Icons.check);
                                 }
                               } catch (e) {
-                                if (context.mounted) toast(context, 'Couldn\'t report: $e');
+                                if (context.mounted) toast(context, friendlyError(e, denied: 'You can report a store 3 times an hour. Try again a bit later.'));
                               }
                             },
                     ),
@@ -240,7 +241,7 @@ class PinSheet extends ConsumerWidget {
             const SizedBox(height: Sp.s3),
             ...recent.when(
               loading: () => const [LinearProgressIndicator()],
-              error: (e, _) => [Text('$e', style: t.bodySmall)],
+              error: (e, _) => [Text(friendlyError(e), style: t.bodySmall)],
               data: (list) => list.isEmpty
                   ? [Text('No reports yet.', style: t.bodySmall?.copyWith(color: c.onSurfaceVariant))]
                   : [

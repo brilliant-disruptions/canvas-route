@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
+import '../../core/logic/errors.dart';
 import '../../core/env.dart';
 import '../../core/theme/kn_colors.dart';
 import '../../core/theme/kn_theme.dart';
@@ -56,7 +57,7 @@ class _HostSaleScreenState extends ConsumerState<HostSaleScreen> {
     setState(() => _busy = true);
     try {
       final geo = await ref.read(placesServiceProvider).geocode(addr);
-      if (geo == null) throw Exception('Couldn\'t find that address');
+      if (geo == null) throw StateError('Couldn\'t find that address. Check it and try again.');
       final pin = await ref.read(pinRepoProvider).createHosted(
             ownerId: ref.read(currentUserIdProvider)!,
             name: name,
@@ -78,7 +79,7 @@ class _HostSaleScreenState extends ConsumerState<HostSaleScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _busy = false);
-        toast(context, '$e');
+        toast(context, friendlyError(e));
       }
     }
   }

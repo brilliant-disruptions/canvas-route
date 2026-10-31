@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/logic/errors.dart';
 import '../../core/theme/kn_colors.dart';
 import '../../core/theme/kn_theme.dart';
 
@@ -272,8 +273,8 @@ class ErrorView extends StatelessWidget {
   @override
   Widget build(BuildContext context) => EmptyState(
         icon: Icons.error_outline,
-        title: 'Something went wrong',
-        body: error.toString(),
+        title: 'Couldn\'t load this',
+        body: friendlyError(error),
         action: onRetry == null ? null : OutlinedButton(onPressed: onRetry, child: const Text('Retry')),
       );
 }

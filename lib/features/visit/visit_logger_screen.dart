@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/logic/errors.dart';
 import '../../core/theme/kn_colors.dart';
 import '../../core/theme/kn_theme.dart';
 import '../../data/models/visit.dart';
@@ -68,7 +69,7 @@ class _VisitLoggerScreenState extends ConsumerState<VisitLoggerScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _saving = false);
-        toast(context, 'Couldn\'t save: $e');
+        toast(context, 'Couldn\'t save. ${friendlyError(e)}');
       }
     }
   }

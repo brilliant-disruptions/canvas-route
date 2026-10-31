@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/logic/errors.dart';
 import '../../core/theme/kn_colors.dart';
 import '../../core/theme/kn_theme.dart';
 import '../../data/models/pin.dart';
@@ -70,7 +71,7 @@ class _ReportSheetState extends ConsumerState<ReportSheet> {
     } catch (e) {
       if (mounted) {
         setState(() => _saving = false);
-        toast(context, 'Couldn\'t report: $e');
+        toast(context, friendlyError(e, denied: 'You can report a store 3 times an hour. Try again a bit later.'));
       }
     }
   }

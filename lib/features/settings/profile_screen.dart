@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/logic/errors.dart';
 import '../../core/logic/trust.dart';
 import '../../core/theme/kn_colors.dart';
 import '../../core/theme/kn_theme.dart';
@@ -50,7 +51,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       await ref.read(profileProvider.notifier).patch(patch);
       if (mounted) toast(context, 'Profile saved', icon: Icons.check);
     } catch (e) {
-      if (mounted) toast(context, 'Couldn\'t save: $e');
+      if (mounted) toast(context, 'Couldn\'t save. ${friendlyError(e)}');
     }
     if (mounted) setState(() => _saving = false);
   }

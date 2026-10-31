@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/logic/errors.dart';
 import '../../core/logic/restock.dart';
 import '../../core/logic/watchlist.dart';
 import '../../core/theme/kn_colors.dart';
@@ -150,7 +151,7 @@ class AlertsScreen extends ConsumerWidget {
             const SectionHeader('History'),
             ...alerts.when(
               loading: () => const [LinearProgressIndicator()],
-              error: (e, _) => [Text('$e')],
+              error: (e, _) => [Text(friendlyError(e))],
               data: (list) => list.isEmpty
                   ? [
                       Text(
