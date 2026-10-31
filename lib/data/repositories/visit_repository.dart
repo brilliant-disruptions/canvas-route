@@ -8,9 +8,22 @@ class VisitRepository {
     return rows.map(Visit.fromRow).toList();
   }
 
+  /// Every visit, newest first. Paged: the API returns at most 1000 rows a call,
+  /// and follow-ups and history must not silently lose older visits.
   Future<List<Visit>> forUser(String userId) async {
-    final rows = await sb.from('visits').select().eq('user_id', userId).order('updated_at', ascending: false);
-    return rows.map(Visit.fromRow).toList();
+    const page = 1000;
+    final out = <Visit>[];
+    for (var from = 0;; from += page) {
+      final rows = await sb
+          .from('visits')
+          .select()
+          .eq('user_id', userId)
+          .order('updated_at', ascending: false)
+          .order('id')
+          .range(from, from + page - 1);
+      out.addAll(rows.map(Visit.fromRow));
+      if (rows.length < page) return out;
+    }
   }
 
   /// One visit per stop; re-logging overwrites.

@@ -762,7 +762,7 @@ class DemoTripRepository implements TripRepository {
 
   @override
   Future<Trip> upsert(Map<String, dynamic> insert) => _later(() {
-    final existing = db.trips.values.where((t) => t['route_id'] == insert['route_id']).firstOrNull;
+    final existing = db.trips.values.where((t) => t['route_id'] == insert['route_id'] && t['day'] == insert['day']).firstOrNull;
     final row = existing ?? {'id': DemoDb.newId()};
     row.addAll(insert);
     db.trips[row['id'] as String] = row;

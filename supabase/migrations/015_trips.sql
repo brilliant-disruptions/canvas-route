@@ -1,11 +1,11 @@
--- Mileage log: one trip per route run, written when the run's summary opens.
+-- Mileage log: one trip per route per day, written when the run's summary opens.
 -- Distance is the drive between visited stops in visit order (home to the first
 -- stop is commuting under IRS rules, so it's left out). Trips outlive their route.
 
 create table if not exists public.trips (
   id            uuid primary key default gen_random_uuid(),
   user_id       uuid not null references public.profiles(id) on delete cascade,
-  route_id      uuid unique references public.routes(id) on delete set null,
+  route_id      uuid references public.routes(id) on delete set null,
   mode          text not null,
   route_name    text not null,
   day           date not null,
@@ -13,7 +13,8 @@ create table if not exists public.trips (
   stops_visited int  not null check (stops_visited >= 0),
   estimated     boolean not null default false,   -- on-device estimate, not Google's
   created_at    timestamptz not null default now(),
-  updated_at    timestamptz not null default now()
+  updated_at    timestamptz not null default now(),
+  unique (route_id, day)  -- running the same route on another day is another trip
 );
 create trigger trips_set_updated_at before update on public.trips
   for each row execute function public.set_updated_at();

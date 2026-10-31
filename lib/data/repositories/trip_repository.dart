@@ -7,9 +7,9 @@ class TripRepository {
     return rows.map(Trip.fromRow).toList();
   }
 
-  /// One trip per route; logging the same run again updates it.
+  /// One trip per route per day; logging that run again updates it.
   Future<Trip> upsert(Map<String, dynamic> insert) async {
-    final row = await sb.from('trips').upsert(insert, onConflict: 'route_id').select().single();
+    final row = await sb.from('trips').upsert(insert, onConflict: 'route_id,day').select().single();
     return Trip.fromRow(row);
   }
 }
