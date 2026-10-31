@@ -111,4 +111,5 @@ const cardDropsPack = ModePack(
     ProPerk(Icons.calendar_month_outlined, 'Restock calendar for your stores'),
   ],
   productCatalog: true,
+  pinsPlacesStops: true,
 );

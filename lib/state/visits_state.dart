@@ -1,7 +1,6 @@
 import 'package:cross_file/cross_file.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../data/models/app_mode.dart';
 import '../data/models/report.dart';
 import '../data/models/route_model.dart';
 import '../data/models/stop.dart';
@@ -58,7 +57,7 @@ class VisitLogger {
     if (status == null) return false;
 
     var pinId = stop.pinId;
-    if (pinId == null && route.mode == AppMode.cardDrops && stop.placeId != null) {
+    if (pinId == null && pack.pinsPlacesStops && stop.placeId != null) {
       final pin = await ref.read(pinRepoProvider).ensureStorePin(stop.toBusiness());
       pinId = pin.id;
     }

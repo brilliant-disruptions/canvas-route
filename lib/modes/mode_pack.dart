@@ -80,6 +80,8 @@ class ModePack {
     this.summaryTotals = const [],
     this.supportsHosting = false,
     this.hostSignHeadline = 'SALE',
+    this.profileAsksCompany = false,
+    this.pinsPlacesStops = false,
     this.productCatalog = false,
   });
 
@@ -167,6 +169,12 @@ class ModePack {
 
   /// The big word on a host's printable sign.
   final String hostSignHeadline;
+
+  /// Profile asks for company and title (they head CSV exports).
+  final bool profileAsksCompany;
+
+  /// A logged Places stop gets a community store pin so its report has a home.
+  final bool pinsPlacesStops;
   final bool productCatalog;
 
   bool get usesTimeWindows => optimizer != OptimizerKind.distance;

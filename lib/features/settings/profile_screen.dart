@@ -68,7 +68,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       _pick['acquisition'] = p.acquisition;
       _init = true;
     }
-    final isSales = pack.id.name == 'fieldSales';
+    final isSales = pack.profileAsksCompany;
 
     Widget picker(String key, String label, List<String> opts) => DropdownButtonFormField<String>(
           initialValue: _pick[key],
