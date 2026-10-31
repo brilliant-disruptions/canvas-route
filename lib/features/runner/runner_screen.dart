@@ -9,9 +9,12 @@ import '../../core/theme/kn_theme.dart';
 import '../../data/models/directions.dart';
 import '../../data/models/route_model.dart';
 import '../../data/models/stop.dart';
+import '../../data/models/visit.dart';
+import '../../modes/mode_pack.dart';
 import '../../state/profile_state.dart';
 import '../../state/providers.dart';
 import '../../state/routes_state.dart';
+import '../../state/visits_state.dart';
 import '../../ui/map/pin_icons.dart';
 import '../../ui/widgets/kn_widgets.dart';
 
@@ -28,6 +31,7 @@ class _RunnerScreenState extends ConsumerState<RunnerScreen> with PinIconsMixin 
   String? _currentStopId;
   List<LatLng> _polyline = const [];
   bool _prompted = false;
+  String? _logging;
 
   @override
   void initState() {
@@ -68,6 +72,42 @@ class _RunnerScreenState extends ConsumerState<RunnerScreen> with PinIconsMixin 
       if (mounted) setState(() => _polyline = decodePolyline(r.encodedPolyline).map((p) => LatLng(p.lat, p.lng)).toList());
     } catch (_) {
       // Map still works without the overview polyline.
+    }
+  }
+
+  /// One tap from the runner: log the outcome, share it, move to the next stop.
+  Future<void> _quickLog(ModePack pack, RouteModel route, Stop stop, String outcome) async {
+    setState(() => _logging = outcome);
+    try {
+      final r = await ref.read(visitLoggerProvider).log(route: route, stop: stop, draft: VisitDraft(values: {'outcome': outcome}));
+      if (!mounted) return;
+      setState(() {
+        _logging = null;
+        _currentStopId = null;
+      });
+      final next = ref.read(routeByIdProvider(route.id))?.stops.where((s) => !s.visited).firstOrNull;
+      if (next != null) _map?.animateCamera(CameraUpdate.newLatLng(LatLng(next.lat, next.lng)));
+      final c = context.kn;
+      final router = GoRouter.of(context); // the snackbar can outlive this screen
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+          content: Row(children: [
+            Icon(pack.outcomeIcon(outcome), size: 18, color: c.tertiary),
+            const SizedBox(width: Sp.s2),
+            Expanded(child: Text('$outcome · ${stop.name}${r.shared ? '\nShared with nearby ${pack.communityNoun}' : ''}')),
+          ]),
+          action: SnackBarAction(
+            label: 'Add details',
+            textColor: c.tertiary,
+            onPressed: () => router.push('/visit/${route.id}/${stop.id}'),
+          ),
+        ));
+    } catch (e) {
+      if (mounted) {
+        setState(() => _logging = null);
+        toast(context, 'Couldn\'t save: $e');
+      }
     }
   }
 
@@ -161,6 +201,32 @@ class _RunnerScreenState extends ConsumerState<RunnerScreen> with PinIconsMixin 
                         const SizedBox(height: Sp.s1),
                         Text(current.address, style: t.bodySmall?.copyWith(color: c.onSurfaceVariant)),
                         const SizedBox(height: Sp.s4),
+                        if (!current.visited) ...[
+                          _QuickLog(
+                            pack: pack,
+                            outcomes: ref.watch(effectiveOutcomesProvider),
+                            logging: _logging,
+                            onLog: (o) => _quickLog(pack, route, current, o),
+                          ),
+                          const SizedBox(height: Sp.s3),
+                          Row(children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () => ref.read(navLauncherProvider).navigateTo(lat: current.lat, lng: current.lng, label: current.name),
+                                icon: const Icon(Icons.navigation_outlined),
+                                label: const Text('Navigate'),
+                              ),
+                            ),
+                            const SizedBox(width: Sp.s2),
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () => context.push('/visit/${route.id}/${current.id}'),
+                                icon: const Icon(Icons.edit_note),
+                                label: const Text('Details'),
+                              ),
+                            ),
+                          ]),
+                        ] else
                         Row(children: [
                           Expanded(
                             child: OutlinedButton.icon(
@@ -199,6 +265,60 @@ class _RunnerScreenState extends ConsumerState<RunnerScreen> with PinIconsMixin 
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// The mode's outcomes as big tiles: the visit is logged on tap.
+class _QuickLog extends StatelessWidget {
+  const _QuickLog({required this.pack, required this.outcomes, required this.logging, required this.onLog});
+  final ModePack pack;
+  final List<String> outcomes;
+  final String? logging;
+  final ValueChanged<String> onLog;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.kn;
+    final t = Theme.of(context).textTheme;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text('What happened?', style: t.labelMedium?.copyWith(color: c.onSurfaceVariant)),
+      const SizedBox(height: Sp.s2),
+      // Rows of Expanded pairs, not LayoutBuilder: the accent card sizes by intrinsics.
+      for (var i = 0; i < outcomes.length; i += 2) ...[
+        if (i > 0) const SizedBox(height: Sp.s2),
+        Row(children: [
+          Expanded(child: _tile(context, outcomes[i])),
+          const SizedBox(width: Sp.s2),
+          Expanded(child: i + 1 < outcomes.length ? _tile(context, outcomes[i + 1]) : const SizedBox()),
+        ]),
+      ],
+    ]);
+  }
+
+  Widget _tile(BuildContext context, String o) {
+    final c = context.kn;
+    final t = Theme.of(context).textTheme;
+    return Material(
+      color: c.surfaceHigh,
+      borderRadius: BorderRadius.circular(Rad.lg),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(Rad.lg),
+        onTap: logging == null ? () => onLog(o) : null,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 52),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: Sp.s3, vertical: Sp.s2),
+            child: Row(children: [
+              logging == o
+                  ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: c.tertiary))
+                  : Icon(pack.outcomeIcon(o), size: 20, color: c.tertiary),
+              const SizedBox(width: Sp.s2),
+              Expanded(child: Text(o, style: t.titleSmall, maxLines: 2, overflow: TextOverflow.ellipsis)),
+            ]),
+          ),
+        ),
       ),
     );
   }

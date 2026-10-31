@@ -64,7 +64,7 @@ class _VisitLoggerScreenState extends ConsumerState<VisitLoggerScreen> {
       final r = await ref.read(visitLoggerProvider).log(route: route, stop: stop, draft: _draft, photo: _photo);
       if (!mounted) return;
       context.pop();
-      if (r.shared) toast(context, 'Shared with nearby ${route.mode.name == 'cardDrops' ? 'collectors' : 'hunters'}', icon: Icons.campaign_outlined);
+      if (r.shared) toast(context, 'Shared with nearby ${ref.read(modePackProvider).communityNoun}', icon: Icons.campaign_outlined);
     } catch (e) {
       if (mounted) {
         setState(() => _saving = false);

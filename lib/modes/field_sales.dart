@@ -65,6 +65,13 @@ const fieldSalesPack = ModePack(
   spotlightTitle: 'near you',
   planLabel: 'Route these',
   planMaxStops: 8,
+  outcomeIcons: {
+    'Contacted': Icons.handshake_outlined,
+    'No Answer': Icons.door_front_door_outlined,
+    'Not Interested': Icons.do_not_disturb_on_outlined,
+    'Interested': Icons.star_outline,
+  },
+  communityNoun: 'reps',
   proProductId: 'canvasroute_pro_monthly',
   proLabel: 'Pro',
 );

@@ -71,6 +71,13 @@ const yardSalesPack = ModePack(
   spotlightTitle: 'worth the drive',
   planLabel: 'Plan my day',
   planMaxStops: 8,
+  outcomeIcons: {
+    'Bought': Icons.shopping_bag_outlined,
+    'Looked, nothing': Icons.visibility_outlined,
+    'Closed early': Icons.lock_clock_outlined,
+    'Couldn\'t find': Icons.wrong_location_outlined,
+  },
+  communityNoun: 'hunters',
   pinCategories: ['Furniture', 'Kids', 'Tools', 'Collectibles', 'Clothing', 'Electronics', 'Books', 'Everything'],
   freeRouteLimit: 1,
   proProductId: 'canvasroute_season_pass',

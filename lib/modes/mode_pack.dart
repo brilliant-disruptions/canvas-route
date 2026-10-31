@@ -56,6 +56,8 @@ class ModePack {
     required this.spotlightTitle,
     required this.planLabel,
     required this.planMaxStops,
+    required this.outcomeIcons,
+    required this.communityNoun,
     this.placesQueryPreset,
     this.pinCategories = const [],
     this.freeRouteLimit,
@@ -103,6 +105,14 @@ class ModePack {
 
   /// How many top-ranked stops the one-tap planner takes.
   final int planMaxStops;
+
+  /// Icons for the runner's one-tap outcome tiles; custom outcomes fall back to a check.
+  final Map<String, IconData> outcomeIcons;
+
+  /// Who sees shared reports: "Shared with nearby collectors".
+  final String communityNoun;
+
+  IconData outcomeIcon(String outcome) => outcomeIcons[outcome] ?? Icons.check_circle_outline;
   final List<String> pinCategories;
   final int? freeRouteLimit;
   final String? proProductId;

@@ -42,6 +42,12 @@ void main() {
     expect(packFor(AppMode.fieldSales).usesTimeWindows, isFalse);
   });
 
+  test('every default outcome has a quick-log icon', () {
+    for (final pack in modePacks.values) {
+      expect(pack.outcomeIcons.keys.toSet(), pack.defaultOutcomes.toSet(), reason: pack.label);
+    }
+  });
+
   test('visit field definitions round-trip through JSON', () {
     const f = VisitFieldDefinition(key: 'c_bins', label: 'Bins', type: FieldType.number, isCustom: true);
     final back = VisitFieldDefinition.fromJson(f.toJson());

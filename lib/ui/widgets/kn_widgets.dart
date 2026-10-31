@@ -174,22 +174,20 @@ class ChipRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.kn;
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          for (final o in options) ...[
-            ChoiceChip(
-              label: Text(o),
-              selected: selected == o,
-              onSelected: (v) => onSelected(v ? o : (allowNone ? null : o)),
-              labelStyle: TextStyle(color: selected == o ? c.onPrimaryContainer : c.onSurface),
-              showCheckmark: false,
-            ),
-            const SizedBox(width: Sp.s2),
-          ],
-        ],
-      ),
+    // Wraps rather than scrolls: a clipped option is an option nobody picks.
+    return Wrap(
+      spacing: Sp.s2,
+      runSpacing: Sp.s2,
+      children: [
+        for (final o in options)
+          ChoiceChip(
+            label: Text(o),
+            selected: selected == o,
+            onSelected: (v) => onSelected(v ? o : (allowNone ? null : o)),
+            labelStyle: TextStyle(color: selected == o ? c.onPrimaryContainer : c.onSurface),
+            showCheckmark: false,
+          ),
+      ],
     );
   }
 }
