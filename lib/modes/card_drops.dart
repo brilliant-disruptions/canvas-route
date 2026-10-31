@@ -30,8 +30,8 @@ const cardDropsPack = ModePack(
     VisitFieldDefinition(key: 'outcome', label: 'Shelf status', type: FieldType.selector),
     VisitFieldDefinition(key: 'products', label: 'Products seen', type: FieldType.productMulti),
     VisitFieldDefinition(key: 'price', label: 'Price', type: FieldType.currency),
-    VisitFieldDefinition(key: 'qty', label: 'Qty on shelf', type: FieldType.number),
-    VisitFieldDefinition(key: 'purchaseLimit', label: 'Purchase limit', type: FieldType.number),
+    VisitFieldDefinition(key: 'qty', label: 'Qty left', type: FieldType.number),
+    VisitFieldDefinition(key: 'purchaseLimit', label: 'Limit', type: FieldType.number),
     VisitFieldDefinition(key: 'linePresent', label: 'Line / scalpers present', type: FieldType.toggle),
     VisitFieldDefinition(key: 'photo', label: 'Photo', type: FieldType.photo),
     VisitFieldDefinition(key: 'notes', label: 'Notes', type: FieldType.multiline),
@@ -112,4 +112,6 @@ const cardDropsPack = ModePack(
   ],
   productCatalog: true,
   pinsPlacesStops: true,
+  saveVisitLabel: 'Save report',
+  photoHint: 'No employee names or back-room photos.',
 );

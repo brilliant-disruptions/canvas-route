@@ -82,6 +82,8 @@ class ModePack {
     this.hostSignHeadline = 'SALE',
     this.profileAsksCompany = false,
     this.pinsPlacesStops = false,
+    this.saveVisitLabel = 'Save visit',
+    this.photoHint,
     this.productCatalog = false,
   });
 
@@ -175,6 +177,12 @@ class ModePack {
 
   /// A logged Places stop gets a community store pin so its report has a home.
   final bool pinsPlacesStops;
+
+  /// The visit form's save button, e.g. "Save report".
+  final String saveVisitLabel;
+
+  /// Shown under the visit photo picker when photos are shared with the community.
+  final String? photoHint;
   final bool productCatalog;
 
   bool get usesTimeWindows => optimizer != OptimizerKind.distance;
