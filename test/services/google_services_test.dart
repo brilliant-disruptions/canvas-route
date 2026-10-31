@@ -1,7 +1,9 @@
 import 'dart:convert';
 
+import 'package:canvas_route/core/logic/polyline.dart';
 import 'package:canvas_route/data/models/directions.dart';
 import 'package:canvas_route/data/services/directions_service.dart';
+import 'package:canvas_route/data/services/estimate_directions.dart';
 import 'package:canvas_route/data/services/places_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -143,6 +145,62 @@ void main() {
       expect(d.phone, '(214) 555-0100');
       expect(d.website, 'https://acme.test');
       expect(d.hours, ['Monday: 9 AM – 5 PM']);
+    });
+  });
+
+  group('free fallback', () {
+    const a = Waypoint(32.80, -96.80), b = Waypoint(32.81, -96.80), c = Waypoint(32.81, -96.81);
+    var calls = 0;
+    DirectionsService google({int status = 200}) => DirectionsService(
+          apiKey: 'k',
+          client: MockClient((_) async {
+            calls++;
+            return http.Response.bytes(
+              utf8.encode(jsonEncode({
+                'routes': [
+                  {'polyline': {'encodedPolyline': 'g'}, 'duration': '100s', 'distanceMeters': 10, 'legs': []},
+                ],
+              })),
+              status,
+            );
+          }),
+        );
+    setUp(() => calls = 0);
+
+    test('estimates are plausible city drives and say so', () async {
+      final r = await EstimateDirectionsService().route([a, b, c]);
+      expect(r.estimated, isTrue);
+      expect(r.legDurationSeconds, hasLength(2));
+      // ~1.1 km straight × 1.3 road factor at 25 mph, plus a minute and a half to park.
+      expect(r.legDurationSeconds.first, inInclusiveRange(200, 260));
+      expect(decodePolyline(r.encodedPolyline).first.lat, closeTo(32.80, 1e-5));
+    });
+
+    test('nearest-neighbor optimize visits the close stop first', () async {
+      const far = Waypoint(32.90, -96.80), near = Waypoint(32.801, -96.80);
+      final r = await EstimateDirectionsService().route([far, near], origin: a, destination: a, optimize: true);
+      expect(r.optimizedOrder, [1, 0]);
+    });
+
+    test('Google answers are used and remembered', () async {
+      final svc = FallbackDirectionsService(primary: google());
+      final r1 = await svc.route([a, b, c]);
+      final r2 = await svc.route([a, b, c]);
+      expect(r1.estimated, isFalse);
+      expect(r2.encodedPolyline, 'g');
+      expect(calls, 1);
+    });
+
+    test('a quota or key failure falls back to a free estimate and retries Google next time', () async {
+      final svc = FallbackDirectionsService(primary: google(status: 429));
+      expect((await svc.route([a, b, c])).estimated, isTrue);
+      await svc.route([a, b, c]);
+      expect(calls, 2);
+      expect((await FallbackDirectionsService(primary: DirectionsService(apiKey: '')).route([a, b])).estimated, isTrue);
+    });
+
+    test('bad input still reports the real problem', () {
+      expect(() => FallbackDirectionsService(primary: google()).route([a]), throwsA(isA<DirectionsException>()));
     });
   });
 }

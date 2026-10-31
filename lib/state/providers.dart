@@ -12,6 +12,7 @@ import '../data/repositories/settings_repository.dart';
 import '../data/repositories/share_repository.dart';
 import '../data/repositories/visit_repository.dart';
 import '../data/services/directions_service.dart';
+import '../data/services/estimate_directions.dart';
 import '../data/services/local_prefs.dart';
 import '../data/services/location_service.dart';
 import '../data/services/nav_launcher.dart';
@@ -23,7 +24,7 @@ import '../data/services/storage_service.dart';
 final localPrefsProvider = Provider<LocalPrefs>((_) => throw UnimplementedError('LocalPrefs not loaded'));
 
 final placesServiceProvider = Provider((_) => PlacesService());
-final directionsServiceProvider = Provider((_) => DirectionsService());
+final directionsServiceProvider = Provider<DirectionsService>((_) => FallbackDirectionsService());
 final locationServiceProvider = Provider((_) => LocationService());
 final storageServiceProvider = Provider((_) => StorageService());
 final shareServiceProvider = Provider((_) => ShareService());

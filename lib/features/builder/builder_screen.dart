@@ -345,6 +345,7 @@ class _BuilderScreenState extends ConsumerState<BuilderScreen> with PinIconsMixi
                 Text(
                   [
                     '${drafts.length} ${pack.stopNoun}${drafts.length == 1 ? '' : 's'}',
+                    if (_preview?.estimated ?? false) 'drive times estimated',
                     // Last arrival plus the planner's dwell time at that stop.
                     if (_arrivals.length == drafts.length && drafts.isNotEmpty)
                       'done ~${DateFormat.jm().format(_arrivals.last.eta.add(const Duration(minutes: 15)))}',
