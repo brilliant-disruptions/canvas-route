@@ -11,7 +11,6 @@ import '../features/host/host_sale_screen.dart';
 import '../features/host/my_sales_screen.dart';
 import '../features/host/sale_sign_screen.dart';
 import '../features/map/map_screen.dart';
-import '../features/onboarding/mode_picker_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
 import '../features/routes/routes_screen.dart';
 import '../features/runner/runner_screen.dart';
@@ -43,7 +42,6 @@ final routerProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       GoRoute(path: '/onboarding', builder: (_, _) => const OnboardingScreen()),
-      GoRoute(path: '/mode', builder: (_, _) => const ModePickerScreen()),
       GoRoute(path: '/signin', builder: (_, s) => SignInScreen(reason: s.uri.queryParameters['reason'])),
       ShellRoute(
         builder: (_, _, child) => AppShell(child: child),
