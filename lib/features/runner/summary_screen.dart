@@ -14,6 +14,7 @@ import '../../core/theme/kn_colors.dart';
 import '../../core/theme/kn_theme.dart';
 import '../../data/models/route_model.dart';
 import '../../data/models/visit.dart';
+import '../../state/digest_state.dart';
 import '../../state/auth_state.dart';
 import '../../state/profile_state.dart';
 import '../../state/providers.dart';
@@ -241,6 +242,11 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
                     loading: _sharing,
                     onPressed: recap.visited == 0 ? null : () => _shareRecap(route, recap),
                   ),
+                  // Right after a good run is when "tell me next Friday" lands.
+                  if (pack.weekendDigest && ref.watch(weekendDigestOptInProvider) == null) ...[
+                    const SizedBox(height: Sp.s3),
+                    const _DigestOffer(),
+                  ],
                   const SizedBox(height: Sp.s2),
                   OutlinedButton.icon(
                     onPressed: () => context.go('/map'),
@@ -286,5 +292,57 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
     if (v is List) return v.map((e) => e is Map ? e['name'] : e).join('; ');
     if (v is bool) return v ? 'Yes' : 'No';
     return v.toString();
+  }
+}
+
+class _DigestOffer extends ConsumerWidget {
+  const _DigestOffer();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.kn;
+    final t = Theme.of(context).textTheme;
+    final pack = ref.watch(modePackProvider);
+    return KnCard(
+      tier: 3,
+      accent: c.tertiary,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.notifications_active_outlined, color: c.tertiary),
+              const SizedBox(width: Sp.s3),
+              Expanded(child: Text('Heads-up next Friday?', style: t.titleMedium)),
+            ],
+          ),
+          const SizedBox(height: Sp.s1),
+          Text(
+            'Friday at 5:30 we\'ll tell you how many ${pack.stopNoun}s are on near you that weekend. One note a week.',
+            style: t.bodySmall?.copyWith(color: c.onSurfaceVariant),
+          ),
+          const SizedBox(height: Sp.s3),
+          Row(
+            children: [
+              Expanded(
+                child: KnButton(
+                  label: 'Yes, remind me',
+                  lime: true,
+                  onPressed: () async {
+                    await ref.read(weekendDigestOptInProvider.notifier).set(true);
+                    if (context.mounted) toast(context, 'See you Friday', icon: Icons.notifications_active_outlined);
+                  },
+                ),
+              ),
+              const SizedBox(width: Sp.s2),
+              TextButton(
+                onPressed: () => ref.read(weekendDigestOptInProvider.notifier).set(false),
+                child: const Text('No thanks'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }

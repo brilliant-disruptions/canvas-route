@@ -49,6 +49,10 @@ class LocalPrefs {
   bool get hasSeenPlanTip => _bool('hasSeenPlanTip') ?? false;
   Future<void> setHasSeenPlanTip(bool v) => _put('hasSeenPlanTip', v);
 
+  /// Friday weekend heads-up: null until the user has been asked.
+  bool? get weekendDigest => _bool('weekendDigest');
+  Future<void> setWeekendDigest(bool v) => _put('weekendDigest', v);
+
   AppMode get cachedMode => AppMode.fromId(_str('activeMode'));
   Future<void> setCachedMode(AppMode m) => _put('activeMode', m.id);
 

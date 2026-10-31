@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/theme/kn_theme.dart';
 import '../state/appearance_state.dart';
+import '../state/digest_state.dart';
 import '../state/follow_ups_state.dart';
 import '../state/profile_state.dart';
 import '../state/team_state.dart';
@@ -41,7 +42,12 @@ class _CanvasRouteAppState extends ConsumerState<CanvasRouteApp> {
         .read(reminderServiceProvider)
         .init(
           onTap: (path) => WidgetsBinding.instance.addPostFrameCallback(
-            (_) => ref.read(routerProvider).push(path ?? '/follow-ups'),
+            (_) {
+              // Tabs (the map) are gone to; other screens stack so Back returns.
+              final router = ref.read(routerProvider);
+              final to = path ?? '/follow-ups';
+              to == '/map' ? router.go(to) : router.push(to);
+            },
           ),
         )
         .catchError((_) {});
@@ -57,8 +63,12 @@ class _CanvasRouteAppState extends ConsumerState<CanvasRouteApp> {
   Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
     // Keep the device's reminders in step with the follow-up list.
+    // And the Friday weekend heads-up, from whatever listings were last loaded.
+    ref.listen(weekendDigestPlanProvider, (_, plan) {
+      if (plan != null) ref.read(reminderServiceProvider).replaceAll(plan, group: '/map').catchError((_) {});
+    });
     ref.listen(followUpReminderPlanProvider, (_, plan) {
-      if (plan != null) ref.read(reminderServiceProvider).replaceAll(plan, payload: '/follow-ups').catchError((_) {});
+      if (plan != null) ref.read(reminderServiceProvider).replaceAll(plan, group: '/follow-ups').catchError((_) {});
     });
     return MaterialApp.router(
       title: 'CanvasRoute',

@@ -87,6 +87,7 @@ class ModePack {
     this.teamPlan = false,
     this.waitlistLabel,
     this.categoryKeywords = const {},
+    this.weekendDigest = false,
     this.proLabel = 'Pro',
     this.proPrice = '',
     this.proPitch = '',
@@ -202,6 +203,9 @@ class ModePack {
   /// Words that put a pasted post in a category (prefix match), e.g.
   /// Kids: ['kid', 'baby', 'toy']. Empty disables category detection.
   final Map<String, List<String>> categoryKeywords;
+
+  /// Offer a Friday-evening notification about the coming weekend's listings.
+  final bool weekendDigest;
 
   /// Store product for the Team plan, billed per seat on the web.
   static const teamProductId = 'canvasroute_team_monthly';

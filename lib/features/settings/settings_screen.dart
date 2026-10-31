@@ -8,6 +8,7 @@ import '../../core/theme/kn_theme.dart';
 import '../../data/models/settings.dart';
 import '../../state/appearance_state.dart';
 import '../../state/auth_state.dart';
+import '../../state/digest_state.dart';
 import '../../state/profile_state.dart';
 import '../../state/providers.dart';
 import '../../ui/widgets/kn_widgets.dart';
@@ -100,6 +101,16 @@ class SettingsScreen extends ConsumerWidget {
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.push('/alerts'),
               ),
+          ],
+          if (pack.weekendDigest) ...[
+            const SectionHeader('Notifications'),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Friday heads-up'),
+              subtitle: Text('How many ${pack.stopNoun}s are on near you that weekend, Fridays at 5:30.'),
+              value: ref.watch(weekendDigestOptInProvider) ?? false,
+              onChanged: (v) => ref.read(weekendDigestOptInProvider.notifier).set(v),
+            ),
           ],
           const SectionHeader('About'),
           ListTile(

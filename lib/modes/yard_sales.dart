@@ -106,6 +106,7 @@ const yardSalesPack = ModePack(
   spotLabel: 'Share it with nearby hunters',
   startLabel: 'Show me sales near me',
   waitlistLabel: 'I\'m hunting here',
+  weekendDigest: true,
   categoryKeywords: {
     'Furniture': ['furniture', 'couch', 'sofa', 'dresser', 'desk', 'dining set', 'recliner', 'bookshel', 'bed frame'],
     'Kids': ['kid', 'baby', 'toy', 'children', 'stroller', 'crib', 'nursery'],
