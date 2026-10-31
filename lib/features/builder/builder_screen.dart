@@ -27,7 +27,10 @@ enum _Order { preserve, optimize }
 /// Finalize draft stops into a named route. Time-window modes run the planner
 /// pre-pass (spec §3.6) and flag late arrivals before Google Directions is asked.
 class BuilderScreen extends ConsumerStatefulWidget {
-  const BuilderScreen({super.key});
+  const BuilderScreen({super.key, this.autoPlan = false});
+
+  /// Opened by the map's one-tap planner: distance modes start optimized.
+  final bool autoPlan;
   @override
   ConsumerState<BuilderScreen> createState() => _BuilderScreenState();
 }
@@ -44,10 +47,12 @@ class _BuilderScreenState extends ConsumerState<BuilderScreen> {
   void initState() {
     super.initState();
     final map = ref.read(mapProvider);
+    if (widget.autoPlan && !ref.read(modePackProvider).usesTimeWindows) _order = _Order.optimize;
     _name.text = map.editingRouteName ?? '';
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (ref.read(modePackProvider).usesTimeWindows) _orderByWindows();
-      _refreshPreview();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Order first: the preview's ETAs are simulated against the draft order.
+      if (ref.read(modePackProvider).usesTimeWindows) await _orderByWindows();
+      if (mounted) await _refreshPreview();
     });
   }
 
