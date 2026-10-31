@@ -4,8 +4,12 @@ import 'package:go_router/go_router.dart';
 
 import '../core/theme/kn_colors.dart';
 import '../core/theme/kn_theme.dart';
+import '../data/models/app_mode.dart';
+import '../modes/mode_pack.dart';
+import '../modes/registry.dart';
 import '../state/auth_state.dart';
 import '../state/profile_state.dart';
+import '../ui/widgets/kn_widgets.dart';
 
 /// Bottom tabs + the profile drawer reachable from every tab.
 class AppShell extends ConsumerWidget {
@@ -47,6 +51,8 @@ class ProfileDrawer extends ConsumerWidget {
     final pack = ref.watch(modePackProvider);
     final isAdmin = ref.watch(isAdminProvider);
     final anon = ref.watch(isAnonymousProvider);
+    final paying = ref.watch(isPayingProvider);
+    final active = ref.watch(activeModeProvider);
 
     void go(String path) {
       Navigator.of(context).pop();
@@ -66,43 +72,174 @@ class ProfileDrawer extends ConsumerWidget {
                   CircleAvatar(
                     radius: 24,
                     backgroundColor: c.primaryContainer,
-                    child: Text((profile?.name ?? profile?.handle ?? 'C').characters.first.toUpperCase(),
-                        style: t.titleLarge?.copyWith(color: c.onPrimaryContainer)),
+                    child: Text(
+                      (profile?.name ?? profile?.handle ?? 'C').characters.first.toUpperCase(),
+                      style: t.titleLarge?.copyWith(color: c.onPrimaryContainer),
+                    ),
                   ),
                   const SizedBox(width: Sp.s3),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(profile?.name ?? (anon ? 'Guest' : 'CanvasRoute'), style: t.titleLarge),
-                        Text(anon ? 'Sign in to share and report' : (profile?.email ?? ''),
-                            style: t.bodySmall?.copyWith(color: c.onSurfaceVariant)),
+                        Text(
+                          profile?.name ?? (anon ? 'Guest' : 'CanvasRoute'),
+                          style: t.titleLarge,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          anon ? 'Sign in to share and report' : (profile?.email ?? ''),
+                          style: t.bodySmall?.copyWith(color: c.onSurfaceVariant),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ],
                     ),
                   ),
+                  if (pack.proProductId != null)
+                    KnBadge(
+                      paying ? 'PRO' : 'FREE',
+                      color: paying ? c.tertiary : c.surfaceHighest,
+                      onColor: paying ? c.onTertiary : c.onSurfaceVariant,
+                    ),
                 ],
               ),
             ),
-            ListTile(
-              leading: Icon(pack.icon, color: c.tertiary),
-              title: Text(pack.label),
-              subtitle: const Text('Switch mode'),
-              onTap: () => go('/mode'),
+            // Modes inline: switching is one tap, and the other verticals stay visible.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(Sp.s4, 0, Sp.s4, Sp.s3),
+              child: Row(
+                children: [
+                  for (final m in AppMode.values) ...[
+                    if (m != AppMode.values.first) const SizedBox(width: Sp.s2),
+                    Expanded(
+                      child: _ModeTile(
+                        pack: packFor(m),
+                        active: m == active,
+                        onTap: () async {
+                          Navigator.of(context).pop();
+                          if (m != active) await ref.read(profileProvider.notifier).setMode(m);
+                          if (context.mounted) context.go('/map');
+                        },
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
+            if (!paying && pack.proProductId != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(Sp.s4, 0, Sp.s4, Sp.s3),
+                child: KnCard(
+                  tier: 3,
+                  accent: c.tertiary,
+                  onTap: () => go('/settings/account'),
+                  padding: const EdgeInsets.symmetric(horizontal: Sp.s4, vertical: Sp.s3),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(pack.proPitch, style: t.titleMedium),
+                            Text(
+                              '${pack.proLabel} · ${pack.proPrice}',
+                              style: t.bodySmall?.copyWith(color: c.tertiary),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.chevron_right, color: c.onSurfaceVariant),
+                    ],
+                  ),
+                ),
+              ),
             const Divider(),
             if (anon)
               ListTile(leading: const Icon(Icons.login), title: const Text('Sign in'), onTap: () => go('/signin')),
-            ListTile(leading: const Icon(Icons.person_outline), title: const Text('Profile'), onTap: () => go('/settings/profile')),
-            ListTile(leading: const Icon(Icons.credit_card), title: const Text('Account'), onTap: () => go('/settings/account')),
+            ListTile(
+              leading: const Icon(Icons.person_outline),
+              title: const Text('Profile'),
+              onTap: () => go('/settings/profile'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.credit_card),
+              title: const Text('Account'),
+              onTap: () => go('/settings/account'),
+            ),
             ListTile(leading: const Icon(Icons.tune), title: const Text('Preferences'), onTap: () => go('/settings')),
             if (pack.alerts.isNotEmpty && pack.hasCommunity)
-              ListTile(leading: const Icon(Icons.notifications_outlined), title: const Text('Alerts'), onTap: () => go('/alerts')),
+              ListTile(
+                leading: const Icon(Icons.notifications_outlined),
+                title: Text(pack.productCatalog ? 'Watchlist' : 'Alerts'),
+                onTap: () => go('/alerts'),
+              ),
             if (pack.supportsHosting)
-              ListTile(leading: const Icon(Icons.sell_outlined), title: const Text('My sales'), onTap: () => go('/host')),
-            ListTile(leading: const Icon(Icons.lightbulb_outline), title: const Text('Feature requests'), onTap: () => go('/feature-requests')),
+              ListTile(
+                leading: const Icon(Icons.sell_outlined),
+                title: const Text('My sales'),
+                onTap: () => go('/host'),
+              ),
+            ListTile(
+              leading: const Icon(Icons.lightbulb_outline),
+              title: const Text('Feature requests'),
+              onTap: () => go('/feature-requests'),
+            ),
             if (isAdmin)
-              ListTile(leading: Icon(Icons.admin_panel_settings_outlined, color: c.error), title: const Text('Admin'), onTap: () => go('/admin')),
+              ListTile(
+                leading: Icon(Icons.admin_panel_settings_outlined, color: c.error),
+                title: const Text('Admin'),
+                onTap: () => go('/admin'),
+              ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ModeTile extends StatelessWidget {
+  const _ModeTile({required this.pack, required this.active, required this.onTap});
+  final ModePack pack;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.kn;
+    final t = Theme.of(context).textTheme;
+    return Semantics(
+      selected: active,
+      button: true,
+      label: '${pack.label} mode',
+      child: Material(
+        color: active ? c.tertiaryContainer : c.surfaceHigh,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Rad.lg),
+          side: BorderSide(color: active ? c.tertiary : c.ghostBorder, width: active ? 1.5 : 1),
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(Rad.lg),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: Sp.s3, horizontal: Sp.s1),
+            child: Column(
+              children: [
+                Icon(pack.icon, color: active ? c.tertiary : c.onSurfaceVariant),
+                const SizedBox(height: Sp.s1),
+                Text(
+                  pack.label,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  style: t.labelMedium?.copyWith(
+                    color: active ? c.onTertiaryContainer : c.onSurface,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -113,9 +250,6 @@ class ProfileDrawer extends ConsumerWidget {
 class ProfileButton extends StatelessWidget {
   const ProfileButton({super.key});
   @override
-  Widget build(BuildContext context) => IconButton(
-        tooltip: 'Menu',
-        icon: const Icon(Icons.menu),
-        onPressed: () => Scaffold.of(context).openEndDrawer(),
-      );
+  Widget build(BuildContext context) =>
+      IconButton(tooltip: 'Menu', icon: const Icon(Icons.menu), onPressed: () => Scaffold.of(context).openEndDrawer());
 }
