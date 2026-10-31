@@ -12,6 +12,12 @@ const yardSalesPack = ModePack(
   routeNamePrefix: 'Yard sales',
   searchHint: 'Search estate sales, thrift stores…',
   searchSuggestions: ['estate sale', 'thrift store', 'flea market', 'antique mall'],
+  suggestionIcons: {
+    'estate sale': Icons.chair_outlined,
+    'thrift store': Icons.checkroom_outlined,
+    'flea market': Icons.storefront_outlined,
+    'antique mall': Icons.watch_outlined,
+  },
   stopSources: [StopSourceId.community, StopSourceId.manual, StopSourceId.listingLink, StopSourceId.places],
   requiresTimeWindow: true,
   optimizer: OptimizerKind.timeWindow,

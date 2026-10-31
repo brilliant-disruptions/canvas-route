@@ -151,33 +151,43 @@ class _PlanTip extends StatelessWidget {
     final t = Theme.of(context).textTheme;
     return Padding(
       padding: const EdgeInsets.fromLTRB(Sp.s8, 0, Sp.s4, Sp.s1),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-        Material(
-          color: c.tertiary,
-          borderRadius: BorderRadius.circular(Rad.lg),
-          child: InkWell(
-            onTap: onDismiss,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Material(
+            color: c.tertiary,
             borderRadius: BorderRadius.circular(Rad.lg),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(Sp.s4, Sp.s3, Sp.s2, Sp.s3),
-              child: Row(children: [
-                Icon(Icons.bolt, color: c.onTertiary, size: 20),
-                const SizedBox(width: Sp.s2),
-                Expanded(child: Text(text, style: t.bodyMedium?.copyWith(color: c.onTertiary, fontWeight: FontWeight.w600))),
-                Semantics(
-                  button: true,
-                  label: 'Dismiss tip',
-                  child: Icon(Icons.close, color: c.onTertiary, size: 18),
+            child: InkWell(
+              onTap: onDismiss,
+              borderRadius: BorderRadius.circular(Rad.lg),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(Sp.s4, Sp.s3, Sp.s2, Sp.s3),
+                child: Row(
+                  children: [
+                    Icon(Icons.bolt, color: c.onTertiary, size: 20),
+                    const SizedBox(width: Sp.s2),
+                    Expanded(
+                      child: Text(
+                        text,
+                        style: t.bodyMedium?.copyWith(color: c.onTertiary, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    Semantics(
+                      button: true,
+                      label: 'Dismiss tip',
+                      child: Icon(Icons.close, color: c.onTertiary, size: 18),
+                    ),
+                  ],
                 ),
-              ]),
+              ),
             ),
           ),
-        ),
-        Padding(
-          padding: const EdgeInsets.only(right: 64),
-          child: CustomPaint(size: const Size(16, 8), painter: _Notch(c.tertiary)),
-        ),
-      ]),
+          Padding(
+            padding: const EdgeInsets.only(right: 64),
+            child: CustomPaint(size: const Size(16, 8), painter: _Notch(c.tertiary)),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -187,12 +197,12 @@ class _Notch extends CustomPainter {
   final Color color;
   @override
   void paint(Canvas canvas, Size size) => canvas.drawPath(
-        Path()
-          ..lineTo(size.width, 0)
-          ..lineTo(size.width / 2, size.height)
-          ..close(),
-        Paint()..color = color,
-      );
+    Path()
+      ..lineTo(size.width, 0)
+      ..lineTo(size.width / 2, size.height)
+      ..close(),
+    Paint()..color = color,
+  );
   @override
   bool shouldRepaint(_Notch old) => old.color != color;
 }
@@ -350,4 +360,127 @@ class _PulseDotState extends State<_PulseDot> with SingleTickerProviderStateMixi
       child: _Dot(color: widget.color),
     ),
   );
+}
+
+/// The empty map's deck: one card per search category. Tapping a card searches;
+/// its button searches and plans the nearest stops in one go.
+class QuickStartDeck extends StatelessWidget {
+  const QuickStartDeck({
+    super.key,
+    required this.pack,
+    required this.busy,
+    required this.onSearch,
+    required this.onPlan,
+  });
+  final ModePack pack;
+
+  /// The category currently being searched or planned, if any.
+  final String? busy;
+  final ValueChanged<String> onSearch;
+  final ValueChanged<String> onPlan;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.kn;
+    final t = Theme.of(context).textTheme;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: Sp.s4),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: Sp.s4, vertical: Sp.s3),
+            decoration: BoxDecoration(
+              color: c.glass,
+              borderRadius: BorderRadius.circular(Rad.xl),
+              border: Border.all(color: c.ghostBorder),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.bolt, color: c.tertiary),
+                const SizedBox(width: Sp.s2),
+                Expanded(
+                  child: Text(
+                    'Pick a category. We\'ll route the nearest ${pack.planMaxStops}.',
+                    style: t.titleSmall,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: Sp.s2),
+        SizedBox(
+          height: 118,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: Sp.s4),
+            itemCount: pack.searchSuggestions.length,
+            separatorBuilder: (_, _) => const SizedBox(width: Sp.s2),
+            itemBuilder: (_, i) {
+              final s = pack.searchSuggestions[i];
+              final label = '${s[0].toUpperCase()}${s.substring(1)}';
+              return SizedBox(
+                width: 204,
+                child: Material(
+                  color: c.surfaceHigh,
+                  borderRadius: BorderRadius.circular(Rad.xl),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    onTap: busy == null ? () => onSearch(s) : null,
+                    child: Padding(
+                      padding: const EdgeInsets.all(Sp.s3),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(pack.suggestionIcon(s), color: c.tertiary, size: 22),
+                              const SizedBox(width: Sp.s2),
+                              Expanded(
+                                child: Text(label, style: t.titleMedium, maxLines: 1, overflow: TextOverflow.ellipsis),
+                              ),
+                            ],
+                          ),
+                          const Spacer(),
+                          SizedBox(
+                            height: 36,
+                            child: FilledButton.icon(
+                              onPressed: busy == null ? () => onPlan(s) : null,
+                              style: FilledButton.styleFrom(
+                                backgroundColor: c.tertiary,
+                                foregroundColor: c.onTertiary,
+                                minimumSize: const Size.fromHeight(36),
+                                padding: const EdgeInsets.symmetric(horizontal: Sp.s3),
+                                textStyle: t.labelLarge,
+                              ),
+                              icon: busy == s
+                                  ? SizedBox(
+                                      width: 14,
+                                      height: 14,
+                                      child: CircularProgressIndicator(strokeWidth: 2, color: c.onTertiary),
+                                    )
+                                  : const Icon(Icons.bolt, size: 16),
+                              label: Text(
+                                'Route nearest ${pack.planMaxStops}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
 }

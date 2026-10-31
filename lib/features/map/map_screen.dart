@@ -46,6 +46,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
   LatLng? _center;
   String? _clipboardUrl;
   bool _movedToUser = false;
+  String? _quickStarting;
 
   @override
   void initState() {
@@ -219,6 +220,20 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
     context.push('/route/builder?plan=1');
   }
 
+  /// Quick start: search a category, then (when [plan]) route the nearest results.
+  Future<void> _quickStart(ModePack pack, String category, {required bool plan}) async {
+    setState(() => _quickStarting = category);
+    _search.text = category;
+    try {
+      await _runSearch();
+      if (!mounted || !plan) return;
+      final entries = _spotEntries(pack: pack, map: ref.read(mapProvider), pins: const [], latest: const {}, summaries: const {});
+      if (entries.isNotEmpty) _plan(pack, entries);
+    } finally {
+      if (mounted) setState(() => _quickStarting = null);
+    }
+  }
+
   Future<void> _openSpot(Business b, List<Pin> pins) async {
     _map?.animateCamera(CameraUpdate.newLatLng(LatLng(b.lat, b.lng)));
     if (b.pinId == null) return showBusinessSheet(context, b);
@@ -281,6 +296,12 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
 
     final spots = _spotEntries(pack: pack, map: map, pins: visiblePins, latest: latest, summaries: summaries);
     final showDeck = map.viewMode == MapViewMode.map && spots.isNotEmpty;
+    final showQuickStart = map.viewMode == MapViewMode.map &&
+        spots.isEmpty &&
+        map.query.isEmpty &&
+        map.draftStops.isEmpty &&
+        pack.hasSource(StopSourceId.places) &&
+        pack.searchSuggestions.isNotEmpty;
 
     final markers = <Marker>{};
     // Route order shows on the map: picked stops become numbered dots.
@@ -363,7 +384,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
             if (mounted) setState(() => _center = mid);
           },
           onLongPress: pack.hasSource(StopSourceId.manual) ? _onLongPress : null,
-          padding: EdgeInsets.only(top: 140, bottom: showDeck ? 200 : 24),
+          padding: EdgeInsets.only(top: 140, bottom: showDeck || showQuickStart ? 200 : 24),
         ),
         SafeArea(
           child: Column(
@@ -427,6 +448,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
               _ModeChips(
                 pack: pack,
                 map: map,
+                hideSuggestions: showQuickStart,
                 onSuggestion: (s) {
                   _search.text = s;
                   _runSearch();
@@ -516,6 +538,13 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
                   showTip: !ref.read(localPrefsProvider).hasSeenPlanTip,
                   onDismissTip: _dismissPlanTip,
                 )
+              else if (showQuickStart)
+                QuickStartDeck(
+                  pack: pack,
+                  busy: _quickStarting,
+                  onSearch: (s) => _quickStart(pack, s, plan: false),
+                  onPlan: (s) => _quickStart(pack, s, plan: true),
+                )
               else
                 Padding(
                   padding: const EdgeInsets.only(right: Sp.s4),
@@ -564,9 +593,12 @@ class _GlassBar extends StatelessWidget {
 /// Mode-specific chip row under the search bar: weekend selector (Yard Sales),
 /// product filter (Card Drops), or search suggestions (everything else).
 class _ModeChips extends ConsumerWidget {
-  const _ModeChips({required this.pack, required this.map, required this.onSuggestion});
+  const _ModeChips({required this.pack, required this.map, required this.onSuggestion, this.hideSuggestions = false});
   final ModePack pack;
   final MapState map;
+
+  /// The quick-start deck already shows the suggestions as cards.
+  final bool hideSuggestions;
   final ValueChanged<String> onSuggestion;
 
   @override
@@ -611,6 +643,8 @@ class _ModeChips extends ConsumerWidget {
             onSelected: (_) => n.setProductFilter(s),
           ),
       ];
+    } else if (hideSuggestions) {
+      return const SizedBox.shrink();
     } else {
       chips = [for (final s in pack.searchSuggestions) ActionChip(label: Text(s), onPressed: () => onSuggestion(s))];
     }

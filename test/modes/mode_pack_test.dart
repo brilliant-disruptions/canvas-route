@@ -70,6 +70,12 @@ void main() {
     expect(packFor(AppMode.fieldSales).atRouteLimit(99, paying: false), isFalse);
   });
 
+  test('every search suggestion has a quick-start icon', () {
+    for (final pack in modePacks.values) {
+      expect(pack.suggestionIcons.keys.toSet(), pack.searchSuggestions.toSet(), reason: pack.label);
+    }
+  });
+
   test('visit field definitions round-trip through JSON', () {
     const f = VisitFieldDefinition(key: 'c_bins', label: 'Bins', type: FieldType.number, isCustom: true);
     final back = VisitFieldDefinition.fromJson(f.toJson());

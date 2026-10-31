@@ -76,6 +76,7 @@ class ModePack {
     this.proPrice = '',
     this.proPitch = '',
     this.proPerks = const [],
+    this.suggestionIcons = const {},
     this.summaryTotals = const [],
     this.supportsHosting = false,
     this.productCatalog = false,
@@ -151,6 +152,10 @@ class ModePack {
   /// Paywall headline, e.g. "Never miss a restock".
   final String proPitch;
   final List<ProPerk> proPerks;
+
+  /// Icons for the map's quick-start category cards.
+  final Map<String, IconData> suggestionIcons;
+  IconData suggestionIcon(String s) => suggestionIcons[s] ?? Icons.search;
 
   /// Saving one more route would pass the free limit.
   bool atRouteLimit(int saved, {required bool paying}) => !paying && freeRouteLimit != null && saved >= freeRouteLimit!;
