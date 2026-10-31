@@ -40,12 +40,16 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
       final image = await boundary.toImage(pixelRatio: 3);
       final png = (await image.toByteData(format: ImageByteFormat.png))!.buffer.asUint8List();
       image.dispose();
+      // The link is what brings the viewer in; guests can't create one, so they share the image alone.
+      final link = ref.read(isAnonymousProvider) ? null : await ref.read(shareRepoProvider).createLink(route.id);
       await ref
           .read(shareServiceProvider)
           .shareImage(
             png,
             csvFileName(route.name, 'recap').replaceAll('.csv', '.png'),
-            text: '${countNoun(recap.wins, pack.winNoun)} on my ${pack.label} run. Planned with CanvasRoute.',
+            text:
+                '${countNoun(recap.wins, pack.winNoun)} on my ${pack.label} ${pack.routeNoun}.'
+                '${link == null ? ' Planned with CanvasRoute.' : ' Run it yourself: $link'}',
             subject: route.name,
           );
     } finally {

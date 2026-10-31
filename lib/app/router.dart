@@ -33,7 +33,8 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/map',
     redirect: (context, state) {
       final loc = state.matchedLocation;
-      if (!prefs.hasOnboarded && !loc.startsWith('/onboarding') && !loc.startsWith('/shared')) {
+      final shared = loc.startsWith('/shared') || loc.startsWith('/r/');
+      if (!prefs.hasOnboarded && !loc.startsWith('/onboarding') && !shared) {
         return '/onboarding';
       }
       return null;
@@ -76,6 +77,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         GoRoute(path: 'new', builder: (_, _) => const HostSaleScreen()),
       ]),
       GoRoute(path: '/shared/:token', builder: (_, s) => SharedRouteScreen(token: s.pathParameters['token']!)),
+      // Share links are generated as <webOrigin>/r/<token>.
+      GoRoute(path: '/r/:token', builder: (_, s) => SharedRouteScreen(token: s.pathParameters['token']!)),
     ],
   );
 });

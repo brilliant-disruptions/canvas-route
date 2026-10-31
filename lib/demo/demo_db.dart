@@ -261,7 +261,8 @@ void _seed(DemoDb db) {
     for (final p in ['pl_gamestop_greenville', 'pl_target_central', 'pl_collectors_cave', 'pl_walmart_retail'])
       {...demoCatalog['stores']!.firstWhere((s) => s['place_id'] == p), 'pin_id': sid(p), 'source': 'community'},
   ];
-  addRoute('card_drops', 'Card run · Saturday', cardStops, visited: 1, status: 'in_progress', lastRun: now.subtract(const Duration(minutes: 40)), visitValues: [
+  // Shared at /r/demo-run so the invite landing can be opened cold.
+  db.shares['demo-run'] = addRoute('card_drops', 'Card run · Saturday', cardStops, visited: 1, status: 'in_progress', lastRun: now.subtract(const Duration(minutes: 40)), visitValues: [
     {'outcome': 'In stock', 'notes': 'Vendor was stocking at 8:10. Two people already waiting.', 'custom_fields': {
       'products': [
         {'id': pid('Prismatic Evolutions — Elite Trainer Box'), 'name': 'Prismatic Evolutions — Elite Trainer Box'},
