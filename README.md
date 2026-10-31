@@ -19,7 +19,7 @@ hides mode switching; a profile saved on another mode opens on the first listed 
 ## Stack
 
 Flutter 3.47 · Riverpod 3 · go_router · google_maps_flutter · Supabase (Postgres, Auth, Storage,
-Realtime, pg_cron) · Google Places / Directions / Geocoding.
+Realtime, pg_cron) · Google Places API (New) / Routes API / Geocoding.
 
 ## Setup
 
@@ -38,8 +38,14 @@ pin expiry and restock-pattern refresh. Make yourself an admin with
 
 ### 2. Google Cloud
 
-Enable **Maps SDK for iOS**, **Maps SDK for Android**, **Places API**, **Directions API**,
-**Geocoding API** on one key.
+Enable **Maps SDK for iOS**, **Maps SDK for Android**, **Places API (New)**, **Routes API** and
+**Geocoding API** on one key. (The legacy Places and Directions APIs can't be enabled on new
+projects.) Restrict the key to the app bundle IDs / SHA-1 and to those five APIs, and set daily
+quotas plus a budget alert.
+
+Cost notes: style the map with client-side JSON, never a cloud **map ID** (a map ID moves native
+map loads from free to billed). Search requests only Pro-tier Place fields. Time-window modes keep the planned order by default
+(no `optimizeWaypointOrder`), so a day of up to 10 stops bills as Routes Essentials.
 
 ### 3. Keys
 

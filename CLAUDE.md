@@ -9,7 +9,7 @@ Spec: `SPEC.md`. Backend: Supabase (Postgres + Auth + Storage + Realtime + pg_cr
 - Flutter 3.47 / Dart 3.13, Riverpod 3 (hand-written Notifiers, no codegen), go_router
 - google_maps_flutter, geolocator, image_picker, share_plus, url_launcher, qr_flutter
 - supabase_flutter (anonymous sign-in on first launch, upgraded to email/OAuth later)
-- Google Places Text Search + Details, Directions, Geocoding via `http`
+- Google Places API (New) Text Search + Details, Routes API, Geocoding via `http` (field masks set the bill)
 
 ## Layout
 - `lib/core/` — env (`--dart-define`), theme (Kinetic Noir tokens as a ThemeExtension), pure logic
