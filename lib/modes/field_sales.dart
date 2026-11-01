@@ -91,6 +91,8 @@ const fieldSalesPack = ModePack(
   webBilling: true,
   crmExport: true,
   teamPlan: true,
+  featureBoard: true,
+  editableOutcomes: true,
   freeRouteLimit: 3,
   proLabel: 'Pro',
   profileAsksCompany: true,

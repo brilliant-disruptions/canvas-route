@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/env.dart';
 import '../core/theme/kn_colors.dart';
 import '../core/theme/kn_theme.dart';
 import '../modes/mode_pack.dart';
@@ -9,6 +10,7 @@ import '../modes/registry.dart';
 import '../state/auth_state.dart';
 import '../state/follow_ups_state.dart';
 import '../state/profile_state.dart';
+import '../state/providers.dart';
 import '../ui/widgets/kn_widgets.dart';
 
 /// Bottom tabs + the profile drawer reachable from every tab.
@@ -191,11 +193,21 @@ class ProfileDrawer extends ConsumerWidget {
                 title: const Text('My sales'),
                 onTap: () => go('/host'),
               ),
-            ListTile(
-              leading: const Icon(Icons.lightbulb_outline),
-              title: const Text('Feature requests'),
-              onTap: () => go('/feature-requests'),
-            ),
+            if (pack.featureBoard)
+              ListTile(
+                leading: const Icon(Icons.lightbulb_outline),
+                title: const Text('Feature requests'),
+                onTap: () => go('/feature-requests'),
+              )
+            else
+              ListTile(
+                leading: const Icon(Icons.mail_outline),
+                title: const Text('Send feedback'),
+                onTap: () {
+                  Navigator.pop(context);
+                  ref.read(navLauncherProvider).open('mailto:${Env.supportEmail}?subject=${Uri.encodeComponent('${pack.label} feedback')}');
+                },
+              ),
             if (isAdmin)
               ListTile(
                 leading: Icon(Icons.admin_panel_settings_outlined, color: c.error),

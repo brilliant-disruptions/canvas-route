@@ -82,6 +82,8 @@ class ModePack {
     this.webBilling = false,
     this.crmExport = false,
     this.teamPlan = false,
+    this.featureBoard = false,
+    this.editableOutcomes = false,
     this.waitlistLabel,
     this.categoryKeywords = const {},
     this.weekendDigest = false,
@@ -188,6 +190,13 @@ class ModePack {
   /// Teams: a manager's activity view, a join code for reps, and teammates'
   /// recent outcomes on business sheets. Creating a team needs the Team plan.
   final bool teamPlan;
+
+  /// A public feature-request board in the drawer (business users vote on the
+  /// roadmap). Without it the drawer offers a plain "Send feedback" email.
+  final bool featureBoard;
+
+  /// Preferences link to edit outcomes and custom fields and export visits.
+  final bool editableOutcomes;
 
   /// When set, an area with no listings shows a "not here yet" card whose main
   /// button (this label, e.g. "I'm hunting here") counts the user as waiting, and

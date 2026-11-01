@@ -37,6 +37,12 @@ void main() {
     expect(packFor(AppMode.yardSales).hasCommunity, isTrue);
   });
 
+  test('yard sales v1 keeps business-only menus out of the drawer and preferences', () {
+    final ys = packFor(AppMode.yardSales), fs = packFor(AppMode.fieldSales);
+    expect([ys.featureBoard, ys.editableOutcomes, ys.teamPlan, ys.mileageLog], everyElement(isFalse));
+    expect([fs.featureBoard, fs.editableOutcomes], everyElement(isTrue));
+  });
+
   test('outcome → report mappings reference declared report statuses', () {
     for (final pack in modePacks.values) {
       final statuses = pack.reportStatuses.map((s) => s.value).toSet();

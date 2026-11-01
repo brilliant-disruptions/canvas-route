@@ -32,7 +32,8 @@ class SettingsScreen extends ConsumerWidget {
         children: [
           ListTile(leading: const Icon(Icons.person_outline), title: const Text('Profile'), trailing: const Icon(Icons.chevron_right), onTap: () => context.push('/settings/profile')),
           ListTile(leading: const Icon(Icons.credit_card), title: const Text('Account & plan'), trailing: const Icon(Icons.chevron_right), onTap: () => context.push('/settings/account')),
-          ListTile(leading: const Icon(Icons.tune), title: Text('Outcomes, fields & export · ${pack.label}'), trailing: const Icon(Icons.chevron_right), onTap: () => context.push('/settings/advanced')),
+          if (pack.editableOutcomes)
+            ListTile(leading: const Icon(Icons.tune), title: Text('Outcomes, fields & export · ${pack.label}'), trailing: const Icon(Icons.chevron_right), onTap: () => context.push('/settings/advanced')),
           const SectionHeader('Appearance'),
           SegmentedButton<ThemeMode>(
             segments: const [
