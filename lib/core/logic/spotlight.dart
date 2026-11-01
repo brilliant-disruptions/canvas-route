@@ -2,10 +2,10 @@
 // Pure so the map's deck and one-tap planner stay testable.
 
 import 'geo.dart';
-import 'restock.dart';
+import 'freshness.dart';
 
 /// Why a spot ranked where it did; drives the card's headline and tone.
-enum SpotReason { liveStock, recentPositive, restockNow, restockLater, openNow, opensSoon, upcoming, closingSoon, packedUp, soldOut, nearby }
+enum SpotReason { liveStock, recentPositive, openNow, opensSoon, upcoming, closingSoon, packedUp, soldOut, nearby }
 
 enum SpotTone { hot, good, neutral, warn }
 
@@ -22,8 +22,6 @@ class SpotCandidate {
     this.reportEnds = false,
     this.reportedAt,
     this.reportProduct,
-    this.tier = RestockTier.unknown,
-    this.restockToday,
   });
 
   final String id;
@@ -41,10 +39,6 @@ class SpotCandidate {
   final bool reportEnds;
   final DateTime? reportedAt;
   final String? reportProduct;
-  final RestockTier tier;
-
-  /// The store's best restock window on the planned day.
-  final ({DateTime start, DateTime end})? restockToday;
 }
 
 class Spot {
@@ -88,14 +82,6 @@ List<Spot> rankSpots(
         consider(60, SpotReason.recentPositive);
       }
     }
-    final w = c.restockToday;
-    if (w != null) {
-      if (!now.isBefore(w.start) && now.isBefore(w.end)) {
-        consider(70, SpotReason.restockNow);
-      } else if (now.isBefore(w.start)) {
-        consider(45, SpotReason.restockLater);
-      }
-    }
     if (c.opensAt != null) {
       if (!now.isBefore(c.opensAt!)) {
         consider(40, SpotReason.openNow);
@@ -106,11 +92,6 @@ List<Spot> rankSpots(
       }
     }
     score += best;
-    score += switch (c.tier) {
-      RestockTier.established => 15,
-      RestockTier.emerging => 8,
-      RestockTier.unknown => 0,
-    };
     if (age != null && c.reportCaution && age <= const Duration(hours: 1)) {
       // Still open, but go now or not at all: ranks between "open" and "live".
       reason = SpotReason.closingSoon;
@@ -132,8 +113,8 @@ List<Spot> rankSpots(
 List<Spot> pickPlan(List<Spot> ranked, int max) => ranked.where((s) => s.plannable).take(max).toList();
 
 SpotTone toneFor(SpotReason r) => switch (r) {
-  SpotReason.liveStock || SpotReason.restockNow => SpotTone.hot,
-  SpotReason.recentPositive || SpotReason.openNow || SpotReason.opensSoon || SpotReason.restockLater => SpotTone.good,
+  SpotReason.liveStock => SpotTone.hot,
+  SpotReason.recentPositive || SpotReason.openNow || SpotReason.opensSoon => SpotTone.good,
   SpotReason.soldOut || SpotReason.closingSoon || SpotReason.packedUp => SpotTone.warn,
   SpotReason.upcoming || SpotReason.nearby => SpotTone.neutral,
 };
@@ -158,8 +139,6 @@ String spotHeadline(Spot s, {required DateTime now, required String Function(Str
     SpotReason.closingSoon ||
     SpotReason.packedUp ||
     SpotReason.soldOut => '${statusLabel(c.reportStatus!)} · ${relativeAge(c.reportedAt!, now: now)}',
-    SpotReason.restockNow => 'Restock window now · until ${_clock(c.restockToday!.end)}',
-    SpotReason.restockLater => 'Restocks ${_clock(c.restockToday!.start)}–${_clock(c.restockToday!.end)}',
     SpotReason.openNow => c.closesAt == null ? 'Open now' : 'Open now · until ${_clock(c.closesAt!)}',
     SpotReason.opensSoon =>
       'Opens in ${c.opensAt!.difference(now).inMinutes < 60 ? '${c.opensAt!.difference(now).inMinutes} min' : '${(c.opensAt!.difference(now).inMinutes / 60).round()}h'}',

@@ -4,11 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 
-import '../../core/logic/dates.dart';
 import '../../core/logic/errors.dart';
 import '../../core/logic/geo.dart';
 import '../../core/logic/polyline.dart';
-import '../../core/logic/restock.dart';
 import '../../core/logic/time_window_planner.dart';
 import '../../core/theme/kn_colors.dart';
 import '../../core/theme/kn_theme.dart';
@@ -16,7 +14,6 @@ import '../../data/models/directions.dart';
 import '../../data/models/draft_stop.dart';
 import '../../data/models/settings.dart';
 import '../../modes/mode_pack.dart';
-import '../../state/community_state.dart';
 import '../../state/map_state.dart';
 import '../../state/profile_state.dart';
 import '../../state/providers.dart';
@@ -74,42 +71,17 @@ class _BuilderScreenState extends ConsumerState<BuilderScreen> with PinIconsMixi
     };
   }
 
-  Future<Map<String, StoreWindow>> _restockWindows(List<DraftStop> drafts) async {
-    final ids = drafts.map((d) => d.business.pinId).whereType<String>().toList();
-    if (ids.isEmpty) return {};
-    final summaries = await ref.read(storeSummariesProvider(ids.join(',')).future);
-    final day = DateTime.now().hour >= 20 ? dayPlus(DateTime.now(), 1) : DateTime.now();
-    final out = <String, StoreWindow>{};
-    for (final e in summaries.entries) {
-      final w = windowOnDay(e.value.bestWindows, day);
-      out[e.key] = StoreWindow(tier: e.value.tier, start: w?.start, end: w?.end, label: e.value.bestWindowLabel);
-    }
-    return out;
-  }
-
   Future<void> _orderByWindows() async {
-    final pack = ref.read(modePackProvider);
     final drafts = ref.read(mapProvider).draftStops;
-    final windows = pack.optimizer == OptimizerKind.restockWindow ? await _restockWindows(drafts) : <String, StoreWindow>{};
-    final planner = drafts.map((d) {
-      final w = d.business.pinId == null ? null : windows[d.business.pinId];
-      return PlannerStop(
-        id: d.id,
-        lat: d.business.lat,
-        lng: d.business.lng,
-        opensAt: d.business.opensAt,
-        closesAt: d.business.closesAt,
-        restockStart: w?.start,
-        restockEnd: w?.end,
-      );
-    }).toList();
-    final ordered = orderByWindows(planner, preferRestockStart: pack.optimizer == OptimizerKind.restockWindow);
+    final planner = [
+      for (final d in drafts)
+        PlannerStop(id: d.id, lat: d.business.lat, lng: d.business.lng, opensAt: d.business.opensAt, closesAt: d.business.closesAt),
+    ];
+    final ordered = orderByWindows(planner);
     final byId = {for (final d in drafts) d.id: d};
     ref.read(mapProvider.notifier).setDrafts(ordered.map((p) => byId[p.id]!).toList());
-    if (mounted) setState(() => _windows = windows);
   }
 
-  Map<String, StoreWindow> _windows = {};
 
   Future<void> _refreshPreview() async {
     final drafts = ref.read(mapProvider).draftStops;
@@ -142,10 +114,10 @@ class _BuilderScreenState extends ConsumerState<BuilderScreen> with PinIconsMixi
       final legs = origin != null && result.legDurationSeconds.length >= ordered.length
           ? result.legDurationSeconds.sublist(0, ordered.length)
           : [0, ...result.legDurationSeconds.take(ordered.length - 1)];
-      final planner = ordered.map((d) {
-        final w = d.business.pinId == null ? null : _windows[d.business.pinId];
-        return PlannerStop(id: d.id, lat: d.business.lat, lng: d.business.lng, opensAt: d.business.opensAt, closesAt: d.business.closesAt, restockStart: w?.start, restockEnd: w?.end);
-      }).toList();
+      final planner = [
+        for (final d in ordered)
+          PlannerStop(id: d.id, lat: d.business.lat, lng: d.business.lng, opensAt: d.business.opensAt, closesAt: d.business.closesAt),
+      ];
       final start = _plannedStart(ordered);
       setState(() {
         _preview = result;
@@ -177,7 +149,7 @@ class _BuilderScreenState extends ConsumerState<BuilderScreen> with PinIconsMixi
     final pack = ref.read(modePackProvider);
     final saved = (await ref.read(routesProvider.future)).length; // may not be loaded yet
     if (!mounted) return;
-    if (map.editingRouteId == null && pack.atRouteLimit(saved, paying: ref.read(hasProAccessProvider))) {
+    if (map.editingRouteId == null && pack.pro.atRouteLimit(saved, paying: ref.read(hasProAccessProvider))) {
       await showPaywall(context, pack, reason: freeLimitReason(pack));
       return;
     }
@@ -310,13 +282,11 @@ class _BuilderScreenState extends ConsumerState<BuilderScreen> with PinIconsMixi
                     itemBuilder: (_, i) {
                       final d = drafts[i];
                       final a = flagById[d.id];
-                      final w = d.business.pinId == null ? null : _windows[d.business.pinId];
                       return _StopRow(
                         key: ValueKey(d.id),
                         index: i,
                         draft: d,
                         arrival: a,
-                        window: w,
                         pack: pack,
                         onRemove: () {
                           ref.read(mapProvider.notifier).removeDraft(d.id);
@@ -381,21 +351,12 @@ class _BuilderScreenState extends ConsumerState<BuilderScreen> with PinIconsMixi
   }
 }
 
-class StoreWindow {
-  const StoreWindow({required this.tier, this.start, this.end, this.label});
-  final RestockTier tier;
-  final DateTime? start;
-  final DateTime? end;
-  final String? label;
-}
-
 class _StopRow extends StatelessWidget {
-  const _StopRow({super.key, required this.index, required this.draft, required this.pack, this.arrival, this.window, required this.onRemove, required this.onEdit});
+  const _StopRow({super.key, required this.index, required this.draft, required this.pack, this.arrival, required this.onRemove, required this.onEdit});
   final int index;
   final DraftStop draft;
   final ModePack pack;
   final PlannedArrival? arrival;
-  final StoreWindow? window;
   final VoidCallback onRemove;
   final VoidCallback onEdit;
 
@@ -404,9 +365,9 @@ class _StopRow extends StatelessWidget {
     final c = context.kn;
     final t = Theme.of(context).textTheme;
     final b = draft.business;
-    final windowText = b.opensAt != null
-        ? '${DateFormat.E().format(b.opensAt!)} ${DateFormat.jm().format(b.opensAt!)}–${b.closesAt == null ? '' : DateFormat.jm().format(b.closesAt!)}'
-        : window?.label;
+    final windowText = b.opensAt == null
+        ? null
+        : '${DateFormat.E().format(b.opensAt!)} ${DateFormat.jm().format(b.opensAt!)}–${b.closesAt == null ? '' : DateFormat.jm().format(b.closesAt!)}';
     Widget? flag;
     if (arrival != null) {
       final (label, color) = switch (arrival!.flag) {

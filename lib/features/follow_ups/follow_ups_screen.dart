@@ -29,7 +29,7 @@ class FollowUpsScreen extends ConsumerWidget {
         .toList();
 
     Future<void> routeDue() async {
-      if (!await requirePro(context, ref, 'Routing your callbacks is part of ${pack.proLabel}.')) return;
+      if (!await requirePro(context, ref, 'Routing your callbacks is part of ${pack.pro.label}.')) return;
       if (!context.mounted) return;
       final map = ref.read(mapProvider.notifier);
       for (final f in due) {
@@ -40,7 +40,7 @@ class FollowUpsScreen extends ConsumerWidget {
     }
 
     return KnScaffold(
-      title: pack.followUpsLabel ?? 'Follow-ups',
+      title: pack.tools.followUpsLabel ?? 'Follow-ups',
       bottom: due.isEmpty
           ? null
           : KnButton(
@@ -102,7 +102,7 @@ class _FollowUpCard extends ConsumerWidget {
     final phone = v.phone;
 
     // Seeing what's due is free; working the list is the paid tier.
-    Future<bool> pro() => requirePro(context, ref, '${pack.followUpsLabel ?? 'Follow-ups'} are part of ${pack.proLabel}.');
+    Future<bool> pro() => requirePro(context, ref, '${pack.tools.followUpsLabel ?? 'Follow-ups'} are part of ${pack.pro.label}.');
 
     Future<void> move(DateTime? to, String message) async {
       if (!await pro()) return;

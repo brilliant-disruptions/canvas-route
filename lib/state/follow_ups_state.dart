@@ -73,7 +73,7 @@ final visitHistoryProvider = Provider<Map<String, VisitHistory>>((ref) {
 
 /// Morning reminders for upcoming follow-ups, or none in modes without them.
 final followUpReminderPlanProvider = Provider<List<PlannedReminder>?>((ref) {
-  if (ref.watch(modePackProvider).followUpsLabel == null) return const [];
+  if (ref.watch(modePackProvider).tools.followUpsLabel == null) return const [];
   final list = ref.watch(followUpsProvider).value;
   if (list == null) return null; // still loading: leave what's scheduled alone
   return planFollowUpReminders([

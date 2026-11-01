@@ -6,7 +6,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../core/logic/errors.dart';
 import '../../core/logic/polyline.dart';
-import '../../core/logic/restock.dart';
+import '../../core/logic/freshness.dart';
 import '../../core/theme/kn_colors.dart';
 import '../../core/theme/kn_theme.dart';
 import '../../data/models/directions.dart';
@@ -87,7 +87,7 @@ class _RunnerScreenState extends ConsumerState<RunnerScreen> with PinIconsMixin 
           content: Row(children: [
             Icon(pack.outcomeIcon(outcome), size: 18, color: c.tertiary),
             const SizedBox(width: Sp.s2),
-            Expanded(child: Text('$outcome · ${stop.name}${r.shared ? '\nShared with nearby ${pack.communityNoun}' : ''}')),
+            Expanded(child: Text('$outcome · ${stop.name}${r.shared ? '\nShared with nearby ${pack.community.noun}' : ''}')),
           ]),
           action: SnackBarAction(
             label: 'Add details',
@@ -196,7 +196,7 @@ class _RunnerScreenState extends ConsumerState<RunnerScreen> with PinIconsMixin 
                   Center(child: Container(width: 36, height: 4, decoration: BoxDecoration(color: c.outline, borderRadius: BorderRadius.circular(Rad.full)))),
                   const SizedBox(height: Sp.s3),
                   // Before you drive there: what people at this stop just reported.
-                  if (current != null && !current.visited && current.pinId != null && pack.communityReports)
+                  if (current != null && !current.visited && current.pinId != null && pack.community.reports)
                     _LiveHeadsUp(
                       pack: pack,
                       pinId: current.pinId!,
@@ -369,7 +369,7 @@ class _LiveHeadsUp extends ConsumerWidget {
     });
     final rep = ref.watch(latestReportsProvider(pinId)).value?[pinId];
     if (rep == null) return const SizedBox.shrink();
-    final st = pack.reportStatuses.where((s) => s.value == rep.status).firstOrNull;
+    final st = pack.community.statuses.where((s) => s.value == rep.status).firstOrNull;
     final age = DateTime.now().difference(rep.createdAt);
     // Only recent news is worth a banner: "packed up" holds for the day, the rest for an hour.
     final style = switch (st) {

@@ -12,18 +12,8 @@ void main() {
         PlannerStop(id: 'none', lat: 0, lng: 0),
         PlannerStop(id: 'early', lat: 0, lng: 0, opensAt: at(7), closesAt: at(11)),
       ];
-      final ordered = orderByWindows(stops, preferRestockStart: false);
+      final ordered = orderByWindows(stops);
       expect(ordered.map((s) => s.id), ['early', 'late', 'none']);
-    });
-
-    test('card drops: by restock window start, then deadline', () {
-      final stops = [
-        PlannerStop(id: 'walmart', lat: 0, lng: 0, restockStart: at(10), restockEnd: at(12)),
-        PlannerStop(id: 'target', lat: 0, lng: 0, restockStart: at(8), restockEnd: at(10)),
-        PlannerStop(id: 'lcs', lat: 0, lng: 0, closesAt: at(9)),
-      ];
-      final ordered = orderByWindows(stops, preferRestockStart: true);
-      expect(ordered.map((s) => s.id), ['target', 'lcs', 'walmart']);
     });
 
     test('stable for equal keys', () {
@@ -31,7 +21,7 @@ void main() {
         PlannerStop(id: 'a', lat: 0, lng: 0, closesAt: at(12)),
         PlannerStop(id: 'b', lat: 0, lng: 0, closesAt: at(12)),
       ];
-      expect(orderByWindows(stops, preferRestockStart: false).map((s) => s.id), ['a', 'b']);
+      expect(orderByWindows(stops).map((s) => s.id), ['a', 'b']);
     });
   });
 

@@ -2,15 +2,11 @@ import 'package:cross_file/cross_file.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show AuthState, OAuthProvider, User;
 
 import '../core/logic/geo.dart';
-import '../core/logic/restock.dart';
-import '../data/models/alert_item.dart';
 import '../data/models/app_mode.dart';
-import '../data/models/business.dart';
 import '../data/models/draft_stop.dart';
 import '../data/models/feature_request.dart';
 import '../data/models/json_utils.dart';
 import '../data/models/pin.dart';
-import '../data/models/product.dart';
 import '../data/models/profile.dart';
 import '../data/models/report.dart';
 import '../data/models/route_model.dart';
@@ -18,14 +14,11 @@ import '../data/models/settings.dart';
 import '../data/models/stop.dart';
 import '../data/models/team.dart';
 import '../data/models/trip.dart';
-import '../data/models/store_summary.dart';
 import '../data/models/visit.dart';
-import '../data/repositories/alert_repository.dart';
 import '../data/repositories/auth_repository.dart';
 import '../data/repositories/demand_repository.dart';
 import '../data/repositories/feature_request_repository.dart';
 import '../data/repositories/pin_repository.dart';
-import '../data/repositories/product_repository.dart';
 import '../data/repositories/profile_repository.dart';
 import '../data/repositories/report_repository.dart';
 import '../data/repositories/route_repository.dart';
@@ -375,7 +368,7 @@ class DemoPinRepository implements PinRepository {
   }) async {
     final r = _insert({
       'mode': mode.id,
-      'kind': mode == AppMode.cardDrops ? 'store' : 'yard_sale',
+      'kind': 'yard_sale',
       'origin': 'spotted',
       'owner_id': userId,
       'name': name,
@@ -391,27 +384,6 @@ class DemoPinRepository implements PinRepository {
     await addPhoto(r['id'] as String, userId, signPhoto);
     return _pin(r);
   }
-
-  @override
-  Future<Pin> ensureStorePin(Business b) => _later(() {
-    final existing = db.pins.values
-        .where((p) => p['mode'] == 'card_drops' && p['place_id'] != null && p['place_id'] == b.placeId)
-        .firstOrNull;
-    if (existing != null) return _pin(existing);
-    return _pin(
-      _insert({
-        'mode': 'card_drops',
-        'kind': 'store',
-        'origin': 'places',
-        'place_id': b.placeId,
-        'name': b.name,
-        'address': b.address,
-        'lat': b.lat,
-        'lng': b.lng,
-        'status': 'live',
-      }),
-    );
-  });
 
   @override
   Future<void> addPhoto(String pinId, String userId, XFile file) async {
@@ -446,16 +418,6 @@ class DemoReportRepository implements ReportRepository {
   DemoReportRepository(this.db);
   final DemoDb db;
 
-  static const _positive = {'in_stock', 'restocking_now'};
-
-  Map<String, dynamic> _withProduct(Map<String, dynamic> r) {
-    final p = r['product_id'] == null ? null : db.products[r['product_id']];
-    return {
-      ...r,
-      'products': p == null ? null : {'display_name': p['display_name']},
-    };
-  }
-
   @override
   Future<Report> create(ReportDraft draft, String userId) => _later(() {
     final trust = (db.profiles[userId]?['trust_score'] as int?) ?? 50;
@@ -477,7 +439,7 @@ class DemoReportRepository implements ReportRepository {
       if (pin['status'] == 'pending') pin['status'] = 'live';
     }
     db.profiles[userId]?['trust_score'] = (trust + 1).clamp(0, 100);
-    return Report.fromRow(_withProduct(row));
+    return Report.fromRow(row);
   });
 
   List<Map<String, dynamic>> _forPin(String pinId) =>
@@ -486,7 +448,7 @@ class DemoReportRepository implements ReportRepository {
 
   @override
   Future<List<Report>> recentForPin(String pinId, {int limit = 10}) =>
-      _later(() => _forPin(pinId).take(limit).map((r) => Report.fromRow(_withProduct(r))).toList());
+      _later(() => _forPin(pinId).take(limit).map((r) => Report.fromRow(r)).toList());
 
   @override
   Future<Map<String, Report>> latestForPins(List<String> pinIds) => _later(() {
@@ -494,52 +456,10 @@ class DemoReportRepository implements ReportRepository {
     final out = <String, Report>{};
     for (final id in pinIds) {
       final latest = _forPin(id).where((r) => DateTime.parse(r['created_at'] as String).isAfter(cutoff)).firstOrNull;
-      if (latest != null) out[id] = Report.fromRow(_withProduct(latest));
+      if (latest != null) out[id] = Report.fromRow(latest);
     }
     return out;
   });
-
-  /// Mirrors migration 006: trusted positive reports in the last 90 days,
-  /// bucketed by local weekday × hour.
-  StoreSummary _summary(String pinId) {
-    final cutoff = DateTime.now().subtract(const Duration(days: 90));
-    final rows = _forPin(pinId).where(
-      (r) => DateTime.parse(r['created_at'] as String).isAfter(cutoff) && (r['trust_at_filing'] as int? ?? 50) >= 30,
-    );
-    final buckets = <(int, int), int>{};
-    final days = List.filled(7, 0);
-    var hits = 0;
-    DateTime? lastSeen;
-    for (final r in rows) {
-      final t = DateTime.parse(r['created_at'] as String).toLocal();
-      lastSeen ??= t;
-      if (!_positive.contains(r['status'])) continue;
-      hits++;
-      final k = (t.weekday % 7, t.hour);
-      buckets[k] = (buckets[k] ?? 0) + 1;
-      days[t.weekday % 7]++;
-    }
-    final best = buckets.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
-    return StoreSummary(
-      totalHits: hits,
-      totalReports: rows.length,
-      lastSeen: lastSeen,
-      tier: tierForHits(hits),
-      bestWindows: [for (final e in best.take(3)) (dow: e.key.$1, hour: e.key.$2, hits: e.value)],
-      dayHits: days,
-      recent: const [],
-    );
-  }
-
-  @override
-  Future<StoreSummary> storeSummary(String pinId) => _later(() => _summary(pinId));
-
-  @override
-  Future<Map<String, StoreSummary>> summaries(List<String> pinIds) =>
-      _later(() => {for (final id in pinIds) id: _summary(id)});
-
-  @override
-  Future<void> delete(String reportId) async => db.reports.remove(reportId);
 
   @override
   Stream<List<Map<String, dynamic>>> stream() async* {
@@ -548,99 +468,29 @@ class DemoReportRepository implements ReportRepository {
             .take(50)
             .toList();
     yield latest();
-    // Demo only: a community sighting arrives shortly after launch, so the live-drop banner can be seen.
+    // Demo only: on a sale morning, a neighbor confirms a sale shortly after launch (the
+    // live-drop banner), and the first sale on most plans packs up early, so the runner's
+    // "reported packed up · Skip it" heads-up can be seen mid-route.
     await Future<void>.delayed(const Duration(seconds: 20));
-    final target = db.pins.values.where((p) => p['place_id'] == 'pl_target_central').firstOrNull;
-    final etb = db.products.values
-        .where((p) => p['display_name'] == 'Prismatic Evolutions — Elite Trainer Box')
-        .firstOrNull;
-    // And on a sale morning, the first sale on most plans packs up early, so the
-    // runner's "reported packed up · Skip it" heads-up can be seen mid-route.
     final now = DateTime.now();
-    final moving = db.pins.values.where((p) => (p['name'] as String).startsWith('Moving sale')).firstOrNull;
-    if (moving != null) {
-      final opens = DateTime.parse(moving['opens_at'] as String).toLocal();
-      final closes = DateTime.parse(moving['closes_at'] as String).toLocal();
-      if (now.isAfter(opens) && now.isBefore(closes)) {
-        final rid = DemoDb.newId();
-        db.reports[rid] = {
-          'id': rid, 'pin_id': moving['id'], 'user_id': 'community-3', 'status': 'packed_up',
-          'trust_at_filing': 70, 'created_at': DemoDb.nowIso(),
-        };
-      }
+    bool openNow(Map<String, dynamic> p) =>
+        p['opens_at'] != null &&
+        now.isAfter(DateTime.parse(p['opens_at'] as String).toLocal()) &&
+        now.isBefore(DateTime.parse(p['closes_at'] as String).toLocal());
+    void file(Map<String, dynamic>? pin, String status, String user) {
+      if (pin == null || !openNow(pin)) return;
+      final rid = DemoDb.newId();
+      db.reports[rid] = {
+        'id': rid, 'pin_id': pin['id'], 'user_id': user, 'status': status,
+        'trust_at_filing': 70, 'created_at': DemoDb.nowIso(),
+      };
     }
-    if (target == null) {
-      yield latest();
-      return;
-    }
-    final id = DemoDb.newId();
-    db.reports[id] = {
-      'id': id,
-      'pin_id': target['id'],
-      'user_id': 'community-7',
-      'status': 'in_stock',
-      'product_id': etb?['id'],
-      'qty': 4,
-      'price_cents': 4999,
-      'purchase_limit': 2,
-      'line_present': false,
-      'trust_at_filing': 72,
-      'created_at': DemoDb.nowIso(),
-    };
+
+    Map<String, dynamic>? named(String prefix) => db.pins.values.where((p) => (p['name'] as String).startsWith(prefix)).firstOrNull;
+    file(named('Estate sale'), 'still_open', 'community-7');
+    file(named('Moving sale'), 'packed_up', 'community-3');
     yield latest();
   }
-}
-
-class DemoProductRepository implements ProductRepository {
-  DemoProductRepository(this.db);
-  final DemoDb db;
-
-  List<Product> _where(bool Function(Map<String, dynamic>) test) =>
-      db.products.values.where(test).map(Product.fromRow).toList();
-
-  @override
-  Future<List<Product>> canonical() => _later(() {
-    final list = _where((p) => p['is_canonical'] == true);
-    list.sort((a, b) => (b.releaseDate ?? DateTime(2000)).compareTo(a.releaseDate ?? DateTime(2000)));
-    // Show only released sets first, like the catalog a shopper would see.
-    final now = DateTime.now();
-    return [
-      ...list.where((p) => p.releaseDate == null || !p.releaseDate!.isAfter(now)),
-      ...list.where((p) => p.releaseDate != null && p.releaseDate!.isAfter(now)),
-    ];
-  });
-
-  @override
-  Future<List<Product>> search(String q) => _later(
-    () => _where((p) => (p['display_name'] as String).toLowerCase().contains(q.toLowerCase())).take(30).toList(),
-  );
-
-  @override
-  Future<Product> addFreeText(String name, String userId) => _later(() {
-    final id = DemoDb.newId();
-    db.products[id] = {
-      'id': id,
-      'game': 'other',
-      'set_name': name,
-      'sku_type': 'other',
-      'display_name': name,
-      'is_canonical': false,
-      'created_by': userId,
-      'created_at': DemoDb.nowIso(),
-    };
-    return Product.fromRow(db.products[id]!);
-  });
-
-  @override
-  Future<Set<String>> follows(String userId) async => {...db.follows};
-  @override
-  Future<void> follow(String userId, String productId) async => db.follows.add(productId);
-  @override
-  Future<void> unfollow(String userId, String productId) async => db.follows.remove(productId);
-  @override
-  Future<List<Product>> nonCanonical() => _later(() => _where((p) => p['is_canonical'] == false));
-  @override
-  Future<void> merge(String fromId, String intoId) async => db.products[fromId]?['canonical_id'] = intoId;
 }
 
 class DemoFeatureRequestRepository implements FeatureRequestRepository {
@@ -722,25 +572,6 @@ class DemoFeatureRequestRepository implements FeatureRequestRepository {
     'body': body,
     'created_at': DemoDb.nowIso(),
   });
-}
-
-class DemoAlertRepository implements AlertRepository {
-  DemoAlertRepository(this.db);
-  final DemoDb db;
-
-  @override
-  Future<List<AlertItem>> list(String userId) => _later(() {
-    final rows = db.alerts.values.where((a) => a['user_id'] == userId).toList()
-      ..sort((a, b) => (b['sent_at'] as String).compareTo(a['sent_at'] as String));
-    return rows.map(AlertItem.fromRow).toList();
-  });
-
-  @override
-  Future<void> markOpened(String id) async => db.alerts[id]?['opened_at'] = DemoDb.nowIso();
-  @override
-  Future<void> registerPushToken(String userId, String token) async {}
-  @override
-  Stream<List<Map<String, dynamic>>> stream(String userId) => const Stream.empty();
 }
 
 class DemoShareRepository implements ShareRepository {

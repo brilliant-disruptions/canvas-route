@@ -1,11 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../data/repositories/alert_repository.dart';
 import '../data/repositories/auth_repository.dart';
 import '../data/repositories/demand_repository.dart';
 import '../data/repositories/feature_request_repository.dart';
 import '../data/repositories/pin_repository.dart';
-import '../data/repositories/product_repository.dart';
 import '../data/repositories/profile_repository.dart';
 import '../data/repositories/report_repository.dart';
 import '../data/repositories/route_repository.dart';
@@ -46,9 +44,7 @@ final routeRepoProvider = Provider((_) => RouteRepository());
 final visitRepoProvider = Provider((_) => VisitRepository());
 final pinRepoProvider = Provider((ref) => PinRepository(ref.watch(storageServiceProvider)));
 final reportRepoProvider = Provider((_) => ReportRepository());
-final productRepoProvider = Provider((_) => ProductRepository());
 final featureRequestRepoProvider = Provider((_) => FeatureRequestRepository());
-final alertRepoProvider = Provider((_) => AlertRepository());
 final shareRepoProvider = Provider((_) => ShareRepository());
 final tripRepoProvider = Provider((_) => TripRepository());
 final teamRepoProvider = Provider((_) => TeamRepository());

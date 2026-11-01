@@ -32,7 +32,8 @@ class SettingsScreen extends ConsumerWidget {
         children: [
           ListTile(leading: const Icon(Icons.person_outline), title: const Text('Profile'), trailing: const Icon(Icons.chevron_right), onTap: () => context.push('/settings/profile')),
           ListTile(leading: const Icon(Icons.credit_card), title: const Text('Account & plan'), trailing: const Icon(Icons.chevron_right), onTap: () => context.push('/settings/account')),
-          ListTile(leading: const Icon(Icons.tune), title: Text('Outcomes, fields & export · ${pack.label}'), trailing: const Icon(Icons.chevron_right), onTap: () => context.push('/settings/advanced')),
+          if (pack.tools.editableOutcomes)
+            ListTile(leading: const Icon(Icons.tune), title: Text('Outcomes, fields & export · ${pack.label}'), trailing: const Icon(Icons.chevron_right), onTap: () => context.push('/settings/advanced')),
           const SectionHeader('Appearance'),
           SegmentedButton<ThemeMode>(
             segments: const [
@@ -88,21 +89,12 @@ class SettingsScreen extends ConsumerWidget {
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: const Text('Auto-share my visits as reports'),
-              subtitle: Text('What you log at each ${pack.stopNoun} helps ${pack.communityNoun} nearby. Never includes your location.'),
+              subtitle: Text('What you log at each ${pack.stopNoun} helps ${pack.community.noun} nearby. Never includes your location.'),
               value: profile.autoShareReports,
               onChanged: (v) => ref.read(profileProvider.notifier).patch({'auto_share_reports': v}),
             ),
-            // The radius lives on the alerts screen, which applies the free plan's cap.
-            if (pack.alerts.isNotEmpty)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Alert radius'),
-                subtitle: Text('${profile.alertRadiusMi} mi · quiet hours and products in ${pack.productCatalog ? 'Watchlist' : 'Alerts'}'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.push('/alerts'),
-              ),
           ],
-          if (pack.weekendDigest) ...[
+          if (pack.community.weekendDigest) ...[
             const SectionHeader('Notifications'),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,

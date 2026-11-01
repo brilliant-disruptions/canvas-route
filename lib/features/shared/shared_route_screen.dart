@@ -44,7 +44,7 @@ class _SharedRouteScreenState extends ConsumerState<SharedRouteScreen> with PinI
       if (ref.read(activeModeProvider) != mode) await profile.setMode(mode);
       final saved = (await ref.read(routesProvider.future)).length;
       if (!mounted) return;
-      if (pack.atRouteLimit(saved, paying: ref.read(hasProAccessProvider))) {
+      if (pack.pro.atRouteLimit(saved, paying: ref.read(hasProAccessProvider))) {
         await showPaywall(context, pack, reason: freeLimitReason(pack));
         return;
       }

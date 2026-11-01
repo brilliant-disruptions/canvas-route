@@ -8,7 +8,7 @@ import 'providers.dart';
 /// The caller's team, or null. Only modes with a Team plan look.
 final myTeamProvider = FutureProvider<Team?>((ref) async {
   ref.watch(currentUserIdProvider);
-  if (!ref.watch(modePackProvider).teamPlan || ref.watch(isAnonymousProvider)) return null;
+  if (!ref.watch(modePackProvider).tools.teamPlan || ref.watch(isAnonymousProvider)) return null;
   return ref.read(teamRepoProvider).mine();
 });
 

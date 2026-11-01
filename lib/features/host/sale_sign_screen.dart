@@ -61,7 +61,7 @@ class _SaleSignScreenState extends ConsumerState<SaleSignScreen> {
                 child: FittedBox(
                   child: RepaintBoundary(
                     key: _signKey,
-                    child: SaleSign(pin: p, headline: packFor(p.mode).hostSignHeadline, link: saleLink(p)),
+                    child: SaleSign(pin: p, headline: packFor(p.mode).community.signHeadline, link: saleLink(p)),
                   ),
                 ),
               ),

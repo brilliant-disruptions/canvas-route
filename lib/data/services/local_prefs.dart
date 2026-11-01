@@ -46,8 +46,6 @@ class LocalPrefs {
   Future<void> setHasOnboarded(bool v) => _put('hasOnboarded', v);
 
   /// The map's first-run hint pointing at the one-tap planner.
-  bool get hasSeenPlanTip => _bool('hasSeenPlanTip') ?? false;
-  Future<void> setHasSeenPlanTip(bool v) => _put('hasSeenPlanTip', v);
 
   /// Friday weekend heads-up: null until the user has been asked.
   bool? get weekendDigest => _bool('weekendDigest');

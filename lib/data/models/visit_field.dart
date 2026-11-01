@@ -1,4 +1,4 @@
-enum FieldType { text, multiline, number, currency, date, photo, toggle, selector, productMulti }
+enum FieldType { text, multiline, number, currency, date, photo, toggle, selector }
 
 /// Visit fields whose values live in dedicated `visits` columns. Everything
 /// else is stored in `visits.custom_fields` keyed by [VisitFieldDefinition.key].

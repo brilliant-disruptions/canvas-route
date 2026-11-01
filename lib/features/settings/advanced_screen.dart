@@ -44,7 +44,7 @@ class AdvancedScreen extends ConsumerWidget {
             tooltip: 'Add outcome',
             icon: const Icon(Icons.add),
             onPressed: () async {
-              if (pack.customFieldsPro && !await requirePro(context, ref, 'Custom outcomes are part of ${pack.proLabel}.')) return;
+              if (pack.pro.customFieldsPro && !await requirePro(context, ref, 'Custom outcomes are part of ${pack.pro.label}.')) return;
               if (!context.mounted) return;
               final v = await promptText(context, title: 'New outcome', confirmLabel: 'Add');
               if (v != null && v.isNotEmpty && !outcomes.contains(v)) n.updateOverride(pack.id, (o) => o.copyWith(outcomes: [...outcomes, v]));
@@ -74,7 +74,7 @@ class AdvancedScreen extends ConsumerWidget {
             tooltip: 'Add field',
             icon: const Icon(Icons.add),
             onPressed: () async {
-              if (pack.customFieldsPro && !await requirePro(context, ref, 'Custom fields are part of ${pack.proLabel}.')) return;
+              if (pack.pro.customFieldsPro && !await requirePro(context, ref, 'Custom fields are part of ${pack.pro.label}.')) return;
               if (!context.mounted) return;
               final r = await showKnSheet<VisitFieldDefinition>(context, builder: (_) => const _NewFieldSheet());
               if (r != null) n.updateOverride(pack.id, (x) => x.copyWith(visitFields: [...fields, r]));

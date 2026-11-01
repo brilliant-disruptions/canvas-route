@@ -90,16 +90,16 @@ class _ColdStartCardState extends ConsumerState<ColdStartCard> {
             const SizedBox(height: Sp.s1),
             Text(
               switch ((mine, others)) {
-                (true, 0) => 'You\'re first in line. Invite another ${p.communityNoun.replaceAll(RegExp(r's$'), '')} to fill it faster.',
-                (true, _) => 'You and $others other ${p.communityNoun} are waiting here.',
-                (false, 0) => 'Be the first ${p.communityNoun.replaceAll(RegExp(r's$'), '')} here. Hosts see how many are waiting.',
-                (false, _) => '$others ${p.communityNoun} near you are already waiting. Hosts can see that.',
+                (true, 0) => 'You\'re first in line. Invite another ${p.community.noun.replaceAll(RegExp(r's$'), '')} to fill it faster.',
+                (true, _) => 'You and $others other ${p.community.noun} are waiting here.',
+                (false, 0) => 'Be the first ${p.community.noun.replaceAll(RegExp(r's$'), '')} here. Hosts see how many are waiting.',
+                (false, _) => '$others ${p.community.noun} near you are already waiting. Hosts can see that.',
               },
               style: t.bodyMedium?.copyWith(color: c.onSurfaceVariant),
             ),
             const SizedBox(height: Sp.s3),
             KnButton(
-              label: mine ? 'You\'re on the list · Invite a friend' : p.waitlistLabel!,
+              label: mine ? 'You\'re on the list · Invite a friend' : p.community.waitlistLabel!,
               icon: mine ? Icons.ios_share : Icons.front_hand_outlined,
               lime: !mine,
               loading: _busy,
@@ -110,9 +110,9 @@ class _ColdStartCardState extends ConsumerState<ColdStartCard> {
               spacing: Sp.s2,
               runSpacing: Sp.s1,
               children: [
-                if (p.spotLabel != null)
+                if (p.community.spotLabel != null)
                   ActionChip(avatar: const Icon(Icons.add_a_photo_outlined, size: 18), label: const Text('Spot one'), onPressed: widget.onSpot),
-                if (p.supportsHosting)
+                if (p.community.hosting)
                   ActionChip(avatar: const Icon(Icons.sell_outlined, size: 18), label: const Text('Post mine free'), onPressed: () => context.push('/host/new')),
                 if (nearest != null && nearest.miles > 15)
                   ActionChip(

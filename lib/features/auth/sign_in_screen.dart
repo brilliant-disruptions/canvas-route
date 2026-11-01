@@ -59,7 +59,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     final routes = routeIds.length;
     final visits = ref.watch(allVisitsProvider).value?.where((v) => routeIds.contains(v.routeId)).length ?? 0;
     final headline = switch (widget.reason) {
-      'report' => 'Join nearby ${pack.communityNoun}',
+      'report' => 'Join nearby ${pack.community.noun}',
       'share' => 'Share your ${pack.routeNoun}',
       'host' => 'Post your sale',
       'upgrade' => 'Sign in to upgrade',

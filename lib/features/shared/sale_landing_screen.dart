@@ -7,7 +7,7 @@ import 'package:intl/intl.dart';
 import '../../app/router.dart';
 import '../../core/logic/geo.dart';
 import '../../core/logic/pin_labels.dart';
-import '../../core/logic/restock.dart';
+import '../../core/logic/freshness.dart';
 import '../../core/logic/sale_page.dart';
 import '../../core/theme/kn_colors.dart';
 import '../../core/theme/kn_theme.dart';
@@ -112,7 +112,7 @@ class _SalePage extends ConsumerWidget {
     final reports = sameDay.isEmpty ? const {} : (ref.watch(latestReportsProvider(sameDay.join(','))).value ?? const {});
     bool over(String id) {
       final r = reports[id];
-      final st = r == null ? null : pack.reportStatuses.where((s) => s.value == r.status).firstOrNull;
+      final st = r == null ? null : pack.community.statuses.where((s) => s.value == r.status).firstOrNull;
       return st != null && st.ends && now.difference(r!.createdAt) <= const Duration(hours: 6);
     }
     final companions = [for (final id in sameDay) if (!over(id)) byId[id]!];
@@ -264,7 +264,7 @@ class _SalePage extends ConsumerWidget {
   /// status ("Opens Sat 7am · in 7 days"). The bool says whether it's live news.
   (String, bool)? _status(WidgetRef ref, ModePack pack, DateTime now) {
     final rep = ref.watch(latestReportsProvider(pin.id)).value?[pin.id];
-    final st = rep == null ? null : pack.reportStatuses.where((s) => s.value == rep.status).firstOrNull;
+    final st = rep == null ? null : pack.community.statuses.where((s) => s.value == rep.status).firstOrNull;
     if (st != null && now.difference(rep!.createdAt) <= Duration(hours: st.ends ? 6 : 1)) {
       return ('${st.label} · reported ${relativeAge(rep.createdAt)}', st.positive);
     }

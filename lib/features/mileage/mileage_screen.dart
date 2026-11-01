@@ -24,7 +24,7 @@ class MileageScreen extends ConsumerWidget {
 
   Future<void> _export(BuildContext context, WidgetRef ref, List<Trip> trips) async {
     final pack = ref.read(modePackProvider);
-    if (!await requirePro(context, ref, 'Mileage export for expense reports is part of ${pack.proLabel}.')) return;
+    if (!await requirePro(context, ref, 'Mileage export for expense reports is part of ${pack.pro.label}.')) return;
     final profile = ref.read(profileProvider).value;
     const fields = ['date', 'route', 'stops', 'miles', 'rate', 'amount', 'source'];
     final csv = buildCsv(

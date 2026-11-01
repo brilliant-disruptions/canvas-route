@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
-import '../../core/logic/errors.dart';
 import '../../core/logic/geo.dart';
 import '../../core/logic/visit_history.dart';
 import '../../core/theme/kn_colors.dart';
@@ -10,7 +8,6 @@ import '../../core/theme/kn_theme.dart';
 import '../../data/models/business.dart';
 import '../../data/models/stop.dart';
 import '../../data/models/team.dart';
-import '../../state/auth_state.dart';
 import '../../state/follow_ups_state.dart';
 import '../../state/location_state.dart';
 import '../../state/map_state.dart';
@@ -18,7 +15,6 @@ import '../../state/profile_state.dart';
 import '../../state/providers.dart';
 import '../../state/team_state.dart';
 import '../../ui/widgets/kn_widgets.dart';
-import '../community/report_sheet.dart';
 import '../settings/paywall_sheet.dart';
 
 Future<void> showBusinessSheet(BuildContext context, Business b) =>
@@ -41,7 +37,7 @@ class BusinessSheet extends ConsumerWidget {
     final added = map.isDraft(business);
     final dist = haversineMeters(center.lat, center.lng, business.lat, business.lng);
     final history = ref.watch(visitHistoryProvider)[business.identity];
-    final seeHistory = !pack.visitHistoryPro || ref.watch(hasProAccessProvider);
+    final seeHistory = !pack.pro.visitHistoryPro || ref.watch(hasProAccessProvider);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(Sp.s5, 0, Sp.s5, Sp.s5),
@@ -66,7 +62,7 @@ class BusinessSheet extends ConsumerWidget {
               accent: c.tertiary,
               onTap: seeHistory
                   ? null
-                  : () => showPaywall(context, pack, reason: 'See what happened last time at every ${pack.stopNoun} with ${pack.proLabel}.'),
+                  : () => showPaywall(context, pack, reason: 'See what happened last time at every ${pack.stopNoun} with ${pack.pro.label}.'),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -83,7 +79,7 @@ class BusinessSheet extends ConsumerWidget {
                           if (history.lastNotes != null && history.lastNotes!.isNotEmpty)
                             Text(history.lastNotes!, style: t.bodyMedium, maxLines: 3, overflow: TextOverflow.ellipsis),
                         ] else
-                          Text('See last outcome and notes with ${pack.proLabel}', style: t.bodySmall?.copyWith(color: c.tertiary)),
+                          Text('See last outcome and notes with ${pack.pro.label}', style: t.bodySmall?.copyWith(color: c.tertiary)),
                       ],
                     ),
                   ),
@@ -92,7 +88,7 @@ class BusinessSheet extends ConsumerWidget {
             ),
           ],
           // Don't double-knock: who on the team has been here lately (outcome only).
-          if (pack.teamPlan && business.placeId != null)
+          if (pack.tools.teamPlan && business.placeId != null)
             for (final v in ref.watch(teammateVisitsProvider(business.placeId!)).value ?? const <TeammateVisit>[])
               Padding(
                 padding: const EdgeInsets.only(top: Sp.s2),
@@ -148,33 +144,6 @@ class BusinessSheet extends ConsumerWidget {
                 },
               ),
             ),
-            if (pack.communityReports && pack.productCatalog && business.placeId != null) ...[
-              const SizedBox(width: Sp.s2),
-              SizedBox(
-                width: 52,
-                child: OutlinedButton(
-                  onPressed: () async {
-                    // Reporting needs a real account (the server refuses guests).
-                    if (ref.read(isAnonymousProvider)) {
-                      Navigator.pop(context);
-                      context.push('/signin?reason=report');
-                      return;
-                    }
-                    try {
-                      final pin = await ref.read(pinRepoProvider).ensureStorePin(business);
-                      if (context.mounted) {
-                        Navigator.pop(context);
-                        showReportSheet(context, pin);
-                      }
-                    } catch (e) {
-                      if (context.mounted) toast(context, friendlyError(e));
-                    }
-                  },
-                  style: OutlinedButton.styleFrom(padding: EdgeInsets.zero),
-                  child: const Icon(Icons.campaign_outlined),
-                ),
-              ),
-            ],
           ]),
           const SizedBox(height: Sp.s2),
           OutlinedButton.icon(

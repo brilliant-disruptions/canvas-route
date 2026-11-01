@@ -38,7 +38,7 @@ class _CheckInBannerState extends ConsumerState<CheckInBanner> {
       await ref.read(reportRepoProvider).create(ReportDraft(pinId: widget.pin.id, status: s.value), ref.read(currentUserIdProvider)!);
       ref.invalidate(latestReportsProvider);
       HapticFeedback.mediumImpact();
-      if (mounted) toast(context, 'Thanks. ${widget.pack.communityNoun[0].toUpperCase()}${widget.pack.communityNoun.substring(1)} nearby can see it.', icon: Icons.check);
+      if (mounted) toast(context, 'Thanks. ${widget.pack.community.noun[0].toUpperCase()}${widget.pack.community.noun.substring(1)} nearby can see it.', icon: Icons.check);
       widget.onDone();
     } catch (e) {
       if (mounted) {
@@ -77,7 +77,7 @@ class _CheckInBannerState extends ConsumerState<CheckInBanner> {
           Wrap(
             spacing: Sp.s2,
             children: [
-              for (final s in widget.pack.reportStatuses)
+              for (final s in widget.pack.community.statuses)
                 ActionChip(
                   avatar: _sending == s.value
                       ? const SizedBox.square(dimension: 14, child: CircularProgressIndicator(strokeWidth: 2))

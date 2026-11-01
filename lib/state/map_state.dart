@@ -20,7 +20,6 @@ class MapState {
     this.editingRouteId,
     this.editingRouteName,
     this.selectedDay,
-    this.productFilter,
     this.huntFilter = const {},
     this.openNow = false,
     this.searching = false,
@@ -36,9 +35,6 @@ class MapState {
 
   /// Yard Sales weekend selector; null = any day.
   final DateTime? selectedDay;
-
-  /// Card Drops product filter chip; null = any.
-  final String? productFilter;
 
   /// Pin categories the user is hunting for; empty = all.
   final Set<String> huntFilter;
@@ -59,14 +55,12 @@ class MapState {
     String? editingRouteId,
     String? editingRouteName,
     DateTime? selectedDay,
-    String? productFilter,
     Set<String>? huntFilter,
     bool? openNow,
     bool? searching,
     String? error,
     bool clearEditing = false,
     bool clearDay = false,
-    bool clearProduct = false,
     bool clearError = false,
   }) =>
       MapState(
@@ -77,7 +71,6 @@ class MapState {
         editingRouteId: clearEditing ? null : editingRouteId ?? this.editingRouteId,
         editingRouteName: clearEditing ? null : editingRouteName ?? this.editingRouteName,
         selectedDay: clearDay ? null : selectedDay ?? this.selectedDay,
-        productFilter: clearProduct ? null : productFilter ?? this.productFilter,
         huntFilter: huntFilter ?? this.huntFilter,
         openNow: openNow ?? this.openNow,
         searching: searching ?? this.searching,
@@ -122,8 +115,6 @@ class MapNotifier extends Notifier<MapState> {
   void setDay(DateTime? d) =>
       state = d == null ? state.copyWith(clearDay: true, openNow: false) : state.copyWith(selectedDay: d, openNow: false);
   void setOpenNow(bool on) => state = state.copyWith(openNow: on, clearDay: true);
-  void setProductFilter(String? p) =>
-      state = p == null ? state.copyWith(clearProduct: true) : state.copyWith(productFilter: p);
   void setHunt(Set<String> categories) => state = state.copyWith(huntFilter: categories);
   void showResults(List<Business> results) => state = state.copyWith(results: results);
 

@@ -52,35 +52,17 @@ class VisitLogger {
   Future<bool> _autoFileReport(RouteModel route, Stop stop, Visit visit) async {
     final pack = ref.read(modePackProvider);
     final profile = ref.read(profileProvider).value;
-    if (!pack.communityReports || profile == null || !profile.autoShareReports) return false;
+    if (!pack.community.reports || profile == null || !profile.autoShareReports) return false;
     if (ref.read(isAnonymousProvider)) return false;
-    final status = pack.outcomeToReportStatus[visit.outcome];
+    final status = pack.community.outcomeToReportStatus[visit.outcome];
     if (status == null) return false;
 
-    var pinId = stop.pinId;
-    if (pinId == null && pack.pinsPlacesStops && stop.placeId != null) {
-      final pin = await ref.read(pinRepoProvider).ensureStorePin(stop.toBusiness());
-      pinId = pin.id;
-    }
+    final pinId = stop.pinId;
     if (pinId == null) return false;
 
-    final cf = visit.customFields;
-    final products = (cf['products'] as List?)?.cast<Map>() ?? const [];
-    final first = products.isEmpty ? null : products.first;
     try {
       await ref.read(reportRepoProvider).create(
-            ReportDraft(
-              pinId: pinId,
-              status: status,
-              visitId: visit.id,
-              productId: first?['id'] as String?,
-              productText: first?['name'] as String?,
-              qty: _int(cf['qty']),
-              priceCents: cf['price'] == null ? null : ((cf['price'] as num) * 100).round(),
-              purchaseLimit: _int(cf['purchaseLimit']),
-              linePresent: cf['linePresent'] as bool?,
-              photoPath: visit.photoPath,
-            ),
+            ReportDraft(pinId: pinId, status: status, visitId: visit.id, photoPath: visit.photoPath),
             ref.read(currentUserIdProvider)!,
           );
       return true;
@@ -89,7 +71,6 @@ class VisitLogger {
     }
   }
 
-  int? _int(dynamic v) => v == null ? null : (v as num).toInt();
 }
 
 final visitLoggerProvider = Provider((ref) => VisitLogger(ref));

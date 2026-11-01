@@ -15,7 +15,7 @@ import '../../state/providers.dart';
 import '../../ui/widgets/kn_widgets.dart';
 import '../feature_requests/feature_requests_screen.dart';
 
-/// Role-gated. Requests pipeline, pin moderation, product catalog merges.
+/// Role-gated. Requests pipeline, pin moderation, and where hunters are waiting.
 class AdminScreen extends ConsumerWidget {
   const AdminScreen({super.key});
 
@@ -25,7 +25,7 @@ class AdminScreen extends ConsumerWidget {
       return const Scaffold(body: EmptyState(icon: Icons.lock_outline, title: 'Admins only'));
     }
     return DefaultTabController(
-      length: 4,
+      length: 3,
       child: Scaffold(
         appBar: AppBar(
           title: Row(
@@ -39,12 +39,11 @@ class AdminScreen extends ConsumerWidget {
             tabs: [
               Tab(text: 'Requests'),
               Tab(text: 'Pins'),
-              Tab(text: 'Products'),
               Tab(text: 'Demand'),
             ],
           ),
         ),
-        body: const TabBarView(children: [_Requests(), _Pins(), _Products(), _Demand()]),
+        body: const TabBarView(children: [_Requests(), _Pins(), _Demand()]),
       ),
     );
   }
@@ -194,53 +193,6 @@ class _Pins extends ConsumerWidget {
   }
 }
 
-class _Products extends ConsumerWidget {
-  const _Products();
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final canonical = ref.watch(productsProvider).value ?? const [];
-    return FutureBuilder(
-      future: ref.read(productRepoProvider).nonCanonical(),
-      builder: (_, snap) {
-        if (!snap.hasData) return const LoadingView();
-        final list = snap.data!;
-        if (list.isEmpty) {
-          return const EmptyState(icon: Icons.inventory_2_outlined, title: 'No free-text products to merge');
-        }
-        return ListView.separated(
-          padding: const EdgeInsets.all(Sp.s4),
-          itemCount: list.length,
-          separatorBuilder: (_, _) => const GhostDivider(),
-          itemBuilder: (_, i) {
-            final p = list[i];
-            return ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(p.displayName),
-              subtitle: const Text('Free-text · tap to merge into a canonical product'),
-              onTap: () async {
-                final target = await showKnSheet<String>(
-                  context,
-                  builder: (_) => ListView(
-                    padding: const EdgeInsets.all(Sp.s4),
-                    children: [
-                      for (final cp in canonical)
-                        ListTile(title: Text(cp.displayName), onTap: () => Navigator.pop(context, cp.id)),
-                    ],
-                  ),
-                );
-                if (target != null) {
-                  await ref.read(productRepoProvider).merge(p.id, target);
-                  if (context.mounted) (context as Element).markNeedsBuild();
-                }
-              },
-            );
-          },
-        );
-      },
-    );
-  }
-}
-
 /// Where people are waiting for listings: the busiest areas first, with how much
 /// is live there. Many waiting and nothing live is where to recruit hosts next.
 class _Demand extends ConsumerWidget {
@@ -256,7 +208,7 @@ class _Demand extends ConsumerWidget {
       value: cells,
       onRetry: () => ref.invalidate(demandCellsProvider(pack.id)),
       data: (list) => list.isEmpty
-          ? EmptyState(icon: Icons.front_hand_outlined, title: 'No one waiting yet', body: 'People who tap "${pack.waitlistLabel ?? 'I\'m hunting here'}" in an empty area show up here.')
+          ? EmptyState(icon: Icons.front_hand_outlined, title: 'No one waiting yet', body: 'People who tap "${pack.community.waitlistLabel ?? 'I\'m hunting here'}" in an empty area show up here.')
           : ListView.separated(
               padding: const EdgeInsets.all(Sp.s4),
               itemCount: list.length,
@@ -272,7 +224,7 @@ class _Demand extends ConsumerWidget {
                   ),
                   title: Text('${d.lat.toStringAsFixed(1)}, ${d.lng.toStringAsFixed(1)}'),
                   subtitle: Text([
-                    '${d.hunters} ${pack.communityNoun} waiting',
+                    '${d.hunters} ${pack.community.noun} waiting',
                     '${d.liveSales} live',
                     if (d.newest != null) 'latest ${DateFormat.MMMd().format(d.newest!)}',
                   ].join(' · ')),

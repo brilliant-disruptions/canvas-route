@@ -1,7 +1,6 @@
 enum AppMode {
   fieldSales('field_sales'),
-  yardSales('yard_sales'),
-  cardDrops('card_drops');
+  yardSales('yard_sales');
 
   const AppMode(this.id);
   final String id;

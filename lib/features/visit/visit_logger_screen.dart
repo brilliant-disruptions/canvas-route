@@ -16,7 +16,6 @@ import '../../state/routes_state.dart';
 import '../../state/visits_state.dart';
 import '../../ui/widgets/kn_widgets.dart';
 import '../../ui/widgets/xfile_image.dart';
-import '../community/product_picker.dart';
 
 /// Renders the mode's visit fields dynamically; a re-log pre-fills and overwrites.
 class VisitLoggerScreen extends ConsumerStatefulWidget {
@@ -66,7 +65,7 @@ class _VisitLoggerScreenState extends ConsumerState<VisitLoggerScreen> {
       if (!mounted) return;
       context.pop();
       if (r.shared) {
-        toast(context, 'Shared with nearby ${ref.read(modePackProvider).communityNoun}', icon: Icons.campaign_outlined);
+        toast(context, 'Shared with nearby ${ref.read(modePackProvider).community.noun}', icon: Icons.campaign_outlined);
       }
     } catch (e) {
       if (mounted) {
@@ -116,13 +115,13 @@ class _VisitLoggerScreenState extends ConsumerState<VisitLoggerScreen> {
           // Short numeric fields share a row so the form isn't a column of full-width boxes.
           for (final group in _groupShort(fields)) ...[
             group.length == 1
-                ? _field(group.single, outcomes, nav, pack.productCatalog)
+                ? _field(group.single, outcomes, nav)
                 : Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       for (var i = 0; i < group.length; i++) ...[
                         if (i > 0) const SizedBox(width: Sp.s2),
-                        Expanded(child: _field(group[i], outcomes, nav, pack.productCatalog)),
+                        Expanded(child: _field(group[i], outcomes, nav)),
                       ],
                     ],
                   ),
@@ -159,7 +158,7 @@ class _VisitLoggerScreenState extends ConsumerState<VisitLoggerScreen> {
     return out;
   }
 
-  Widget _field(VisitFieldDefinition f, List<String> outcomes, dynamic nav, bool catalog) {
+  Widget _field(VisitFieldDefinition f, List<String> outcomes, dynamic nav) {
     final t = Theme.of(context).textTheme;
     final c = context.kn;
     switch (f.type) {
@@ -296,20 +295,8 @@ class _VisitLoggerScreenState extends ConsumerState<VisitLoggerScreen> {
                 ),
               ],
             ),
-            if (ref.read(modePackProvider).photoHint case final hint?)
+            if (ref.read(modePackProvider).community.photoHint case final hint?)
               Text(hint, style: t.labelSmall?.copyWith(color: c.onSurfaceDisabled)),
-          ],
-        );
-      case FieldType.productMulti:
-        final v =
-            (_draft.values[f.key] as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ??
-            const <Map<String, dynamic>>[];
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(f.label, style: t.titleMedium),
-            const SizedBox(height: Sp.s2),
-            ProductMultiField(value: v, onChanged: (list) => setState(() => _draft.values[f.key] = list)),
           ],
         );
     }

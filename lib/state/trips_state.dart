@@ -28,7 +28,7 @@ class TripLogger {
   Future<void> logRun(RouteModel route, List<Visit> visits) async {
     final pack = ref.read(modePackProvider);
     final uid = ref.read(currentUserIdProvider);
-    if (!pack.mileageLog || uid == null) return;
+    if (!pack.tools.mileageLog || uid == null) return;
     final stops = {for (final s in route.stops) s.id: s};
     final done = [...visits.where((v) => stops.containsKey(v.stopId))]..sort((a, b) => a.createdAt.compareTo(b.createdAt));
     if (done.length < 2) return;

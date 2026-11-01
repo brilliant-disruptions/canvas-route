@@ -41,7 +41,7 @@ class _State extends ConsumerState<FeatureRequestsScreen> {
                   : showPaywall(
                       context,
                       ref.read(modePackProvider),
-                      reason: 'Suggesting features is part of ${ref.read(modePackProvider).proLabel}. Anyone can upvote.',
+                      reason: 'Suggesting features is part of ${ref.read(modePackProvider).pro.label}. Anyone can upvote.',
                     ),
               icon: const Icon(Icons.add),
               label: const Text('New'),

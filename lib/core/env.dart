@@ -21,8 +21,11 @@ abstract final class Env {
   );
 
   /// Modes this build ships, comma-separated ids in picker order; the first is the default.
-  /// v1 launches Yard Sales alone. Pass `yard_sales,card_drops,field_sales` for every vertical.
+  /// v1 launches Yard Sales alone. Pass `yard_sales,field_sales` for both verticals.
   static const launchModes = String.fromEnvironment('LAUNCH_MODES', defaultValue: 'yard_sales');
+
+  /// Where "Send feedback" goes; also listed in web/terms.html.
+  static const supportEmail = String.fromEnvironment('SUPPORT_EMAIL', defaultValue: 'support@canvasroute.app');
 
   /// Platforms where the app may open Stripe Checkout for web-billed plans:
   /// any of web, android, ios. Defaults to web only. Apple allows a purchase link

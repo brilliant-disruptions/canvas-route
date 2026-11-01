@@ -75,7 +75,7 @@ class _NoTeamState extends ConsumerState<_NoTeam> {
       final n = int.tryParse(seats ?? '');
       if (n == null || !mounted) return;
       await _run(() async {
-        final url = await ref.read(billingServiceProvider).checkoutUrl(ModePack.teamProductId, seats: n);
+        final url = await ref.read(billingServiceProvider).checkoutUrl(ProTier.teamProductId, seats: n);
         await ref.read(navLauncherProvider).open(url.toString());
         if (mounted) toast(context, 'Finish checkout in your browser, then come back to name your team.');
       });
