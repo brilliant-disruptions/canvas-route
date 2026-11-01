@@ -68,7 +68,7 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
   /// Plain CSV, or for modes with CRM export, a choice of import formats.
   Future<void> _export(RouteModel route, List<Visit> list) async {
     final pack = ref.read(modePackProvider);
-    if (!pack.crmExport) return _exportCsv(route, list);
+    if (!pack.tools.crmExport) return _exportCsv(route, list);
     // A record so "CSV" and "dismissed" (null) are different answers.
     final choice = await showKnSheet<({CrmFormat? crm})>(
       context,
@@ -86,7 +86,7 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
               leading: const Icon(Icons.cloud_upload_outlined),
               title: Text('$name import file'),
               subtitle: Text(f == CrmFormat.hubspot ? 'Contacts + companies, lead status, notes' : 'Leads, lead status, description'),
-              trailing: ref.read(hasProAccessProvider) ? null : KnBadge(pack.proLabel.toUpperCase()),
+              trailing: ref.read(hasProAccessProvider) ? null : KnBadge(pack.pro.label.toUpperCase()),
               onTap: () => Navigator.pop(ctx, (crm: f)),
             ),
           const SizedBox(height: Sp.s4),
@@ -96,7 +96,7 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
     if (!mounted || choice == null) return;
     final format = choice.crm;
     if (format == null) return _exportCsv(route, list);
-    if (!await requirePro(context, ref, 'CRM import files are part of ${pack.proLabel}.')) return;
+    if (!await requirePro(context, ref, 'CRM import files are part of ${pack.pro.label}.')) return;
     final byStop = {for (final v in list) v.stopId: v};
     final csv = buildCrmCsv(format, [
       for (final s in route.stops)
@@ -243,7 +243,7 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
                     onPressed: recap.visited == 0 ? null : () => _shareRecap(route, recap),
                   ),
                   // Right after a good run is when "tell me next Friday" lands.
-                  if (pack.weekendDigest && ref.watch(weekendDigestOptInProvider) == null) ...[
+                  if (pack.community.weekendDigest && ref.watch(weekendDigestOptInProvider) == null) ...[
                     const SizedBox(height: Sp.s3),
                     const _DigestOffer(),
                   ],
@@ -260,7 +260,7 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
                         child: TextButton.icon(
                           onPressed: list.isEmpty ? null : () => _export(route, list),
                           icon: const Icon(Icons.table_view_outlined),
-                          label: Text(pack.crmExport ? 'Export' : 'Export CSV'),
+                          label: Text(pack.tools.crmExport ? 'Export' : 'Export CSV'),
                         ),
                       ),
                       Expanded(

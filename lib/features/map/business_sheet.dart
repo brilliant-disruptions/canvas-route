@@ -37,7 +37,7 @@ class BusinessSheet extends ConsumerWidget {
     final added = map.isDraft(business);
     final dist = haversineMeters(center.lat, center.lng, business.lat, business.lng);
     final history = ref.watch(visitHistoryProvider)[business.identity];
-    final seeHistory = !pack.visitHistoryPro || ref.watch(hasProAccessProvider);
+    final seeHistory = !pack.pro.visitHistoryPro || ref.watch(hasProAccessProvider);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(Sp.s5, 0, Sp.s5, Sp.s5),
@@ -62,7 +62,7 @@ class BusinessSheet extends ConsumerWidget {
               accent: c.tertiary,
               onTap: seeHistory
                   ? null
-                  : () => showPaywall(context, pack, reason: 'See what happened last time at every ${pack.stopNoun} with ${pack.proLabel}.'),
+                  : () => showPaywall(context, pack, reason: 'See what happened last time at every ${pack.stopNoun} with ${pack.pro.label}.'),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -79,7 +79,7 @@ class BusinessSheet extends ConsumerWidget {
                           if (history.lastNotes != null && history.lastNotes!.isNotEmpty)
                             Text(history.lastNotes!, style: t.bodyMedium, maxLines: 3, overflow: TextOverflow.ellipsis),
                         ] else
-                          Text('See last outcome and notes with ${pack.proLabel}', style: t.bodySmall?.copyWith(color: c.tertiary)),
+                          Text('See last outcome and notes with ${pack.pro.label}', style: t.bodySmall?.copyWith(color: c.tertiary)),
                       ],
                     ),
                   ),
@@ -88,7 +88,7 @@ class BusinessSheet extends ConsumerWidget {
             ),
           ],
           // Don't double-knock: who on the team has been here lately (outcome only).
-          if (pack.teamPlan && business.placeId != null)
+          if (pack.tools.teamPlan && business.placeId != null)
             for (final v in ref.watch(teammateVisitsProvider(business.placeId!)).value ?? const <TeammateVisit>[])
               Padding(
                 padding: const EdgeInsets.only(top: Sp.s2),

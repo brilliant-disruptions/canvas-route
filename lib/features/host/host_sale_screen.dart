@@ -96,7 +96,7 @@ class _HostSaleScreenState extends ConsumerState<HostSaleScreen> {
   /// Fills whatever [text] reveals; only found fields change.
   void _fillFrom(String text, {required bool keepAsNotes}) {
     final pack = ref.read(modePackProvider);
-    final d = parseSaleText(text, DateTime.now(), categoryKeywords: pack.categoryKeywords);
+    final d = parseSaleText(text, DateTime.now(), categoryKeywords: pack.community.categoryKeywords);
     if (d.filled == 0) {
       toast(context, 'Couldn\'t find sale details in that. Fill the form below instead.');
       return;
@@ -107,7 +107,7 @@ class _HostSaleScreenState extends ConsumerState<HostSaleScreen> {
       if (d.day != null) _day = d.day!;
       if (d.opens case (final h, final m)) _open = TimeOfDay(hour: h, minute: m);
       if (d.closes case (final h, final m)) _close = TimeOfDay(hour: h, minute: m);
-      _cats.addAll(d.categories.where(pack.pinCategories.contains));
+      _cats.addAll(d.categories.where(pack.community.categories.contains));
       if (d.earlyBirds != null) _earlyBirds = d.earlyBirds;
       if (keepAsNotes && _notes.text.trim().isEmpty) {
         _notes.text = text.trim().length > 500 ? '${text.trim().substring(0, 500)}…' : text.trim();
@@ -183,9 +183,9 @@ class _HostSaleScreenState extends ConsumerState<HostSaleScreen> {
         padding: const EdgeInsets.all(Sp.s4),
         children: [
           // Supply meets demand: hosts see that people near them are looking.
-          if (pack.waitlistLabel != null) _WaitingBanner(pack: pack),
+          if (pack.community.waitlistLabel != null) _WaitingBanner(pack: pack),
           // The fastest way in: most hosts already wrote this post somewhere.
-          if (pack.categoryKeywords.isNotEmpty) ...[
+          if (pack.community.categoryKeywords.isNotEmpty) ...[
             KnCard(
               tier: 2,
               child: Column(
@@ -277,7 +277,7 @@ class _HostSaleScreenState extends ConsumerState<HostSaleScreen> {
             spacing: Sp.s2,
             runSpacing: Sp.s2,
             children: [
-              for (final cat in pack.pinCategories)
+              for (final cat in pack.community.categories)
                 FilterChip(
                   label: Text(cat),
                   selected: _cats.contains(cat),
@@ -421,7 +421,7 @@ class _WaitingBanner extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('$n ${pack.communityNoun} near you are waiting', style: t.titleMedium),
+                  Text('$n ${pack.community.noun} near you are waiting', style: t.titleMedium),
                   Text(
                     'Your ${pack.stopNoun} lands on their map the moment you publish. Free, always.',
                     style: t.bodySmall?.copyWith(color: c.onSurfaceVariant),

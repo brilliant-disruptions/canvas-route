@@ -37,7 +37,7 @@ class AccountScreen extends ConsumerWidget {
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 // Paid tiers are per vertical: show the one for the mode you're in.
                 Text('${pack.label} plan', style: t.labelMedium?.copyWith(color: c.onSurfaceVariant)),
-                Text((paying ? pack.proLabel : 'Free').toUpperCase(), style: t.headlineMedium?.copyWith(color: c.tertiary)),
+                Text((paying ? pack.pro.label : 'Free').toUpperCase(), style: t.headlineMedium?.copyWith(color: c.tertiary)),
                 if (p.billingDate != null) Text('Next billing ${DateFormat.yMMMd().format(p.billingDate!)}', style: t.bodySmall),
               ])),
               Icon(Icons.workspace_premium_outlined, color: c.tertiary, size: 36),
@@ -45,16 +45,16 @@ class AccountScreen extends ConsumerWidget {
           ),
           if (canBuy) ...[
             const SectionHeader('Plans'),
-            _PlanRow(name: 'Free', price: '\$0', perks: 'Map, routes${pack.freeRouteLimit != null ? ' (${pack.freeRouteLimit} saved)' : ''}, visit logging, reporting'),
-            _PlanRow(name: pack.proLabel, price: pack.proPrice, perks: ['Everything in Free', ...pack.proPerks.map((p) => p.label)].join(' · '), highlight: true),
+            _PlanRow(name: 'Free', price: '\$0', perks: 'Map, routes${pack.pro.freeRouteLimit != null ? ' (${pack.pro.freeRouteLimit} saved)' : ''}, visit logging, reporting'),
+            _PlanRow(name: pack.pro.label, price: pack.pro.price, perks: ['Everything in Free', ...pack.pro.perks.map((p) => p.label)].join(' · '), highlight: true),
             const SizedBox(height: Sp.s4),
           ],
           if (!paying && canBuy)
             KnButton(
-              label: 'Upgrade to ${pack.proLabel}',
+              label: 'Upgrade to ${pack.pro.label}',
               lime: true,
               onPressed: () async {
-                if (!pack.webBilling || pack.proProductId == null) {
+                if (!pack.pro.webBilling || pack.pro.productId == null) {
                   toast(context, 'In-app purchase arrives in the next release. Email us for early access.');
                   return;
                 }
@@ -63,7 +63,7 @@ class AccountScreen extends ConsumerWidget {
                   return;
                 }
                 try {
-                  final url = await ref.read(billingServiceProvider).checkoutUrl(pack.proProductId!);
+                  final url = await ref.read(billingServiceProvider).checkoutUrl(pack.pro.productId!);
                   await ref.read(navLauncherProvider).open(url.toString());
                   if (context.mounted) toast(context, 'Finish checkout in your browser. Pro turns on when you come back.');
                 } catch (e) {

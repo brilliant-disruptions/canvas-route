@@ -182,7 +182,7 @@ class PinSheet extends ConsumerWidget {
               ],
             ],
           ),
-          if (pack.communityReports) ...[
+          if (pack.community.reports) ...[
             SectionHeader(
               takesReports ? 'Still going?' : 'Live reports',
               trailing: anon && takesReports
@@ -203,7 +203,7 @@ class PinSheet extends ConsumerWidget {
               Wrap(
                 spacing: Sp.s2,
                 children: [
-                  for (final s in pack.reportStatuses)
+                  for (final s in pack.community.statuses)
                     ActionChip(
                       avatar: Icon(s.icon, size: 16),
                       label: Text(s.label),
@@ -221,7 +221,7 @@ class PinSheet extends ConsumerWidget {
                                 if (context.mounted) {
                                   toast(
                                     context,
-                                    'Thanks — shared with nearby ${pack.communityNoun}',
+                                    'Thanks — shared with nearby ${pack.community.noun}',
                                     icon: Icons.check,
                                   );
                                 }
@@ -250,7 +250,7 @@ class PinSheet extends ConsumerWidget {
                       for (final r in list.take(5))
                         _ReportRow(
                           r,
-                          pack.reportStatuses.where((s) => s.value == r.status).firstOrNull?.label ?? r.status,
+                          pack.community.statuses.where((s) => s.value == r.status).firstOrNull?.label ?? r.status,
                         ),
                     ],
             ),

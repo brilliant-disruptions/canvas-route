@@ -65,7 +65,7 @@ class _VisitLoggerScreenState extends ConsumerState<VisitLoggerScreen> {
       if (!mounted) return;
       context.pop();
       if (r.shared) {
-        toast(context, 'Shared with nearby ${ref.read(modePackProvider).communityNoun}', icon: Icons.campaign_outlined);
+        toast(context, 'Shared with nearby ${ref.read(modePackProvider).community.noun}', icon: Icons.campaign_outlined);
       }
     } catch (e) {
       if (mounted) {
@@ -295,7 +295,7 @@ class _VisitLoggerScreenState extends ConsumerState<VisitLoggerScreen> {
                 ),
               ],
             ),
-            if (ref.read(modePackProvider).photoHint case final hint?)
+            if (ref.read(modePackProvider).community.photoHint case final hint?)
               Text(hint, style: t.labelSmall?.copyWith(color: c.onSurfaceDisabled)),
           ],
         );

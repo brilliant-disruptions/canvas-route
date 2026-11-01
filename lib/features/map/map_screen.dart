@@ -134,10 +134,10 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
       context,
       address: address,
       requiresWindow: pack.requiresTimeWindow,
-      shareLabel: pack.spotLabel,
-      categories: pack.pinCategories,
+      shareLabel: pack.community.spotLabel,
+      categories: pack.community.categories,
       readSign: ref.read(signReaderProvider).available ? ref.read(signReaderProvider).read : null,
-      categoryKeywords: pack.categoryKeywords,
+      categoryKeywords: pack.community.categoryKeywords,
     );
     if (r == null || !mounted) return;
     void addPrivately() => ref
@@ -181,7 +181,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
       if (mounted) {
         toast(
           context,
-          'Thanks! Other ${pack.communityNoun} will see it after a quick check.',
+          'Thanks! Other ${pack.community.noun} will see it after a quick check.',
           icon: Icons.campaign_outlined,
         );
       }
@@ -262,9 +262,9 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
           opensAt: p.opensAt,
           closesAt: p.closesAt,
           reportStatus: rep?.status,
-          reportPositive: rep != null && pack.reportStatuses.any((s) => s.value == rep.status && s.positive),
-          reportCaution: rep != null && pack.reportStatuses.any((s) => s.value == rep.status && s.caution),
-          reportEnds: rep != null && pack.reportStatuses.any((s) => s.value == rep.status && s.ends),
+          reportPositive: rep != null && pack.community.statuses.any((s) => s.value == rep.status && s.positive),
+          reportCaution: rep != null && pack.community.statuses.any((s) => s.value == rep.status && s.caution),
+          reportEnds: rep != null && pack.community.statuses.any((s) => s.value == rep.status && s.ends),
           reportedAt: rep?.createdAt,
         ),
       );
@@ -332,7 +332,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
     if (fresh.isEmpty) return;
     ref.invalidate(latestReportsProvider);
     for (final r in fresh) {
-      final positive = pack.reportStatuses.any((s) => s.value == r['status'] && s.positive);
+      final positive = pack.community.statuses.any((s) => s.value == r['status'] && s.positive);
       final pin = pins.where((p) => p.id == r['pin_id']).firstOrNull;
       if (!positive || pin == null) continue;
       HapticFeedback.mediumImpact();
@@ -346,7 +346,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
   }
 
   String _statusLabel(ModePack pack, String status) =>
-      pack.reportStatuses.where((s) => s.value == status).firstOrNull?.label ?? status;
+      pack.community.statuses.where((s) => s.value == status).firstOrNull?.label ?? status;
 
   @override
   Widget build(BuildContext context) {
@@ -378,10 +378,10 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
       lng: double.parse((_center?.longitude ?? center.lng).toStringAsFixed(2)),
       radiusMi: 20.0,
     );
-    final nearby = pack.communityPins ? ref.watch(nearbyPinsProvider(key)) : null;
+    final nearby = pack.community.pins ? ref.watch(nearbyPinsProvider(key)) : null;
     final pins = nearby?.value ?? const <Pin>[];
     final visiblePins = pins.where((p) {
-      if (!matchesHunt(p.categories, map.huntFilter, wildcard: pack.pinCategoryWildcard)) return false;
+      if (!matchesHunt(p.categories, map.huntFilter, wildcard: pack.community.categoryWildcard)) return false;
       if (map.openNow) {
         final now = DateTime.now();
         return p.opensAt != null &&
@@ -392,11 +392,11 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
       return DateUtils.isSameDay(p.opensAt, map.selectedDay);
     }).toList();
     final joined = visiblePins.map((p) => p.id).join(',');
-    final latest = pack.communityReports && joined.isNotEmpty
+    final latest = pack.community.reports && joined.isNotEmpty
         ? (ref.watch(latestReportsProvider(joined)).value ?? const <String, Report>{})
         : const <String, Report>{};
 
-    if (pack.communityReports) {
+    if (pack.community.reports) {
       ref.listen(reportStreamProvider, (_, next) {
         final rows = next.value;
         if (rows != null) _onReports(rows, pack, visiblePins);
@@ -406,7 +406,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
     // Standing at an open listing (signed in, so the report can be filed): ask once.
     final here = ref.watch(currentLocationProvider).value;
     final doneToday = ref.read(localPrefsProvider).checkInsDone;
-    final checkInId = !pack.communityReports || !pack.requiresTimeWindow || here == null || ref.watch(isAnonymousProvider)
+    final checkInId = !pack.community.reports || !pack.requiresTimeWindow || here == null || ref.watch(isAnonymousProvider)
         ? null
         : checkInCandidate(
             [
@@ -426,7 +426,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
     // Nothing listed anywhere near: say so, count the user in, and offer the ways
     // to change it, instead of an empty map.
     final coldStart =
-        pack.waitlistLabel != null &&
+        pack.community.waitlistLabel != null &&
         (nearby?.hasValue ?? false) &&
         pins.isEmpty &&
         map.viewMode == MapViewMode.map &&
@@ -569,12 +569,12 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              if (!listView && !coldStart && (pack.spotLabel != null || pack.hasSource(StopSourceId.listingLink))) ...[
+              if (!listView && !coldStart && (pack.community.spotLabel != null || pack.hasSource(StopSourceId.listingLink))) ...[
                 Padding(
                   padding: const EdgeInsets.only(right: Sp.s4),
                   child: AddSaleButton(
                     noun: pack.stopNoun,
-                    onSpot: pack.spotLabel == null ? null : _spotHere,
+                    onSpot: pack.community.spotLabel == null ? null : _spotHere,
                     onPasteLink: pack.hasSource(StopSourceId.listingLink) ? _pasteLink : null,
                   ),
                 ),

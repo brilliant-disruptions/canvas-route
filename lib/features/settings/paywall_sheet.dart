@@ -27,15 +27,15 @@ Future<void> showPaywall(BuildContext context, ModePack pack, {required String r
                 child: Icon(Icons.workspace_premium_outlined, color: c.onTertiary),
               ),
               const SizedBox(width: Sp.s3),
-              Text(pack.proLabel.toUpperCase(),
+              Text(pack.pro.label.toUpperCase(),
                   style: t.labelMedium?.copyWith(color: c.tertiary, fontWeight: FontWeight.w800, letterSpacing: 1.4)),
             ]),
             const SizedBox(height: Sp.s4),
-            Text(pack.proPitch, style: t.displaySmall),
+            Text(pack.pro.pitch, style: t.displaySmall),
             const SizedBox(height: Sp.s2),
             Text(reason, style: t.bodyMedium?.copyWith(color: c.onSurfaceVariant)),
             const SizedBox(height: Sp.s5),
-            for (final p in pack.proPerks)
+            for (final p in pack.pro.perks)
               Padding(
                 padding: const EdgeInsets.only(bottom: Sp.s3),
                 child: Row(children: [
@@ -49,15 +49,15 @@ Future<void> showPaywall(BuildContext context, ModePack pack, {required String r
               tier: 3,
               padding: const EdgeInsets.symmetric(horizontal: Sp.s4, vertical: Sp.s3),
               child: Row(children: [
-                Expanded(child: Text(pack.proLabel, style: t.titleLarge)),
-                Text(pack.proPrice, style: t.titleLarge?.copyWith(color: c.tertiary)),
+                Expanded(child: Text(pack.pro.label, style: t.titleLarge)),
+                Text(pack.pro.price, style: t.titleLarge?.copyWith(color: c.tertiary)),
               ]),
             ),
             const SizedBox(height: Sp.s1),
             Center(child: Text('Cancel anytime.', style: t.labelSmall?.copyWith(color: c.onSurfaceVariant))),
             const SizedBox(height: Sp.s4),
             KnButton(
-              label: 'Upgrade · ${pack.proPrice}',
+              label: 'Upgrade · ${pack.pro.price}',
               lime: true,
               onPressed: () {
                 Navigator.pop(ctx);
@@ -81,7 +81,7 @@ Future<bool> requirePro(BuildContext context, WidgetRef ref, String reason) asyn
 }
 
 String freeLimitReason(ModePack pack) {
-  final n = pack.freeRouteLimit ?? 0;
+  final n = pack.pro.freeRouteLimit ?? 0;
   final noun = pack.routeNoun;
   return 'Free saves $n $noun${n == 1 ? '' : 's'}. This would be your ${_ordinal(n + 1)}.';
 }

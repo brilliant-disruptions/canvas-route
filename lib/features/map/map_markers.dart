@@ -81,7 +81,7 @@ Set<Marker> buildMapMarkers({
 
 /// Saturday-morning truth beats posted hours: a recent report decides the look.
 (PinSpec, int, double) _pinStyle(KnColors c, ModePack pack, Pin p, Report? rep, DateTime now) {
-  final st = rep == null ? null : pack.reportStatuses.where((s) => s.value == rep.status).firstOrNull;
+  final st = rep == null ? null : pack.community.statuses.where((s) => s.value == rep.status).firstOrNull;
   final age = rep == null ? null : now.difference(rep.createdAt);
   if (p.opensAt == null) {
     final live = st != null && st.positive && isFresh(rep!.createdAt, now: now);

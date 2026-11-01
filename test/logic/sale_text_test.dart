@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   final now = DateTime(2026, 10, 31, 15); // Saturday afternoon
-  SaleDraft parse(String s) => parseSaleText(s, now, categoryKeywords: yardSalesPack.categoryKeywords);
+  SaleDraft parse(String s) => parseSaleText(s, now, categoryKeywords: yardSalesPack.community.categoryKeywords);
 
   test('a typical Facebook post', () {
     final d = parse('HUGE Moving Sale!!\nSat 11/7, 7am-1pm at 4431 Bryan St, Dallas, TX 75204. '

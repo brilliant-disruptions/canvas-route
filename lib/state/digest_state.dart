@@ -25,7 +25,7 @@ final weekendDigestOptInProvider = NotifierProvider<WeekendDigestOptIn, bool?>(W
 /// scheduled alone); empty when off or there's nothing to say.
 final weekendDigestPlanProvider = Provider<List<PlannedReminder>?>((ref) {
   final pack = ref.watch(modePackProvider);
-  if (!pack.weekendDigest || ref.watch(weekendDigestOptInProvider) != true) return const [];
+  if (!pack.community.weekendDigest || ref.watch(weekendDigestOptInProvider) != true) return const [];
   final at = ref.watch(mapCenterProvider);
   final key = (
     mode: pack.id,
@@ -39,7 +39,7 @@ final weekendDigestPlanProvider = Provider<List<PlannedReminder>?>((ref) {
     [for (final p in pins) if (p.opensAt != null) (opensAt: p.opensAt!, categories: p.categories)],
     DateTime.now(),
     noun: pack.stopNoun,
-    wildcard: pack.pinCategoryWildcard,
+    wildcard: pack.community.categoryWildcard,
   );
   return r == null ? const [] : [r];
 });

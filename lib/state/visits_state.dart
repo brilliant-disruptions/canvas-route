@@ -52,9 +52,9 @@ class VisitLogger {
   Future<bool> _autoFileReport(RouteModel route, Stop stop, Visit visit) async {
     final pack = ref.read(modePackProvider);
     final profile = ref.read(profileProvider).value;
-    if (!pack.communityReports || profile == null || !profile.autoShareReports) return false;
+    if (!pack.community.reports || profile == null || !profile.autoShareReports) return false;
     if (ref.read(isAnonymousProvider)) return false;
-    final status = pack.outcomeToReportStatus[visit.outcome];
+    final status = pack.community.outcomeToReportStatus[visit.outcome];
     if (status == null) return false;
 
     final pinId = stop.pinId;

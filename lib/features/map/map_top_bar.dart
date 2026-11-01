@@ -127,7 +127,7 @@ class _FilterRow extends ConsumerWidget {
       final when = whenLabel(openNow: map.openNow, day: map.selectedDay, now: now);
       final anyDay = !map.openNow && map.selectedDay == null;
       chips = [
-        if (pack.pinCategories.isNotEmpty)
+        if (pack.community.categories.isNotEmpty)
           InputChip(
             avatar: Icon(Icons.tune, size: 16, color: map.huntFilter.isEmpty ? null : c.onPrimaryContainer),
             label: Text('Hunting: ${huntLabel(map.huntFilter)}'),
@@ -231,7 +231,7 @@ Future<void> _pickHunt(
                 spacing: Sp.s2,
                 runSpacing: Sp.s2,
                 children: [
-                  for (final cat in pack.pinCategories.where((c) => c != pack.pinCategoryWildcard))
+                  for (final cat in pack.community.categories.where((c) => c != pack.community.categoryWildcard))
                     FilterChip(
                       label: Text(cat),
                       selected: picked.contains(cat),

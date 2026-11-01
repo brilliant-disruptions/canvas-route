@@ -26,11 +26,11 @@ class RoutesScreen extends ConsumerWidget {
     final pack = ref.watch(modePackProvider);
     final routes = ref.watch(routesProvider);
     final paying = ref.watch(hasProAccessProvider);
-    final dueFollowUps = pack.followUpsLabel == null ? 0 : ref.watch(followUpsDueProvider);
+    final dueFollowUps = pack.tools.followUpsLabel == null ? 0 : ref.watch(followUpsDueProvider);
 
     Future<void> newRoute() async {
       final count = routes.value?.length ?? 0;
-      if (pack.atRouteLimit(count, paying: paying)) {
+      if (pack.pro.atRouteLimit(count, paying: paying)) {
         await showPaywall(context, pack, reason: freeLimitReason(pack));
         return;
       }
@@ -73,7 +73,7 @@ class RoutesScreen extends ConsumerWidget {
                       itemCount: sorted.length + lead,
                       separatorBuilder: (_, _) => const SizedBox(height: Sp.s3),
                       itemBuilder: (_, i) => i < lead
-                          ? _FollowUpsDue(count: dueFollowUps, label: pack.followUpsLabel!)
+                          ? _FollowUpsDue(count: dueFollowUps, label: pack.tools.followUpsLabel!)
                           : _RouteCard(route: sorted[i - lead]),
                     );
                   },
@@ -252,7 +252,7 @@ class _RouteCard extends ConsumerWidget {
   Future<void> _runAgain(BuildContext context, WidgetRef ref) async {
     final pack = ref.read(modePackProvider);
     final saved = ref.read(routesProvider).value?.length ?? 0;
-    if (pack.atRouteLimit(saved, paying: ref.read(hasProAccessProvider))) {
+    if (pack.pro.atRouteLimit(saved, paying: ref.read(hasProAccessProvider))) {
       await showPaywall(context, pack, reason: freeLimitReason(pack));
       return;
     }

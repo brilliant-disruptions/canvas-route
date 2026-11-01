@@ -56,7 +56,7 @@ class ProfileDrawer extends ConsumerWidget {
     final paying = ref.watch(isPayingProvider);
     final canBuy = ref.watch(canBuyProProvider);
     final active = ref.watch(activeModeProvider);
-    final dueFollowUps = pack.followUpsLabel == null ? 0 : ref.watch(followUpsDueProvider);
+    final dueFollowUps = pack.tools.followUpsLabel == null ? 0 : ref.watch(followUpsDueProvider);
 
     void go(String path) {
       Navigator.of(context).pop();
@@ -101,7 +101,7 @@ class ProfileDrawer extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  if (pack.proProductId != null && (paying || canBuy))
+                  if (pack.pro.productId != null && (paying || canBuy))
                     KnBadge(
                       paying ? 'PRO' : 'FREE',
                       color: paying ? c.tertiary : c.surfaceHighest,
@@ -147,9 +147,9 @@ class ProfileDrawer extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(pack.proPitch, style: t.titleMedium),
+                            Text(pack.pro.pitch, style: t.titleMedium),
                             Text(
-                              '${pack.proLabel} · ${pack.proPrice}',
+                              '${pack.pro.label} · ${pack.pro.price}',
                               style: t.bodySmall?.copyWith(color: c.tertiary),
                             ),
                           ],
@@ -174,26 +174,26 @@ class ProfileDrawer extends ConsumerWidget {
               onTap: () => go('/settings/account'),
             ),
             ListTile(leading: const Icon(Icons.tune), title: const Text('Preferences'), onTap: () => go('/settings')),
-            if (pack.followUpsLabel != null)
+            if (pack.tools.followUpsLabel != null)
               ListTile(
                 leading: const Icon(Icons.event_repeat_outlined),
-                title: Text(pack.followUpsLabel!),
+                title: Text(pack.tools.followUpsLabel!),
                 trailing: dueFollowUps == 0
                     ? null
                     : KnBadge('$dueFollowUps due', color: c.tertiary, onColor: c.onTertiary),
                 onTap: () => go('/follow-ups'),
               ),
-            if (pack.teamPlan)
+            if (pack.tools.teamPlan)
               ListTile(leading: const Icon(Icons.groups_outlined), title: const Text('Team'), onTap: () => go('/team')),
-            if (pack.mileageLog)
+            if (pack.tools.mileageLog)
               ListTile(leading: const Icon(Icons.speed), title: const Text('Mileage'), onTap: () => go('/mileage')),
-            if (pack.supportsHosting)
+            if (pack.community.hosting)
               ListTile(
                 leading: const Icon(Icons.sell_outlined),
                 title: const Text('My sales'),
                 onTap: () => go('/host'),
               ),
-            if (pack.featureBoard)
+            if (pack.tools.featureBoard)
               ListTile(
                 leading: const Icon(Icons.lightbulb_outline),
                 title: const Text('Feature requests'),

@@ -56,9 +56,9 @@ final isAdminProvider = Provider<bool>((ref) => ref.watch(profileProvider).value
 /// Has paid for the active vertical. A Season Pass doesn't unlock Field Sales Pro.
 final isPayingProvider = Provider<bool>((ref) {
   final pack = ref.watch(modePackProvider);
-  final own = ref.watch(profileProvider).value?.owns(pack.proProductId, includedInPlan: pack.includedInPlan) ?? false;
+  final own = ref.watch(profileProvider).value?.owns(pack.pro.productId, includedInPlan: pack.pro.includedInPlan) ?? false;
   // Reps on a manager's Team plan are covered without buying their own.
-  return own || (pack.teamPlan && (ref.watch(myTeamProvider).value?.covered ?? false));
+  return own || (pack.tools.teamPlan && (ref.watch(myTeamProvider).value?.covered ?? false));
 });
 
 /// The active vertical's paid tier can be bought here: web-billed plans where
@@ -66,7 +66,7 @@ final isPayingProvider = Provider<bool>((ref) {
 /// so store-billed passes can't be bought anywhere for now.
 final canBuyProProvider = Provider<bool>((ref) {
   final pack = ref.watch(modePackProvider);
-  return pack.proProductId != null && pack.webBilling && Env.webCheckoutHere;
+  return pack.pro.productId != null && pack.pro.webBilling && Env.webCheckoutHere;
 });
 
 /// What gates features. Nothing is locked behind a tier the user can't buy here:

@@ -208,7 +208,7 @@ class _Demand extends ConsumerWidget {
       value: cells,
       onRetry: () => ref.invalidate(demandCellsProvider(pack.id)),
       data: (list) => list.isEmpty
-          ? EmptyState(icon: Icons.front_hand_outlined, title: 'No one waiting yet', body: 'People who tap "${pack.waitlistLabel ?? 'I\'m hunting here'}" in an empty area show up here.')
+          ? EmptyState(icon: Icons.front_hand_outlined, title: 'No one waiting yet', body: 'People who tap "${pack.community.waitlistLabel ?? 'I\'m hunting here'}" in an empty area show up here.')
           : ListView.separated(
               padding: const EdgeInsets.all(Sp.s4),
               itemCount: list.length,
@@ -224,7 +224,7 @@ class _Demand extends ConsumerWidget {
                   ),
                   title: Text('${d.lat.toStringAsFixed(1)}, ${d.lng.toStringAsFixed(1)}'),
                   subtitle: Text([
-                    '${d.hunters} ${pack.communityNoun} waiting',
+                    '${d.hunters} ${pack.community.noun} waiting',
                     '${d.liveSales} live',
                     if (d.newest != null) 'latest ${DateFormat.MMMd().format(d.newest!)}',
                   ].join(' · ')),

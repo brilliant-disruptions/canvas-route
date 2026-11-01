@@ -39,14 +39,14 @@ void main() {
 
   test('yard sales v1 keeps business-only menus out of the drawer and preferences', () {
     final ys = packFor(AppMode.yardSales), fs = packFor(AppMode.fieldSales);
-    expect([ys.featureBoard, ys.editableOutcomes, ys.teamPlan, ys.mileageLog], everyElement(isFalse));
-    expect([fs.featureBoard, fs.editableOutcomes], everyElement(isTrue));
+    expect([ys.tools.featureBoard, ys.tools.editableOutcomes, ys.tools.teamPlan, ys.tools.mileageLog], everyElement(isFalse));
+    expect([fs.tools.featureBoard, fs.tools.editableOutcomes], everyElement(isTrue));
   });
 
   test('outcome → report mappings reference declared report statuses', () {
     for (final pack in modePacks.values) {
-      final statuses = pack.reportStatuses.map((s) => s.value).toSet();
-      for (final e in pack.outcomeToReportStatus.entries) {
+      final statuses = pack.community.statuses.map((s) => s.value).toSet();
+      for (final e in pack.community.outcomeToReportStatus.entries) {
         expect(pack.defaultOutcomes, contains(e.key), reason: '${pack.label}: ${e.key}');
         expect(statuses, contains(e.value), reason: '${pack.label}: ${e.value}');
       }
@@ -80,22 +80,22 @@ void main() {
   });
 
   test('paid packs price and pitch their plan', () {
-    for (final pack in modePacks.values.where((p) => p.proProductId != null)) {
-      expect(pack.proPrice, isNotEmpty, reason: pack.label);
-      expect(pack.proPitch, isNotEmpty, reason: pack.label);
-      expect(pack.proPerks, isNotEmpty, reason: pack.label);
+    for (final pack in modePacks.values.where((p) => p.pro.productId != null)) {
+      expect(pack.pro.price, isNotEmpty, reason: pack.label);
+      expect(pack.pro.pitch, isNotEmpty, reason: pack.label);
+      expect(pack.pro.perks, isNotEmpty, reason: pack.label);
     }
   });
 
   test('route limit applies to free users at the limit only', () {
     final pack = packFor(AppMode.yardSales);
-    expect(pack.atRouteLimit(0, paying: false), isFalse);
-    expect(pack.atRouteLimit(pack.freeRouteLimit!, paying: false), isTrue);
-    expect(pack.atRouteLimit(99, paying: true), isFalse);
+    expect(pack.pro.atRouteLimit(0, paying: false), isFalse);
+    expect(pack.pro.atRouteLimit(pack.pro.freeRouteLimit!, paying: false), isTrue);
+    expect(pack.pro.atRouteLimit(99, paying: true), isFalse);
     // Field Sales: free reps keep 3 saved routes; Pro is unlimited.
-    expect(packFor(AppMode.fieldSales).atRouteLimit(2, paying: false), isFalse);
-    expect(packFor(AppMode.fieldSales).atRouteLimit(3, paying: false), isTrue);
-    expect(packFor(AppMode.fieldSales).atRouteLimit(99, paying: true), isFalse);
+    expect(packFor(AppMode.fieldSales).pro.atRouteLimit(2, paying: false), isFalse);
+    expect(packFor(AppMode.fieldSales).pro.atRouteLimit(3, paying: false), isTrue);
+    expect(packFor(AppMode.fieldSales).pro.atRouteLimit(99, paying: true), isFalse);
   });
 
   test('every search suggestion has a quick-start icon', () {
@@ -115,10 +115,10 @@ void main() {
   group('paid access per vertical', () {
     Profile who({Plan plan = Plan.free, List<String> owns = const []}) =>
         Profile.fromRow({'id': 'u', 'plan': plan.name, 'entitlements': owns});
-    bool pays(Profile p, AppMode m) => p.owns(packFor(m).proProductId, includedInPlan: packFor(m).includedInPlan);
+    bool pays(Profile p, AppMode m) => p.owns(packFor(m).pro.productId, includedInPlan: packFor(m).pro.includedInPlan);
 
     test('a Season Pass unlocks Yard Sales only', () {
-      final p = who(owns: [packFor(AppMode.yardSales).proProductId!]);
+      final p = who(owns: [packFor(AppMode.yardSales).pro.productId!]);
       expect(pays(p, AppMode.yardSales), isTrue);
       expect(pays(p, AppMode.fieldSales), isFalse);
       expect(p.isPaying, isTrue);
@@ -137,7 +137,7 @@ void main() {
     });
 
     test('every paid vertical has its own product id', () {
-      final ids = [for (final p in modePacks.values) ?p.proProductId];
+      final ids = [for (final p in modePacks.values) ?p.pro.productId];
       expect(ids.toSet(), hasLength(ids.length));
     });
   });

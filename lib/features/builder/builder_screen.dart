@@ -149,7 +149,7 @@ class _BuilderScreenState extends ConsumerState<BuilderScreen> with PinIconsMixi
     final pack = ref.read(modePackProvider);
     final saved = (await ref.read(routesProvider.future)).length; // may not be loaded yet
     if (!mounted) return;
-    if (map.editingRouteId == null && pack.atRouteLimit(saved, paying: ref.read(hasProAccessProvider))) {
+    if (map.editingRouteId == null && pack.pro.atRouteLimit(saved, paying: ref.read(hasProAccessProvider))) {
       await showPaywall(context, pack, reason: freeLimitReason(pack));
       return;
     }
