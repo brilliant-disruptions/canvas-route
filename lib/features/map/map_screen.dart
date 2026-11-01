@@ -5,22 +5,16 @@ import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:intl/intl.dart';
 
-import '../../app/shell.dart';
 import '../../core/logic/check_in.dart';
-import '../../core/logic/dates.dart';
 import '../../core/logic/errors.dart';
 import '../../core/logic/pin_labels.dart';
-import '../../core/logic/freshness.dart';
 import '../../core/logic/spotlight.dart';
 import '../../core/theme/kn_colors.dart';
 import '../../core/theme/kn_theme.dart';
-import '../../data/models/app_mode.dart';
 import '../../data/models/business.dart';
 import '../../data/models/pin.dart';
 import '../../data/models/report.dart';
-import '../../data/models/stop.dart';
 import '../../data/services/listing_link.dart';
 import '../../modes/mode_pack.dart';
 import '../../state/auth_state.dart';
@@ -39,6 +33,9 @@ import 'check_in_banner.dart';
 import 'cold_start_card.dart';
 import 'draft_tray.dart';
 import 'manual_stop_sheet.dart';
+import 'map_markers.dart';
+import 'map_overlays.dart';
+import 'map_top_bar.dart';
 import 'spotlight_deck.dart';
 
 class MapScreen extends ConsumerStatefulWidget {
@@ -117,19 +114,6 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
     }
   }
 
-  Business _pinToBusiness(Pin p) => Business(
-    pinId: p.id,
-    placeId: p.placeId,
-    name: p.name,
-    address: p.address ?? '',
-    lat: p.lat,
-    lng: p.lng,
-    source: StopSource.community,
-    opensAt: p.opensAt,
-    closesAt: p.closesAt,
-    listingUrl: p.listingUrl,
-  );
-
   Future<void> _onLongPress(LatLng at) => _dropStop(at);
 
   /// Spot a sale where you're standing (or the middle of the map without GPS).
@@ -193,7 +177,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
             categories: r.categories,
             signPhoto: r.signPhoto!,
           );
-      ref.read(mapProvider.notifier).addDraft(_pinToBusiness(pin));
+      ref.read(mapProvider.notifier).addDraft(businessFromPin(pin));
       if (mounted) {
         toast(
           context,
@@ -212,9 +196,18 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
     }
   }
 
-  Future<void> _addFromClipboard() async {
-    final url = _clipboardUrl;
-    if (url == null) return;
+  /// The + button's "Paste a listing link": whatever link is on the clipboard now.
+  Future<void> _pasteLink() async {
+    final url = await ListingLink.readClipboardUrl();
+    if (!mounted) return;
+    if (url == null) {
+      toast(context, 'Copy the sale\'s link first (Facebook, Craigslist, Nextdoor…), then tap here.', icon: Icons.link);
+      return;
+    }
+    await _addFromClipboard(url);
+  }
+
+  Future<void> _addFromClipboard(String url) async {
     await ref.read(localPrefsProvider).setLastSeenClipboardUrl(url);
     setState(() => _clipboardUrl = null);
     if (!mounted) return;
@@ -257,7 +250,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
       candidates.add(SpotCandidate(id: b.identity, lat: b.lat, lng: b.lng, opensAt: b.opensAt, closesAt: b.closesAt));
     }
     for (final p in pins) {
-      final b = _pinToBusiness(p);
+      final b = businessFromPin(p);
       if (byId.containsKey(b.identity)) continue;
       final rep = latest[p.id];
       byId[b.identity] = (b, p.categories.join(', '));
@@ -290,7 +283,6 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
 
   void _plan(ModePack pack, List<SpotEntry> entries) {
     HapticFeedback.mediumImpact();
-    _dismissPlanTip();
     final n = ref.read(mapProvider.notifier);
     if (ref.read(mapProvider).draftStops.isNotEmpty) {
       context.push('/route/builder');
@@ -327,13 +319,6 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
     if (b.pinId == null) return showBusinessSheet(context, b);
     final pin = pins.where((p) => p.id == b.pinId).firstOrNull;
     if (pin != null) await showPinSheet(context, pin);
-  }
-
-  void _dismissPlanTip() {
-    final prefs = ref.read(localPrefsProvider);
-    if (prefs.hasSeenPlanTip) return;
-    prefs.setHasSeenPlanTip(true);
-    if (mounted) setState(() {});
   }
 
   /// Realtime: a positive report on a visible pin refreshes the map and drops a banner.
@@ -456,102 +441,50 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
         pack.hasSource(StopSourceId.places) &&
         pack.searchSuggestions.isNotEmpty;
 
-    final markers = <Marker>{};
-    // Route order shows on the map: picked stops become numbered dots.
-    final visited = ref.watch(visitHistoryProvider);
-    void add(String id, Business b, PinSpec spec, VoidCallback onTap, {int z = 0, double alpha = 1}) {
-      final i = map.draftIndex(b);
-      final s = i < 0 ? spec : PinSpec.number(i + 1, fill: c.primary, ink: c.onPrimary);
-      final icon = pinIcon(s);
-      markers.add(
-        Marker(
-          markerId: MarkerId(id),
-          position: LatLng(b.lat, b.lng),
-          icon: icon ?? BitmapDescriptor.defaultMarker,
-          visible: icon != null,
-          anchor: s.anchor,
-          alpha: alpha,
-          zIndexInt: i < 0 ? z : 10,
-          infoWindow: InfoWindow(title: b.name),
-          onTap: onTap,
-        ),
-      );
-    }
+    final markers = buildMapMarkers(
+      c: c,
+      pack: pack,
+      map: map,
+      pins: visiblePins,
+      latest: latest,
+      visited: ref.watch(visitHistoryProvider).keys.toSet(),
+      iconFor: pinIcon,
+      onBusiness: (b) => showBusinessSheet(context, b),
+      onPin: (p) => showPinSheet(context, p),
+      now: DateTime.now(),
+    );
 
-    for (final b in map.results) {
-      add(
-        'r:${b.identity}',
-        b,
-        // A leading dot marks places you've already been.
-        PinSpec.pill(
-          shortPlaceName(b.name),
-          fill: c.surfaceHighest,
-          ink: c.onSurface,
-          border: c.primary,
-          dot: visited.containsKey(b.identity) ? c.tertiary : null,
-        ),
-        () => showBusinessSheet(context, b),
-      );
-    }
-    for (final d in map.draftStops) {
-      if (map.results.any((r) => r.identity == d.business.identity)) continue;
-      if (visiblePins.any((p) => p.id == d.business.pinId)) continue;
-      add(
-        'd:${d.id}',
-        d.business,
-        PinSpec.pill(shortPlaceName(d.business.name), fill: c.surfaceHighest, ink: c.onSurface),
-        () => showBusinessSheet(context, d.business),
-      );
-    }
-    final now = DateTime.now();
-    for (final p in visiblePins) {
-      PinSpec spec;
-      var z = 0;
-      var alpha = 1.0;
-      if (p.opensAt != null) {
-        final ended = p.closesAt != null && !p.closesAt!.isAfter(now);
-        final open = !now.isBefore(p.opensAt!) && !ended;
-        // Saturday-morning truth beats posted hours: the latest report decides.
-        final rep = latest[p.id];
-        final st = rep == null ? null : pack.reportStatuses.where((s) => s.value == rep.status).firstOrNull;
-        final age = rep == null ? null : now.difference(rep.createdAt);
-        if (st != null && st.ends && age! <= const Duration(hours: 6)) {
-          spec = PinSpec.pill(st.label, fill: c.surfaceHighest, ink: c.onSurfaceVariant, border: c.outline);
-          alpha = 0.45;
-        } else if (st != null && st.positive && open && age! <= const Duration(hours: 1)) {
-          spec = PinSpec.pill('${st.label} · ${compactTime(rep!.createdAt)}', fill: c.tertiary, ink: c.onTertiary, halo: true);
-          z = 5;
-        } else if (st != null && st.caution && !ended && age! <= const Duration(hours: 1)) {
-          spec = PinSpec.pill(st.label, fill: c.warning, ink: Colors.black, border: c.warning);
-          z = 4;
-        } else {
-          spec = PinSpec.pill(
-            compactWindow(p.opensAt!, p.closesAt),
-            fill: c.surfaceHighest,
-            ink: c.onSurface,
-            border: open ? c.tertiary : c.outline,
-            dot: open ? c.tertiary : null,
-          );
-          if (ended) alpha = 0.45;
-        }
-      } else {
-        final rep = latest[p.id];
-        final live =
-            rep != null &&
-            isFresh(rep.createdAt) &&
-            pack.reportStatuses.any((s) => s.value == rep.status && s.positive);
-        spec = live
-            ? PinSpec.pill(
-                '${shortPlaceName(p.name, max: 12)} · ${_statusLabel(pack, rep.status)}',
-                fill: c.tertiary,
-                ink: c.onTertiary,
-                halo: true,
-              )
-            : PinSpec.pill(shortPlaceName(p.name), fill: c.surfaceHighest, ink: c.onSurface);
-        if (live) z = 5;
-      }
-      add('p:${p.id}', _pinToBusiness(p), spec, () => showPinSheet(context, p), z: z, alpha: alpha);
-    }
+    // One banner at a time, most urgent first: you're standing at a sale, a
+    // neighbor just confirmed one, then a link waiting on the clipboard.
+    final Widget? banner = checkIn != null
+        ? CheckInBanner(
+            key: ValueKey('checkin:${checkIn.id}'),
+            pack: pack,
+            pin: checkIn,
+            onDone: () async {
+              await ref.read(localPrefsProvider).addCheckInDone(checkInKey(checkIn.id, DateTime.now()));
+              if (mounted) setState(() {});
+            },
+          )
+        : _liveDrop != null
+        ? LiveDropBanner(
+            key: ValueKey(_liveDrop),
+            label: '${_statusLabel(pack, _liveDrop!.status)} · ${shortPlaceName(_liveDrop!.pin.name)}',
+            onTap: () {
+              final pin = _liveDrop!.pin;
+              setState(() => _liveDrop = null);
+              _map?.animateCamera(CameraUpdate.newLatLng(LatLng(pin.lat, pin.lng)));
+              showPinSheet(context, pin);
+            },
+          )
+        : _clipboardUrl != null
+        ? ClipboardBanner(
+            key: ValueKey(_clipboardUrl),
+            source: ListingLink.sourceLabel(_clipboardUrl!) ?? 'listing',
+            onAdd: () => _addFromClipboard(_clipboardUrl!),
+            onDismiss: () => setState(() => _clipboardUrl = null),
+          )
+        : null;
 
     return Stack(
       children: [
@@ -580,131 +513,30 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
         SafeArea(
           child: Column(
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(Sp.s4, Sp.s2, Sp.s4, 0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _GlassBar(
-                        child: TextField(
-                          controller: _search,
-                          textInputAction: TextInputAction.search,
-                          onSubmitted: (_) => _runSearch(),
-                          decoration: InputDecoration(
-                            hintText: pack.searchHint,
-                            prefixIcon: map.searching
-                                ? const Padding(
-                                    padding: EdgeInsets.all(12),
-                                    child: SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(strokeWidth: 2),
-                                    ),
-                                  )
-                                : const Icon(Icons.search),
-                            suffixIcon: map.query.isEmpty
-                                ? null
-                                : IconButton(
-                                    tooltip: 'Clear search',
-                                    icon: const Icon(Icons.close),
-                                    onPressed: () {
-                                      _search.clear();
-                                      ref.read(mapProvider.notifier).clearSearch();
-                                    },
-                                  ),
-                            filled: false,
-                            border: InputBorder.none,
-                            enabledBorder: InputBorder.none,
-                            focusedBorder: InputBorder.none,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: Sp.s2),
-                    _GlassBar(
-                      child: IconButton(
-                        tooltip: map.viewMode == MapViewMode.map ? 'Show list' : 'Show map',
-                        icon: Icon(map.viewMode == MapViewMode.map ? Icons.view_list : Icons.map),
-                        onPressed: () => ref
-                            .read(mapProvider.notifier)
-                            .setViewMode(map.viewMode == MapViewMode.map ? MapViewMode.list : MapViewMode.map),
-                      ),
-                    ),
-                    const SizedBox(width: Sp.s2),
-                    const _GlassBar(child: ProfileButton()),
-                  ],
-                ),
-              ),
-              const SizedBox(height: Sp.s2),
-              _ModeChips(
+              MapTopBar(
                 pack: pack,
-                map: map,
+                search: _search,
+                onSearch: _runSearch,
                 hideSuggestions: showQuickStart,
                 onSuggestion: (s) {
                   _search.text = s;
                   _runSearch();
                 },
               ),
-              if (_clipboardUrl != null)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(Sp.s4, Sp.s2, Sp.s4, 0),
-                  child: KnCard(
-                    tier: 3,
-                    padding: const EdgeInsets.symmetric(horizontal: Sp.s4, vertical: Sp.s2),
-                    child: Row(
-                      children: [
-                        Icon(Icons.link, color: c.tertiary),
-                        const SizedBox(width: Sp.s3),
-                        Expanded(
-                          child: Text(
-                            'Add the ${ListingLink.sourceLabel(_clipboardUrl!) ?? 'listing'} sale from your clipboard?',
-                          ),
-                        ),
-                        TextButton(onPressed: _addFromClipboard, child: const Text('Add')),
-                        IconButton(
-                          tooltip: 'Dismiss',
-                          icon: const Icon(Icons.close),
-                          onPressed: () => setState(() => _clipboardUrl = null),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
               AnimatedSwitcher(
                 duration: const Duration(milliseconds: 250),
                 transitionBuilder: (child, a) => SizeTransition(
                   sizeFactor: a,
                   child: FadeTransition(opacity: a, child: child),
                 ),
-                child: _liveDrop == null
+                child: banner == null
                     ? const SizedBox(width: double.infinity)
                     : Padding(
-                        key: ValueKey(_liveDrop),
+                        key: banner.key,
                         padding: const EdgeInsets.fromLTRB(Sp.s4, Sp.s2, Sp.s4, 0),
-                        child: _LiveDropBanner(
-                          label: '${_statusLabel(pack, _liveDrop!.status)} · ${shortPlaceName(_liveDrop!.pin.name)}',
-                          onTap: () {
-                            final pin = _liveDrop!.pin;
-                            setState(() => _liveDrop = null);
-                            _map?.animateCamera(CameraUpdate.newLatLng(LatLng(pin.lat, pin.lng)));
-                            showPinSheet(context, pin);
-                          },
-                        ),
+                        child: banner,
                       ),
               ),
-              if (checkIn != null)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(Sp.s4, Sp.s2, Sp.s4, 0),
-                  child: CheckInBanner(
-                    key: ValueKey(checkIn.id),
-                    pack: pack,
-                    pin: checkIn,
-                    onDone: () async {
-                      await ref.read(localPrefsProvider).addCheckInDone(checkInKey(checkIn.id, DateTime.now()));
-                      if (mounted) setState(() {});
-                    },
-                  ),
-                ),
               if (map.error != null)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(Sp.s4, Sp.s2, Sp.s4, 0),
@@ -737,16 +569,13 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              if (!listView && !coldStart && pack.spotLabel != null) ...[
+              if (!listView && !coldStart && (pack.spotLabel != null || pack.hasSource(StopSourceId.listingLink))) ...[
                 Padding(
                   padding: const EdgeInsets.only(right: Sp.s4),
-                  child: FloatingActionButton.extended(
-                    heroTag: 'spot',
-                    onPressed: _spotHere,
-                    backgroundColor: c.surfaceHighest,
-                    foregroundColor: c.onSurface,
-                    icon: const Icon(Icons.add_a_photo_outlined),
-                    label: const Text('Spot a sale'),
+                  child: AddSaleButton(
+                    noun: pack.stopNoun,
+                    onSpot: pack.spotLabel == null ? null : _spotHere,
+                    onPasteLink: pack.hasSource(StopSourceId.listingLink) ? _pasteLink : null,
                   ),
                 ),
                 const SizedBox(height: Sp.s2),
@@ -778,8 +607,6 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
                   onPlan: () => _plan(pack, spots),
                   onOpenDraft: () => showDraftTray(context),
                   statusLabel: (s) => _statusLabel(pack, s),
-                  showTip: !listView && !ref.read(localPrefsProvider).hasSeenPlanTip,
-                  onDismissTip: _dismissPlanTip,
                   showCards: !listView,
                 )
               else if (coldStart)
@@ -821,211 +648,4 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
       ],
     );
   }
-}
-
-class _LiveDropBanner extends StatelessWidget {
-  const _LiveDropBanner({required this.label, required this.onTap});
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.kn;
-    final t = Theme.of(context).textTheme;
-    return Semantics(
-      liveRegion: true,
-      child: Material(
-        color: c.tertiary,
-        borderRadius: BorderRadius.circular(Rad.full),
-        elevation: 4,
-        shadowColor: c.tertiary.withValues(alpha: 0.5),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(Rad.full),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: Sp.s4, vertical: Sp.s3),
-            child: Row(
-              children: [
-                Icon(Icons.bolt, color: c.onTertiary, size: 20),
-                const SizedBox(width: Sp.s2),
-                Text(
-                  'LIVE',
-                  style: t.labelSmall?.copyWith(color: c.onTertiary, fontWeight: FontWeight.w900, letterSpacing: 1.4),
-                ),
-                const SizedBox(width: Sp.s2),
-                Expanded(
-                  child: Text(
-                    '$label · just now',
-                    style: t.titleSmall?.copyWith(color: c.onTertiary),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                Icon(Icons.chevron_right, color: c.onTertiary),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _GlassBar extends StatelessWidget {
-  const _GlassBar({required this.child});
-  final Widget child;
-  @override
-  Widget build(BuildContext context) => Container(
-    height: 52,
-    decoration: BoxDecoration(
-      color: context.kn.glass,
-      borderRadius: BorderRadius.circular(Rad.xl),
-      border: Border.all(color: context.kn.ghostBorder),
-      boxShadow: [
-        BoxShadow(color: context.kn.primaryDim.withValues(alpha: 0.08), blurRadius: 32, offset: const Offset(0, 8)),
-      ],
-    ),
-    child: Center(child: child),
-  );
-}
-
-/// Mode-specific chip row under the search bar: weekend selector (Yard Sales),
-/// or search suggestions (everything else).
-class _ModeChips extends ConsumerWidget {
-  const _ModeChips({required this.pack, required this.map, required this.onSuggestion, this.hideSuggestions = false});
-  final ModePack pack;
-  final MapState map;
-
-  /// The quick-start deck already shows the suggestions as cards.
-  final bool hideSuggestions;
-  final ValueChanged<String> onSuggestion;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final n = ref.read(mapProvider.notifier);
-    final now = DateTime.now();
-    List<Widget> chips;
-    if (pack.requiresTimeWindow) {
-      final sat = dayPlus(now, (DateTime.saturday - now.weekday) % 7);
-      final sun = dayPlus(sat, 1);
-      final nextSat = dayPlus(sat, 7);
-      final opts = [
-        (null, 'Any day'),
-        (sat, 'Sat ${DateFormat.Md().format(sat)}'),
-        (sun, 'Sun ${DateFormat.Md().format(sun)}'),
-        (nextSat, 'Next Sat'),
-      ];
-      chips = [
-        // First, so it never scrolls off: what the user is hunting for.
-        if (pack.pinCategories.isNotEmpty)
-          InputChip(
-            avatar: Icon(Icons.tune, size: 16, color: map.huntFilter.isEmpty ? null : context.kn.onPrimaryContainer),
-            label: Text('Hunting: ${huntLabel(map.huntFilter)}'),
-            selected: map.huntFilter.isNotEmpty,
-            showCheckmark: false,
-            onPressed: () => _pickHunt(context, pack, map.huntFilter, n.setHunt),
-          ),
-        // Saturday morning's question: what can I get to right now?
-        ChoiceChip(
-          avatar: Icon(Icons.circle, size: 10, color: context.kn.tertiary),
-          label: const Text('Open now'),
-          selected: map.openNow,
-          showCheckmark: false,
-          onSelected: (on) => n.setOpenNow(on),
-        ),
-        for (final (d, label) in opts)
-          ChoiceChip(
-            label: Text(label),
-            selected: !map.openNow && (d == null ? map.selectedDay == null : DateUtils.isSameDay(map.selectedDay, d)),
-            showCheckmark: false,
-            onSelected: (_) => n.setDay(d),
-          ),
-      ];
-    } else if (hideSuggestions) {
-      return const SizedBox.shrink();
-    } else {
-      chips = [for (final s in pack.searchSuggestions) ActionChip(label: Text(s), onPressed: () => onSuggestion(s))];
-    }
-    return SizedBox(
-      height: 40,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: Sp.s4),
-        itemCount: chips.length,
-        separatorBuilder: (_, _) => const SizedBox(width: Sp.s2),
-        itemBuilder: (_, i) => chips[i],
-      ),
-    );
-  }
-}
-
-/// Exposed for the community sheets so they can enter edit mode.
-void goToBuilder(BuildContext context) => context.push('/route/builder');
-
-String modeLabel(AppMode m) => switch (m) {
-  AppMode.fieldSales => 'Field Sales',
-  AppMode.yardSales => 'Yard Sales',
-};
-
-/// Multi-select of the pack's pin categories for the hunt filter.
-Future<void> _pickHunt(
-  BuildContext context,
-  ModePack pack,
-  Set<String> current,
-  ValueChanged<Set<String>> onDone,
-) async {
-  final picked = {...current};
-  await showKnSheet<void>(
-    context,
-    builder: (ctx) => StatefulBuilder(
-      builder: (ctx, setState) {
-        final t = Theme.of(ctx).textTheme;
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(Sp.s5, 0, Sp.s5, Sp.s5),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('What are you hunting?', style: t.headlineSmall),
-              const SizedBox(height: Sp.s1),
-              Text(
-                'Only matching ${pack.stopNoun}s show on the map and in your plan.',
-                style: t.bodySmall?.copyWith(color: ctx.kn.onSurfaceVariant),
-              ),
-              const SizedBox(height: Sp.s4),
-              Wrap(
-                spacing: Sp.s2,
-                runSpacing: Sp.s2,
-                children: [
-                  for (final cat in pack.pinCategories.where((c) => c != pack.pinCategoryWildcard))
-                    FilterChip(
-                      label: Text(cat),
-                      selected: picked.contains(cat),
-                      onSelected: (v) => setState(() => v ? picked.add(cat) : picked.remove(cat)),
-                    ),
-                ],
-              ),
-              const SizedBox(height: Sp.s5),
-              Row(
-                children: [
-                  TextButton(onPressed: () => setState(picked.clear), child: const Text('Clear')),
-                  const Spacer(),
-                  SizedBox(
-                    width: 160,
-                    child: KnButton(
-                      label: 'Show ${pack.stopNoun}s',
-                      lime: true,
-                      compact: true,
-                      onPressed: () => Navigator.pop(ctx),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
-    ),
-  );
-  onDone(picked);
 }
