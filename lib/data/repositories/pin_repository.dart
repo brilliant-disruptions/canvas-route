@@ -1,7 +1,6 @@
 import 'package:cross_file/cross_file.dart';
 
 import '../models/app_mode.dart';
-import '../models/business.dart';
 import '../models/pin.dart';
 import '../services/storage_service.dart';
 import '../supabase_client.dart';
@@ -108,7 +107,7 @@ class PinRepository {
         .from('pins')
         .insert({
           'mode': mode.id,
-          'kind': mode == AppMode.cardDrops ? 'store' : 'yard_sale',
+          'kind': 'yard_sale',
           'origin': 'spotted',
           'owner_id': userId,
           'name': name,
@@ -126,30 +125,6 @@ class PinRepository {
     final id = row['id'] as String;
     await addPhoto(id, userId, signPhoto);
     return Pin.fromRow(row, photos: await _photoUrls(id));
-  }
-
-  /// Promote a Places result to a persistent store pin so intel can attach to it.
-  Future<Pin> ensureStorePin(Business b) async {
-    final existing = b.placeId == null
-        ? null
-        : await sb.from('pins').select().eq('mode', AppMode.cardDrops.id).eq('place_id', b.placeId!).maybeSingle();
-    if (existing != null) return Pin.fromRow(existing);
-    final row = await sb
-        .from('pins')
-        .insert({
-          'mode': AppMode.cardDrops.id,
-          'kind': 'store',
-          'origin': 'places',
-          'place_id': b.placeId,
-          'name': b.name,
-          'address': b.address,
-          'lat': b.lat,
-          'lng': b.lng,
-          'status': 'live',
-        })
-        .select()
-        .single();
-    return Pin.fromRow(row);
   }
 
   Future<void> addPhoto(String pinId, String userId, XFile file) async {

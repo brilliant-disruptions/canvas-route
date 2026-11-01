@@ -1,4 +1,3 @@
-import 'package:canvas_route/core/logic/restock.dart';
 import 'package:canvas_route/core/logic/spotlight.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -69,29 +68,6 @@ void main() {
     expect(r.map((s) => s.candidate.id), ['open', 'next']);
     expect(spotHeadline(r[0], now: now, statusLabel: label), 'Open now · until 1pm');
     expect(spotHeadline(r[1], now: now, statusLabel: label), 'Opens Sat 7am–12pm');
-  });
-
-  test('restock windows: inside beats later; tier adds confidence', () {
-    final day = DateTime(2026, 10, 31);
-    final r = rank([
-      SpotCandidate(
-        id: 'later',
-        lat: lat,
-        lng: lng,
-        tier: RestockTier.established,
-        restockToday: (start: day.add(const Duration(hours: 11)), end: day.add(const Duration(hours: 13))),
-      ),
-      SpotCandidate(
-        id: 'now',
-        lat: lat,
-        lng: lng,
-        tier: RestockTier.emerging,
-        restockToday: (start: day.add(const Duration(hours: 8)), end: day.add(const Duration(hours: 10))),
-      ),
-    ]);
-    expect(r.map((s) => s.candidate.id), ['now', 'later']);
-    expect(spotHeadline(r[0], now: now, statusLabel: label), 'Restock window now · until 10am');
-    expect(spotHeadline(r[1], now: now, statusLabel: label), 'Restocks 11am–1pm');
   });
 
   test('with no signals, nearest wins and pickPlan caps the count', () {

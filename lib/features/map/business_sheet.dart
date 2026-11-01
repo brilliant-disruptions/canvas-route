@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
-import '../../core/logic/errors.dart';
 import '../../core/logic/geo.dart';
 import '../../core/logic/visit_history.dart';
 import '../../core/theme/kn_colors.dart';
@@ -10,7 +8,6 @@ import '../../core/theme/kn_theme.dart';
 import '../../data/models/business.dart';
 import '../../data/models/stop.dart';
 import '../../data/models/team.dart';
-import '../../state/auth_state.dart';
 import '../../state/follow_ups_state.dart';
 import '../../state/location_state.dart';
 import '../../state/map_state.dart';
@@ -18,7 +15,6 @@ import '../../state/profile_state.dart';
 import '../../state/providers.dart';
 import '../../state/team_state.dart';
 import '../../ui/widgets/kn_widgets.dart';
-import '../community/report_sheet.dart';
 import '../settings/paywall_sheet.dart';
 
 Future<void> showBusinessSheet(BuildContext context, Business b) =>
@@ -148,33 +144,6 @@ class BusinessSheet extends ConsumerWidget {
                 },
               ),
             ),
-            if (pack.communityReports && pack.productCatalog && business.placeId != null) ...[
-              const SizedBox(width: Sp.s2),
-              SizedBox(
-                width: 52,
-                child: OutlinedButton(
-                  onPressed: () async {
-                    // Reporting needs a real account (the server refuses guests).
-                    if (ref.read(isAnonymousProvider)) {
-                      Navigator.pop(context);
-                      context.push('/signin?reason=report');
-                      return;
-                    }
-                    try {
-                      final pin = await ref.read(pinRepoProvider).ensureStorePin(business);
-                      if (context.mounted) {
-                        Navigator.pop(context);
-                        showReportSheet(context, pin);
-                      }
-                    } catch (e) {
-                      if (context.mounted) toast(context, friendlyError(e));
-                    }
-                  },
-                  style: OutlinedButton.styleFrom(padding: EdgeInsets.zero),
-                  child: const Icon(Icons.campaign_outlined),
-                ),
-              ),
-            ],
           ]),
           const SizedBox(height: Sp.s2),
           OutlinedButton.icon(

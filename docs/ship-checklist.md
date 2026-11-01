@@ -1,7 +1,7 @@
 # Ship checklist: CanvasRoute v1 (Yard Sales)
 
-v1 ships Yard Sales only (`LAUNCH_MODES=yard_sales`, the default). Field Sales and Card Drops
-are built but off.
+v1 ships Yard Sales only (`LAUNCH_MODES=yard_sales`, the default). Field Sales is built but off;
+Card Drops is parked on the `park/card-drops` branch.
 
 ## Verified in the repo
 
@@ -74,8 +74,7 @@ are built but off.
 - [ ] Android release build compiles. It has core library desugaring and notification receivers, which this repo's CI never compiled.
 
 ## Known limits (v1.1 candidates)
-- **In-app purchase isn't built.** Consumer passes (Season Pass, Drop Alerts Pro) can't be sold yet, so those features are unlocked rather than shown behind a paywall that can't be paid.
+- **In-app purchase isn't built.** The consumer Season Pass can't be sold yet, so those features are unlocked rather than shown behind a paywall that can't be paid.
 - **Share links open the web page, not the app.** That needs Android App Links and iOS Associated Domains.
 - **No push alerts from the server.** Only on-device follow-up reminders exist.
 - **Reports and pins carry opaque user ids.** One person's reports can be linked to each other, but not to a name.
-- **Store pins:** the first person to report on a store sets its name and position. Admins can correct it.

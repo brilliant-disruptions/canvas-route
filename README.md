@@ -1,20 +1,23 @@
 # CanvasRoute
 
 **Find → route → run → log**, for anyone who has to visit a list of places in a good order and
-remember what happened at each one. One Flutter app, three modes:
+remember what happened at each one. One Flutter app, two modes:
 
 | Mode | For | What's special |
 |---|---|---|
 | **Field Sales** | B2B reps | Places search, drive-time optimization, outcome logging, CSV export |
 | **Yard Sales** | Weekend hunters, resellers, hosts | Host-posted sales with sign QR, time-window-aware routing, haul log |
-| **Card Drops** | Collectors and parents buying TCG product at retail | Crowd-sourced per-store restock patterns, two-tap shelf reports, stock alerts |
 
 Full product spec: [`SPEC.md`](SPEC.md).
 
 **v1 ships Yard Sales only.** `LAUNCH_MODES` (a `--dart-define`, default `yard_sales`) lists the
 modes a build offers, in picker order. With one mode, onboarding skips the picker and the drawer
 hides mode switching; a profile saved on another mode opens on the first listed one. Build with
-`LAUNCH_MODES=yard_sales,card_drops,field_sales` to turn every vertical back on.
+`LAUNCH_MODES=yard_sales,field_sales` to turn Field Sales back on.
+
+**Card Drops** (trading-card restock runs) is parked on the `park/card-drops` branch. Its
+migrations (`006`, `008`, `010`) stay on `main` so the database never needs a rollback; the app
+code, demo seeds and tests for it live only on that branch.
 
 ## Stack
 
@@ -32,8 +35,7 @@ Create a project, then apply `supabase/migrations/*.sql` in order (Supabase SQL 
 - enable **Email** (magic link) and optionally **Apple** / **Google**
 - add `canvasroute://auth-callback` to **Redirect URLs**
 
-Migration `008` seeds the Pokémon TCG product catalog; `005`/`006` schedule pg_cron jobs for
-pin expiry and restock-pattern refresh. Make yourself an admin with
+`005`/`006` schedule pg_cron jobs for pin expiry and (parked Card Drops) restock-pattern refresh. Make yourself an admin with
 `update profiles set is_admin = true where email = 'you@example.com';`.
 
 ### 2. Google Cloud
@@ -123,16 +125,15 @@ steps are in [`docs/testflight.md`](docs/testflight.md).
 ## Status
 
 Phases 0–3 of the spec are implemented in this codebase: Field Sales parity, Yard Sales mode,
-the community layer (pins, reports, trust gates, admin moderation, shared routes), and Card Drops
-with restock patterns. **Not yet wired:** push delivery for alerts (the `alerts` table and
-Realtime stream exist; an Edge Function + Expo/FCM sender is Phase 4), store billing (RevenueCat,
+and the community layer (pins, reports, trust gates, admin moderation, shared routes). Card Drops
+(phase 3) is parked on `park/card-drops`. **Not yet wired:** server push (the `alerts` table
+exists; an Edge Function + FCM sender is Phase 4), store billing (RevenueCat,
 Phase 4; the paywall sheet explains the tier), and public web pages for shared links (Phase 5).
 
 Share links are generated as `<webOrigin>/r/<token>` (routes) and `/s/<token>` (a host's sign QR).
 Both are routed in the app, but phones only open them in the app once Android App Links and iOS
 Associated Domains are configured and the matching verification files are hosted on that domain.
-Migration `010` adds per-weekday sighting counts to `store_summary` for the store sheet's restock
-chart; without it the sheet falls back to the text card. Migration `011` adds `pin_interest`, which
+Migration `011` adds `pin_interest`, which
 tells a host how many other people have their sale in a route (owner and admins only).
 
 Migration `012` imports city garage-sale permits (Arlington and McKinney, TX to start) as live

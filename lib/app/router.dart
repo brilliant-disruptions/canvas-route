@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/admin/admin_screen.dart';
-import '../features/alerts/alerts_screen.dart';
 import '../features/auth/sign_in_screen.dart';
 import '../features/builder/builder_screen.dart';
 import '../features/feature_requests/feature_requests_screen.dart';
@@ -76,7 +75,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       ]),
       GoRoute(path: '/feature-requests', builder: (_, _) => const FeatureRequestsScreen()),
       GoRoute(path: '/admin', builder: (_, _) => const AdminScreen()),
-      GoRoute(path: '/alerts', builder: (_, _) => const AlertsScreen()),
       GoRoute(path: '/follow-ups', builder: (_, _) => const FollowUpsScreen()),
       GoRoute(path: '/mileage', builder: (_, _) => const MileageScreen()),
       GoRoute(path: '/team', builder: (_, _) => const TeamScreen()),

@@ -32,10 +32,7 @@ class DemoDb {
   final trips = <String, Map<String, dynamic>>{};
   final pins = <String, Map<String, dynamic>>{};
   final pinPhotos = <Map<String, dynamic>>[];
-  final products = <String, Map<String, dynamic>>{};
   final reports = <String, Map<String, dynamic>>{};
-  final follows = <String>{};
-  final alerts = <String, Map<String, dynamic>>{};
   final featureRequests = <String, Map<String, dynamic>>{};
   final upvotes = <String>{}; // "$userId|$requestId"
   final comments = <Map<String, dynamic>>[];
@@ -88,7 +85,7 @@ void _seed(DemoDb db) {
     'office_lng': -96.7985,
     'is_admin': true,
     'plan': 'pro',
-    'entitlements': ['canvasroute_season_pass', 'canvasroute_drop_alerts_pro'],
+    'entitlements': ['canvasroute_season_pass'],
     'active_mode': 'field_sales',
     'trust_score': 62,
     'home_lat': h.lat,
@@ -105,34 +102,6 @@ void _seed(DemoDb db) {
     'appearance': 'dark', // matches the brand; switch in Preferences
     'route_end_preference': 'current_location',
   };
-
-  // ---- Products (Pokémon TCG catalog, same as migration 008) ----
-  const sets = [
-    ('Scarlet & Violet 151', '2023-09-22'), ('Paldean Fates', '2024-01-26'), ('Temporal Forces', '2024-03-22'),
-    ('Twilight Masquerade', '2024-05-24'), ('Shrouded Fable', '2024-08-02'), ('Stellar Crown', '2024-09-13'),
-    ('Surging Sparks', '2024-11-08'), ('Prismatic Evolutions', '2025-01-17'), ('Journey Together', '2025-03-28'),
-    ('Destined Rivals', '2025-05-30'), ('Black Bolt', '2025-07-18'), ('White Flare', '2025-07-18'),
-    ('Mega Evolution', '2025-09-26'), ('Phantasmal Flames', '2025-11-14'), ('Ascended Heroes', '2026-01-30'),
-    ('Perfect Order', '2026-03-27'), ('Chaos Rising', '2026-05-22'), ('Pitch Black', '2026-07-17'),
-    ('Delta Reign', '2026-11-06'),
-  ];
-  const skus = [
-    ('etb', 'Elite Trainer Box'), ('booster_box', 'Booster Box'), ('bundle', 'Booster Bundle'),
-    ('blister', 'Blister Pack'), ('tin', 'Tin'), ('collection', 'Collection Box'), ('pack', 'Single Booster Pack'),
-  ];
-  final productIds = <String, String>{};
-  for (final (set, date) in sets) {
-    for (final (sku, label) in skus) {
-      final id = DemoDb.newId();
-      final name = '$set — $label';
-      productIds[name] = id;
-      db.products[id] = {
-        'id': id, 'game': 'pokemon', 'set_name': set, 'sku_type': sku, 'display_name': name,
-        'release_date': date, 'is_canonical': true, 'created_at': DemoDb.nowIso(),
-      };
-    }
-  }
-  String pid(String name) => productIds[name]!;
 
   // ---- Field Sales routes ----
   final dental = demoCatalog['dental']!;
@@ -276,77 +245,16 @@ void _seed(DemoDb db) {
     {'outcome': 'Closed early', 'custom_fields': <String, dynamic>{}},
   ]);
 
-  // ---- Card Drops stores and report history ----
-  final storeIds = <String, String>{};
-  for (final s in demoCatalog['stores']!) {
-    storeIds[s['place_id'] as String] = pin({
-      'mode': 'card_drops', 'kind': 'store', 'origin': 'places', 'place_id': s['place_id'], 'name': s['name'],
-      'address': s['address'], 'lat': s['lat'], 'lng': s['lng'],
-    });
-  }
-  String sid(String placeId) => storeIds[placeId]!;
-
-  void history(String pinId, int weekday, int hour, int weeks, String product, {int every = 1}) {
-    for (var w = 1; w <= weeks; w += every) {
-      final base = now.subtract(Duration(days: 7 * w));
-      final day = base.subtract(Duration(days: (base.weekday - weekday) % 7));
-      final when = at(day, hour, 10 + (w * 7) % 40);
-      final id = DemoDb.newId();
-      db.reports[id] = {
-        'id': id, 'pin_id': pinId, 'user_id': 'community-${w % 5}', 'status': w % 4 == 0 ? 'restocking_now' : 'in_stock',
-        'product_id': pid(product), 'qty': 4 + (w * 3) % 9, 'price_cents': null, 'purchase_limit': w.isEven ? 2 : null,
-        'line_present': w % 3 == 0, 'trust_at_filing': 55 + w % 20, 'created_at': DemoDb.iso(when),
-      };
-    }
-  }
-
-  history(sid('pl_target_central'), DateTime.tuesday, 8, 12, 'Prismatic Evolutions — Elite Trainer Box');
-  history(sid('pl_target_central'), DateTime.friday, 8, 8, 'Destined Rivals — Booster Bundle', every: 2);
-  history(sid('pl_walmart_retail'), DateTime.thursday, 9, 6, 'Phantasmal Flames — Booster Bundle');
-  history(sid('pl_costco_churchill'), DateTime.saturday, 10, 11, 'Ascended Heroes — Collection Box');
-  history(sid('pl_bn_northwest'), DateTime.saturday, 9, 3, 'Chaos Rising — Elite Trainer Box');
-  history(sid('pl_collectors_cave'), DateTime.saturday, 11, 9, 'Pitch Black — Booster Box');
-  history(sid('pl_collectors_cave'), DateTime.wednesday, 16, 6, 'Perfect Order — Booster Bundle');
-
-  void report(String pinId, String status, Duration ago, String product, {int? qty, int? price, int? limit, bool? line}) {
-    final id = DemoDb.newId();
-    db.reports[id] = {
-      'id': id, 'pin_id': pinId, 'user_id': 'community-9', 'status': status, 'product_id': pid(product), 'qty': qty,
-      'price_cents': price, 'purchase_limit': limit, 'line_present': line, 'trust_at_filing': 70, 'created_at': DemoDb.iso(now.subtract(ago)),
-    };
-  }
-
-  report(sid('pl_gamestop_greenville'), 'in_stock', const Duration(minutes: 9), 'Prismatic Evolutions — Elite Trainer Box', qty: 6, price: 4999, limit: 2);
-  report(sid('pl_gamestop_greenville'), 'sold_out', const Duration(days: 9), 'Destined Rivals — Booster Bundle');
-  report(sid('pl_target_central'), 'sold_out', const Duration(hours: 3), 'Prismatic Evolutions — Elite Trainer Box', line: true);
-  report(sid('pl_walgreens_greenville'), 'didnt_carry', const Duration(days: 2), 'Surging Sparks — Blister Pack');
-
-  final cardStops = [
-    for (final p in ['pl_gamestop_greenville', 'pl_target_central', 'pl_collectors_cave', 'pl_walmart_retail'])
-      {...demoCatalog['stores']!.firstWhere((s) => s['place_id'] == p), 'pin_id': sid(p), 'source': 'community'},
+  // Shared at /r/demo-run so the invite landing can be opened cold: this Saturday's loop.
+  final runStops = [
+    // Moving → Estate → Multi-family → Kids: one sweep east.
+    for (final id in [ys[2], ys[1], ys[0], ys[3]])
+      {for (final k in ['name', 'address', 'lat', 'lng', 'opens_at', 'closes_at']) k: db.pins[id]![k], 'pin_id': id, 'source': 'community'},
   ];
-  // Shared at /r/demo-run so the invite landing can be opened cold.
-  db.shares['demo-run'] = addRoute('card_drops', 'Card run · Saturday', cardStops, visited: 1, status: 'in_progress', lastRun: now.subtract(const Duration(minutes: 40)), visitValues: [
-    {'outcome': 'In stock', 'notes': 'Vendor was stocking at 8:10. Two people already waiting.', 'custom_fields': {
-      'products': [
-        {'id': pid('Prismatic Evolutions — Elite Trainer Box'), 'name': 'Prismatic Evolutions — Elite Trainer Box'},
-      ],
-      'price': 49.99, 'qty': 6, 'purchaseLimit': 2, 'linePresent': true,
-    }},
+  db.shares['demo-run'] = addRoute('yard_sales', 'Saturday loop · Lakewood', runStops, visited: 1, status: 'in_progress',
+      lastRun: now.subtract(const Duration(minutes: 40)), visitValues: [
+    {'outcome': 'Bought', 'notes': 'Everything half off by 9.', 'custom_fields': {'items': 'Teak side table', 'spent': 25.0, 'wouldReturn': true}},
   ]);
-
-  db.follows.add(pid('Prismatic Evolutions — Elite Trainer Box'));
-  void alert(String kind, String pinId, String title, String body, Duration ago, {bool opened = true}) {
-    final id = DemoDb.newId();
-    db.alerts[id] = {
-      'id': id, 'user_id': uid, 'kind': kind, 'pin_id': pinId, 'report_id': null, 'title': title, 'body': body,
-      'sent_at': DemoDb.iso(now.subtract(ago)), 'opened_at': opened ? DemoDb.nowIso() : null,
-    };
-  }
-
-  alert('stock_report_nearby', sid('pl_gamestop_greenville'), 'Prismatic Evolutions ETB in stock', 'GameStop · 1.9 mi · 6 left', const Duration(minutes: 9), opened: false);
-  alert('stock_report_nearby', sid('pl_target_central'), 'Restocking now at Target', 'Target · 0.9 mi · line present', const Duration(days: 1));
-  alert('new_pin_nearby', ys[1], 'New estate sale this Saturday', 'Mid-century + vinyl · 0.8 mi', const Duration(days: 2));
 
   // ---- Feature requests ----
   for (final (title, cat, status, votes, orgs, summary) in [

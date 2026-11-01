@@ -49,7 +49,6 @@ const fieldSalesPack = ModePack(
   communityReports: false,
   reportStatuses: [],
   outcomeToReportStatus: {},
-  alerts: [AlertKind.followUp],
   onboarding: [
     OnboardingPage(
       headline: 'Find businesses near you',

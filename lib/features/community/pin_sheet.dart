@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 import '../../core/logic/errors.dart';
 import '../../core/env.dart';
 import '../../core/logic/pin_labels.dart';
-import '../../core/logic/restock.dart';
+import '../../core/logic/freshness.dart';
 import '../../core/theme/kn_colors.dart';
 import '../../core/theme/kn_theme.dart';
 import '../../data/models/business.dart';
@@ -19,8 +19,6 @@ import '../../state/map_state.dart';
 import '../../state/profile_state.dart';
 import '../../state/providers.dart';
 import '../../ui/widgets/kn_widgets.dart';
-import 'report_sheet.dart';
-import 'restock_rhythm.dart';
 
 Future<void> showPinSheet(BuildContext context, Pin pin) => showKnSheet(context, builder: (_) => PinSheet(pin: pin));
 
@@ -37,8 +35,8 @@ Business businessFromPin(Pin p) => Business(
   listingUrl: p.listingUrl,
 );
 
-/// Community pin sheet: yard sale (hours, categories, photos, "Still going?")
-/// or store (restock tier, best time to go, recent reports, Report button).
+/// A community listing's sheet: live status, hours, categories, photos, recent
+/// reports, and one-tap "Still going?" report chips.
 class PinSheet extends ConsumerWidget {
   const PinSheet({super.key, required this.pin});
   final Pin pin;
@@ -66,7 +64,6 @@ class PinSheet extends ConsumerWidget {
       SalePhase.ended => c.error,
       _ => c.primary,
     };
-    final summary = pin.kind == PinKind.store ? ref.watch(storeSummaryProvider(pin.id)).value : null;
 
     return DraggableScrollableSheet(
       expand: false,
@@ -120,47 +117,8 @@ class PinSheet extends ConsumerWidget {
                 KnBadge('No early birds', color: c.errorContainer, onColor: c.onErrorContainer),
               if (pin.earlyBirds == 'welcome') KnBadge('Early birds OK'),
               for (final cat in pin.categories) KnBadge(cat, color: c.surfaceHighest, onColor: c.onSurface),
-              // Unknown tier is explained in a sentence below; don't say it twice.
-              if (summary != null && summary.tier != RestockTier.unknown) _TierBadge(summary.tier),
             ],
           ),
-          if (summary != null && summary.tier != RestockTier.unknown && summary.dayHits.any((h) => h > 0)) ...[
-            const SizedBox(height: Sp.s3),
-            RestockRhythm(summary: summary),
-          ] else if (summary != null && summary.tier != RestockTier.unknown && summary.bestWindowLabel != null) ...[
-            const SizedBox(height: Sp.s3),
-            KnCard(
-              tier: 3,
-              padding: const EdgeInsets.symmetric(horizontal: Sp.s4, vertical: Sp.s3),
-              child: Row(
-                children: [
-                  Icon(Icons.insights_outlined, color: c.tertiary),
-                  const SizedBox(width: Sp.s3),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Best time to go', style: t.labelMedium?.copyWith(color: c.onSurfaceVariant)),
-                        Text(summary.bestWindowLabel!, style: t.titleMedium),
-                        if (summary.lastSeen != null)
-                          Text(
-                            'Last seen ${relativeAge(summary.lastSeen!)}',
-                            style: t.bodySmall?.copyWith(color: c.onSurfaceVariant),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-          if (summary != null && summary.tier == RestockTier.unknown) ...[
-            const SizedBox(height: Sp.s3),
-            Text(
-              'Help map this store — every report builds its restock pattern.',
-              style: t.bodySmall?.copyWith(color: c.onSurfaceVariant),
-            ),
-          ],
           if (pin.notes != null && pin.notes!.isNotEmpty) ...[
             const SizedBox(height: Sp.s3),
             Text(pin.notes!, style: t.bodyMedium),
@@ -226,7 +184,7 @@ class PinSheet extends ConsumerWidget {
           ),
           if (pack.communityReports) ...[
             SectionHeader(
-              pin.kind == PinKind.store ? 'What\'s on the shelf?' : (takesReports ? 'Still going?' : 'Live reports'),
+              takesReports ? 'Still going?' : 'Live reports',
               trailing: anon && takesReports
                   ? TextButton(
                       onPressed: () => context.push('/signin?reason=report'),
@@ -234,14 +192,7 @@ class PinSheet extends ConsumerWidget {
                     )
                   : null,
             ),
-            if (pin.kind == PinKind.store)
-              KnButton(
-                label: 'Report shelf',
-                icon: Icons.campaign_outlined,
-                lime: true,
-                onPressed: anon ? null : () => showReportSheet(context, pin),
-              )
-            else if (!takesReports)
+            if (!takesReports)
               Text(
                 phase == SalePhase.ended
                     ? 'This sale has ended.'
@@ -310,21 +261,6 @@ class PinSheet extends ConsumerWidget {
   }
 }
 
-class _TierBadge extends StatelessWidget {
-  const _TierBadge(this.tier);
-  final RestockTier tier;
-  @override
-  Widget build(BuildContext context) {
-    final c = context.kn;
-    final color = switch (tier) {
-      RestockTier.unknown => c.tierUnknown,
-      RestockTier.emerging => c.tierEmerging,
-      RestockTier.established => c.tierEstablished,
-    };
-    return KnBadge(tierLabel(tier), color: color, onColor: c.surface, icon: Icons.insights_outlined);
-  }
-}
-
 class _ReportRow extends StatelessWidget {
   const _ReportRow(this.r, this.label);
   final Report r;
@@ -333,14 +269,6 @@ class _ReportRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.kn;
     final t = Theme.of(context).textTheme;
-    final bits = <String>[
-      if (r.productLabel.isNotEmpty) r.productLabel,
-      if (r.qty != null) '${r.qty} left',
-      if (r.priceCents != null) '\$${(r.priceCents! / 100).toStringAsFixed(2)}',
-      if (r.purchaseLimit != null) 'limit ${r.purchaseLimit}',
-      if (r.linePresent == true) 'line present',
-      if (r.crowdLevel != null) r.crowdLevel!,
-    ];
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: Sp.s1),
       child: Row(
@@ -351,7 +279,7 @@ class _ReportRow extends StatelessWidget {
             child: Text(relativeAge(r.createdAt), style: t.labelSmall?.copyWith(color: c.onSurfaceVariant)),
           ),
           const SizedBox(width: Sp.s3),
-          Expanded(child: Text('$label${bits.isEmpty ? '' : ' · ${bits.join(' · ')}'}', style: t.bodySmall)),
+          Expanded(child: Text(label, style: t.bodySmall)),
         ],
       ),
     );

@@ -1,5 +1,8 @@
 # CanvasRoute — Spec v3: Modes Platform
 
+> **Status (Nov 2026):** v1 ships Yard Sales. Card Drops (§5 and its rows below) is parked on the
+> `park/card-drops` branch; its tables stay in the schema. This spec keeps it for when it returns.
+
 > **Status:** Draft for founder review (Michael + Jimmy). Supersedes nothing yet — the v2 feature spec in
 > `founders/apps/canvasroute/SPEC.md` remains the source of truth for the shipped Field Sales product.
 > This document specifies how CanvasRoute grows from a single-vertical B2B tool into a

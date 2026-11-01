@@ -2,7 +2,7 @@
 
 ## Project
 CanvasRoute v3: a Flutter "find → route → run → log" app with pluggable verticals (Modes).
-Field Sales (B2B canvassing), Yard Sales, and Card Drops (trading-card restock runs).
+Yard Sales (v1) and Field Sales (B2B canvassing). Card Drops is parked on the `park/card-drops` branch.
 Spec: `SPEC.md`. Backend: Supabase (Postgres + Auth + Storage + Realtime + pg_cron).
 
 ## Stack

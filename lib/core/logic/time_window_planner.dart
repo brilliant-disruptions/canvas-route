@@ -8,8 +8,6 @@ class PlannerStop {
     required this.lng,
     this.opensAt,
     this.closesAt,
-    this.restockStart,
-    this.restockEnd,
   });
 
   final String id;
@@ -18,11 +16,8 @@ class PlannerStop {
   final DateTime? opensAt;
   final DateTime? closesAt;
 
-  /// For Card Drops: the store's best restock window on the planned day.
-  final DateTime? restockStart;
-  final DateTime? restockEnd;
 
-  DateTime? get deadline => closesAt ?? restockEnd;
+  DateTime? get deadline => closesAt;
 }
 
 enum ArrivalFlag { ok, beforeOpen, late, unknown }
@@ -43,28 +38,20 @@ class PlannedArrival {
   final int minutesLate;
 }
 
-/// Orders stops for a time-window mode:
-///  - Card Drops: by restock window start (be at the shelf when it's fresh), then deadline.
-///  - Yard Sales: by closing time (hard deadline) ascending, then opening time.
+/// Orders stops for a time-window mode: by closing time (the hard deadline)
+/// ascending, then opening time.
 /// Stops without windows go last, preserving their relative order.
-List<PlannerStop> orderByWindows(List<PlannerStop> stops, {required bool preferRestockStart}) {
+List<PlannerStop> orderByWindows(List<PlannerStop> stops) {
   final indexed = stops.asMap().entries.toList();
   int cmp(MapEntry<int, PlannerStop> a, MapEntry<int, PlannerStop> b) {
-    DateTime? ka, kb;
-    if (preferRestockStart) {
-      ka = a.value.restockStart ?? a.value.deadline;
-      kb = b.value.restockStart ?? b.value.deadline;
-    } else {
-      ka = a.value.deadline;
-      kb = b.value.deadline;
-    }
+    final ka = a.value.deadline, kb = b.value.deadline;
     if (ka == null && kb == null) return a.key.compareTo(b.key);
     if (ka == null) return 1;
     if (kb == null) return -1;
     final c = ka.compareTo(kb);
     if (c != 0) return c;
-    final oa = a.value.opensAt ?? a.value.restockStart;
-    final ob = b.value.opensAt ?? b.value.restockStart;
+    final oa = a.value.opensAt;
+    final ob = b.value.opensAt;
     if (oa != null && ob != null) {
       final o = oa.compareTo(ob);
       if (o != 0) return o;
@@ -96,7 +83,7 @@ List<PlannedArrival> simulateArrivals({
     var eta = clock;
     var flag = ArrivalFlag.unknown;
     var late = 0;
-    final opens = stop.opensAt ?? stop.restockStart;
+    final opens = stop.opensAt;
     final deadline = stop.deadline;
     if (opens != null && eta.isBefore(opens)) {
       // Waiting at the door until it opens is allowed; shift the clock.

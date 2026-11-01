@@ -53,7 +53,6 @@ const yardSalesPack = ModePack(
     'Looked, nothing': 'still_open',
     'Closed early': 'packed_up',
   },
-  alerts: [AlertKind.newPinNearby],
   onboarding: [
     OnboardingPage(
       headline: 'See this weekend\'s sales',

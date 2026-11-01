@@ -185,12 +185,6 @@ class ProfileDrawer extends ConsumerWidget {
               ListTile(leading: const Icon(Icons.groups_outlined), title: const Text('Team'), onTap: () => go('/team')),
             if (pack.mileageLog)
               ListTile(leading: const Icon(Icons.speed), title: const Text('Mileage'), onTap: () => go('/mileage')),
-            if (pack.alerts.isNotEmpty && pack.hasCommunity)
-              ListTile(
-                leading: const Icon(Icons.notifications_outlined),
-                title: Text(pack.productCatalog ? 'Watchlist' : 'Alerts'),
-                onTap: () => go('/alerts'),
-              ),
             if (pack.supportsHosting)
               ListTile(
                 leading: const Icon(Icons.sell_outlined),

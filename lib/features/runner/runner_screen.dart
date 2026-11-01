@@ -6,7 +6,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../core/logic/errors.dart';
 import '../../core/logic/polyline.dart';
-import '../../core/logic/restock.dart';
+import '../../core/logic/freshness.dart';
 import '../../core/theme/kn_colors.dart';
 import '../../core/theme/kn_theme.dart';
 import '../../data/models/directions.dart';

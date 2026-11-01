@@ -5,9 +5,7 @@ import '../data/models/visit_field.dart';
 
 enum StopSourceId { places, manual, community, listingLink }
 
-enum OptimizerKind { distance, timeWindow, restockWindow }
-
-enum AlertKind { followUp, newPinNearby, stockReportNearby }
+enum OptimizerKind { distance, timeWindow }
 
 class ReportStatusOption {
   const ReportStatusOption(this.value, this.label, this.icon, {this.positive = false, this.caution = false, this.ends = false});
@@ -60,7 +58,6 @@ class ModePack {
     required this.communityReports,
     required this.reportStatuses,
     required this.outcomeToReportStatus,
-    required this.alerts,
     required this.onboarding,
     required this.emptyRoutesCopy,
     required this.visitVerb,
@@ -97,7 +94,6 @@ class ModePack {
     this.supportsHosting = false,
     this.hostSignHeadline = 'SALE',
     this.profileAsksCompany = false,
-    this.pinsPlacesStops = false,
     this.saveVisitLabel = 'Save visit',
     this.spotLabel,
     this.startLabel,
@@ -105,7 +101,6 @@ class ModePack {
     this.pinCategoryWildcard,
     this.summaryCountField,
     this.photoHint,
-    this.productCatalog = false,
   });
 
   final AppMode id;
@@ -117,7 +112,7 @@ class ModePack {
   final List<String> searchSuggestions;
   final List<StopSourceId> stopSources;
 
-  /// Appended to free-text searches, e.g. retail chains for Card Drops.
+  /// Appended to free-text searches when the query lacks it (no mode sets one today).
   final String? placesQueryPreset;
   final bool requiresTimeWindow;
   final OptimizerKind optimizer;
@@ -131,7 +126,6 @@ class ModePack {
 
   /// Visit outcome label → report status; when present, saving a visit auto-files a report.
   final Map<String, String> outcomeToReportStatus;
-  final List<AlertKind> alerts;
   final List<OnboardingPage> onboarding;
   final String emptyRoutesCopy;
   final String visitVerb; // "Log Visit" / "Log Stop" / "Report Shelf"
@@ -235,9 +229,6 @@ class ModePack {
   /// Profile asks for company and title (they head CSV exports).
   final bool profileAsksCompany;
 
-  /// A logged Places stop gets a community store pin so its report has a home.
-  final bool pinsPlacesStops;
-
   /// The visit form's save button, e.g. "Save report".
   final String saveVisitLabel;
 
@@ -261,7 +252,6 @@ class ModePack {
 
   /// Shown under the visit photo picker when photos are shared with the community.
   final String? photoHint;
-  final bool productCatalog;
 
   bool get usesTimeWindows => optimizer != OptimizerKind.distance;
   bool get hasCommunity => communityPins || communityReports;

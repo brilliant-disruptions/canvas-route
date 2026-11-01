@@ -14,8 +14,10 @@ void main() {
     });
 
     test('parses ids in order, dropping blanks, unknowns and repeats', () {
-      expect(parseLaunchModes(' card_drops, yard_sales,,nope,card_drops'), [AppMode.cardDrops, AppMode.yardSales]);
-      expect(parseLaunchModes('field_sales,yard_sales,card_drops'), AppMode.values);
+      expect(parseLaunchModes(' field_sales, yard_sales,,nope,field_sales'), [AppMode.fieldSales, AppMode.yardSales]);
+      expect(parseLaunchModes('field_sales,yard_sales'), AppMode.values);
+      // A parked vertical's id is simply unknown now.
+      expect(parseLaunchModes('card_drops'), [AppMode.yardSales]);
     });
 
     test('an unusable list falls back to Yard Sales', () {
@@ -30,10 +32,9 @@ void main() {
     }
   });
 
-  test('field sales keeps community off; consumer modes keep it on', () {
+  test('field sales keeps community off; yard sales keeps it on', () {
     expect(packFor(AppMode.fieldSales).hasCommunity, isFalse);
     expect(packFor(AppMode.yardSales).hasCommunity, isTrue);
-    expect(packFor(AppMode.cardDrops).hasCommunity, isTrue);
   });
 
   test('outcome → report mappings reference declared report statuses', () {
@@ -57,7 +58,6 @@ void main() {
 
   test('time-window modes declare a non-distance optimizer', () {
     expect(packFor(AppMode.yardSales).optimizer, OptimizerKind.timeWindow);
-    expect(packFor(AppMode.cardDrops).optimizer, OptimizerKind.restockWindow);
     expect(packFor(AppMode.fieldSales).usesTimeWindows, isFalse);
   });
 
@@ -82,7 +82,7 @@ void main() {
   });
 
   test('route limit applies to free users at the limit only', () {
-    final pack = packFor(AppMode.cardDrops);
+    final pack = packFor(AppMode.yardSales);
     expect(pack.atRouteLimit(0, paying: false), isFalse);
     expect(pack.atRouteLimit(pack.freeRouteLimit!, paying: false), isTrue);
     expect(pack.atRouteLimit(99, paying: true), isFalse);
@@ -115,7 +115,6 @@ void main() {
       final p = who(owns: [packFor(AppMode.yardSales).proProductId!]);
       expect(pays(p, AppMode.yardSales), isTrue);
       expect(pays(p, AppMode.fieldSales), isFalse);
-      expect(pays(p, AppMode.cardDrops), isFalse);
       expect(p.isPaying, isTrue);
     });
 

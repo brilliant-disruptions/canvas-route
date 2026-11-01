@@ -12,7 +12,7 @@ import '../../core/logic/check_in.dart';
 import '../../core/logic/dates.dart';
 import '../../core/logic/errors.dart';
 import '../../core/logic/pin_labels.dart';
-import '../../core/logic/restock.dart';
+import '../../core/logic/freshness.dart';
 import '../../core/logic/spotlight.dart';
 import '../../core/theme/kn_colors.dart';
 import '../../core/theme/kn_theme.dart';
@@ -20,7 +20,6 @@ import '../../data/models/app_mode.dart';
 import '../../data/models/business.dart';
 import '../../data/models/pin.dart';
 import '../../data/models/report.dart';
-import '../../data/models/store_summary.dart';
 import '../../data/models/stop.dart';
 import '../../data/services/listing_link.dart';
 import '../../modes/mode_pack.dart';
@@ -246,7 +245,6 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
     required MapState map,
     required List<Pin> pins,
     required Map<String, Report> latest,
-    required Map<String, StoreSummary> summaries,
   }) {
     final now = DateTime.now();
     final from = ref.read(currentLocationProvider).value;
@@ -261,12 +259,8 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
     for (final p in pins) {
       final b = _pinToBusiness(p);
       if (byId.containsKey(b.identity)) continue;
-      final filter = map.productFilter?.toLowerCase();
-      final r = latest[p.id];
-      final rep = r != null && (filter == null || r.productLabel.toLowerCase().contains(filter)) ? r : null;
-      final sum = summaries[p.id];
-      final window = sum == null ? null : windowOnDay(sum.bestWindows, now);
-      byId[b.identity] = (b, rep?.productLabel.isNotEmpty == true ? rep!.productLabel : p.categories.join(', '));
+      final rep = latest[p.id];
+      byId[b.identity] = (b, p.categories.join(', '));
       candidates.add(
         SpotCandidate(
           id: b.identity,
@@ -279,8 +273,6 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
           reportCaution: rep != null && pack.reportStatuses.any((s) => s.value == rep.status && s.caution),
           reportEnds: rep != null && pack.reportStatuses.any((s) => s.value == rep.status && s.ends),
           reportedAt: rep?.createdAt,
-          tier: sum?.tier ?? RestockTier.unknown,
-          restockToday: window,
         ),
       );
     }
@@ -323,7 +315,6 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
         map: ref.read(mapProvider),
         pins: const [],
         latest: const {},
-        summaries: const {},
       );
       if (entries.isNotEmpty) _plan(pack, entries);
     } finally {
@@ -355,7 +346,6 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
     final fresh = rows.where((r) => !seen.contains(r['id']) && r['user_id'] != me).toList();
     if (fresh.isEmpty) return;
     ref.invalidate(latestReportsProvider);
-    ref.invalidate(storeSummariesProvider);
     for (final r in fresh) {
       final positive = pack.reportStatuses.any((s) => s.value == r['status'] && s.positive);
       final pin = pins.where((p) => p.id == r['pin_id']).firstOrNull;
@@ -420,9 +410,6 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
     final latest = pack.communityReports && joined.isNotEmpty
         ? (ref.watch(latestReportsProvider(joined)).value ?? const <String, Report>{})
         : const <String, Report>{};
-    final summaries = pack.productCatalog && joined.isNotEmpty
-        ? (ref.watch(storeSummariesProvider(joined)).value ?? const <String, StoreSummary>{})
-        : const <String, StoreSummary>{};
 
     if (pack.communityReports) {
       ref.listen(reportStreamProvider, (_, next) {
@@ -448,7 +435,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
           );
     final checkIn = checkInId == null ? null : pins.firstWhere((p) => p.id == checkInId);
 
-    final spots = _spotEntries(pack: pack, map: map, pins: visiblePins, latest: latest, summaries: summaries);
+    final spots = _spotEntries(pack: pack, map: map, pins: visiblePins, latest: latest);
     final listView = map.viewMode == MapViewMode.list;
     final showDeck = spots.isNotEmpty;
     // Nothing listed anywhere near: say so, count the user in, and offer the ways
@@ -549,13 +536,10 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
         }
       } else {
         final rep = latest[p.id];
-        final filter = map.productFilter;
         final live =
             rep != null &&
             isFresh(rep.createdAt) &&
-            pack.reportStatuses.any((s) => s.value == rep.status && s.positive) &&
-            (filter == null || rep.productLabel.toLowerCase().contains(filter.toLowerCase()));
-        final tier = summaries[p.id]?.tier ?? RestockTier.unknown;
+            pack.reportStatuses.any((s) => s.value == rep.status && s.positive);
         spec = live
             ? PinSpec.pill(
                 '${shortPlaceName(p.name, max: 12)} · ${_statusLabel(pack, rep.status)}',
@@ -563,16 +547,7 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
                 ink: c.onTertiary,
                 halo: true,
               )
-            : PinSpec.pill(
-                shortPlaceName(p.name),
-                fill: c.surfaceHighest,
-                ink: c.onSurface,
-                dot: switch (tier) {
-                  RestockTier.unknown => c.outline,
-                  RestockTier.emerging => c.warning,
-                  RestockTier.established => c.statusDone,
-                },
-              );
+            : PinSpec.pill(shortPlaceName(p.name), fill: c.surfaceHighest, ink: c.onSurface);
         if (live) z = 5;
       }
       add('p:${p.id}', _pinToBusiness(p), spec, () => showPinSheet(context, p), z: z, alpha: alpha);
@@ -655,10 +630,6 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
                             .setViewMode(map.viewMode == MapViewMode.map ? MapViewMode.list : MapViewMode.map),
                       ),
                     ),
-                    if (pack.alerts.isNotEmpty && pack.hasCommunity) ...[
-                      const SizedBox(width: Sp.s2),
-                      _GlassBar(child: _AlertsButton(watchlist: pack.productCatalog)),
-                    ],
                     const SizedBox(width: Sp.s2),
                     const _GlassBar(child: ProfileButton()),
                   ],
@@ -852,28 +823,6 @@ class _MapScreenState extends ConsumerState<MapScreen> with WidgetsBindingObserv
   }
 }
 
-/// Opens the watchlist; the badge counts alerts not yet opened.
-class _AlertsButton extends ConsumerWidget {
-  const _AlertsButton({required this.watchlist});
-  final bool watchlist;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final unread = ref.watch(alertsProvider).value?.where((a) => a.openedAt == null).length ?? 0;
-    return IconButton(
-      tooltip: watchlist ? 'Watchlist' : 'Alerts',
-      onPressed: () => context.push('/alerts'),
-      icon: Badge(
-        isLabelVisible: unread > 0,
-        label: Text('$unread'),
-        backgroundColor: context.kn.tertiary,
-        textColor: context.kn.onTertiary,
-        child: const Icon(Icons.notifications_outlined),
-      ),
-    );
-  }
-}
-
 class _LiveDropBanner extends StatelessWidget {
   const _LiveDropBanner({required this.label, required this.onTap});
   final String label;
@@ -941,7 +890,7 @@ class _GlassBar extends StatelessWidget {
 }
 
 /// Mode-specific chip row under the search bar: weekend selector (Yard Sales),
-/// product filter (Card Drops), or search suggestions (everything else).
+/// or search suggestions (everything else).
 class _ModeChips extends ConsumerWidget {
   const _ModeChips({required this.pack, required this.map, required this.onSuggestion, this.hideSuggestions = false});
   final ModePack pack;
@@ -992,24 +941,6 @@ class _ModeChips extends ConsumerWidget {
             onSelected: (_) => n.setDay(d),
           ),
       ];
-    } else if (pack.productCatalog) {
-      final products = ref.watch(productsProvider).value ?? const [];
-      final sets = products.map((p) => p.setName).toSet().take(6).toList();
-      chips = [
-        ChoiceChip(
-          label: const Text('Any product'),
-          selected: map.productFilter == null,
-          showCheckmark: false,
-          onSelected: (_) => n.setProductFilter(null),
-        ),
-        for (final s in sets)
-          ChoiceChip(
-            label: Text(s),
-            selected: map.productFilter == s,
-            showCheckmark: false,
-            onSelected: (_) => n.setProductFilter(s),
-          ),
-      ];
     } else if (hideSuggestions) {
       return const SizedBox.shrink();
     } else {
@@ -1034,7 +965,6 @@ void goToBuilder(BuildContext context) => context.push('/route/builder');
 String modeLabel(AppMode m) => switch (m) {
   AppMode.fieldSales => 'Field Sales',
   AppMode.yardSales => 'Yard Sales',
-  AppMode.cardDrops => 'Card Drops',
 };
 
 /// Multi-select of the pack's pin categories for the hunt filter.
